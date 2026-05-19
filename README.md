@@ -1,4 +1,4 @@
-# 🍽️ Reservaif — Sistema de Reservas de Refeições Escolares
+# 🍽️ ReservaIF — Sistema de Reservas de Refeições Escolares
  
 Sistema web para gestão de reservas de refeições no refeitório escolar, desenvolvido com Django e PostgreSQL.
  
