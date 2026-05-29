@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Cardápio{% endblock %}
+
+{% block menu_cardapio %}active{% endblock %}
+
+{% block content %}
+  <h1>CARDÁPIO</h1>
+  <div class="date">[Dia], [Data do mes]</div>
+  <div class="line"></div>
+
+  <div class="tabs">
+    <button class="tab active" type="button">HOJE</button>
+    <button class="tab" type="button">AMANHÃ</button>
+    <button class="tab" type="button">DEPOIS</button>
+  </div>
+
+  <div class="today">Hoje — 20 de maio</div>
+
+  <div class="meal-card">
+    <div class="badges">
+      <div class="badge yellow">Lanche da manhã</div>
+    </div>
+    <div class="meal-title">Fruta e iogurte</div>
+    <div class="meal-footer">
+      <div class="meal-info">15h00 - pátio principal</div>
+    </div>
+  </div>
+
+  <div class="meal-card">
+    <div class="badges">
+      <div class="badge yellow">Almoço</div>
+      <div class="badge red">182 reservas</div>
+    </div>
+    <div class="meal-title">Arroz, feijão, frango grelhado e salada</div>
+    <div class="meal-footer">
+      <div class="meal-info">11h30 até 13h00 - Refeitório</div>
+      <button class="reserve-btn" type="button">RESERVAR</button>
+    </div>
+  </div>
+{% endblock %}

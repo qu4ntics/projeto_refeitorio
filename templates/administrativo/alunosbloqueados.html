@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alunos Bloqueados</title>
+    <link rel="stylesheet" href="alunosbloqueados.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <!-- MENU DA PARTE DE CIMA -->
+    <header class="topo">
+        <div class="logo-topo">
+            <div class="logo-area">
+                <img src="logo.png" alt="Logo">
+                <div class="titulo-logo">
+                    <h1>Refeitório</h1>
+                    <span>NUTRICIONISTA</span>
+                </div>
+            </div>
+        </div>
+        <div class="topo-direita">
+            <p>[Dia da Semana], [Data do Mes]</p>
+            <button><i class="fa-regular fa-bell"></i></button>
+            <a href="../accounts/login.html" style="color: inherit; text-decoration: none;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </a>
+        </div>
+    </header>
+
+    <div class="container-dashboard">
+
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+            <div class="grupo-menu">
+                <h2>GESTÃO</h2>
+                <a href="nutricionista.html">
+                    <i class="fa-solid fa-table-cells-large"></i>
+                    DASHBOARD
+                </a>
+                <a href="#">
+                    <i class="fa-solid fa-utensils"></i>
+                    REFEIÇÕES
+                </a>
+                <a href="#">
+                    <i class="fa-solid fa-users"></i>
+                    ALUNOS
+                </a>
+                <a href="#">
+                    <i class="fa-solid fa-gear"></i>
+                    CONFIGURAÇÕES
+                </a>
+            </div>
+            <div class="grupo-menu">
+                <h2>AÇÕES RÁPIDAS</h2>
+                <button class="botao-a">
+                    <i class="fa-solid fa-plus"></i>
+                    NOVA REFEIÇÃO
+                </button>
+                <a href="reservas.html" class="botao-a" style="text-decoration: none;">
+                    <i class="fa-solid fa-bars"></i>
+                    RESERVAS DO DIA
+                </a>
+                <a href="alunosbloqueados.html" class="botao-a ativo-bloqueado" style="text-decoration: none;">
+                    <i class="fa-solid fa-user-xmark"></i>
+                    ALUNOS BLOQUEADOS
+                </a>
+            </div>
+        </aside>
+
+        <!-- Parte alunos bloqueados -->
+        <main class="conteudo-dashboard">
+            <section class="pagina-bloqueados">
+                <div class="titulo-pagina">
+                    <div>
+                        <h1>Alunos Bloqueados</h1>
+                        <p>Alunos que atingiram 2 strikes e foram bloqueados da plataforma.</p>
+                    </div>
+                </div>
+                <!-- PESQUISA -->
+                <div class="barra-pesquisa">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Pesquisar por nome do aluno...">
+                </div>
+                <!-- TABELA -->
+                <div class="tabela-bloqueados">
+                    <div class="linha tabela-topo">
+                        <span>ALUNO</span>
+                        <span>E-MAIL</span>
+                        <span>TURMA</span>
+                        <span>DATA DO BLOQUEIO</span>
+                        <span>AÇÕES</span>
+                    </div>
+                     <!-- Nomes para visualização da tabela. Substituir futuramente-->
+                    <div class="linha">
+                        <div class="aluno-info">
+                            <div class="foto-aluno verde">JS</div>
+                            <p>João da Silva</p>
+                        </div>
+                        <p>joaodasilva@email.com</p>
+                        <p>2° Informática</p>
+                        <p>20/05/2025 às 16:22</p>
+                        <button class="btn-desbloquear"><i class="fa-solid fa-lock-open"></i> Desbloquear</button>
+                    </div>
+
+                    <div class="linha">
+                        <div class="aluno-info">
+                            <div class="foto-aluno roxo">MC</div>
+                            <p>Maria Clara Santos</p>
+                        </div>
+                        <p>mariaclara@email.com</p>
+                        <p>1° Administração</p>
+                        <p>19/05/2025 às 14:10</p>
+                        <button class="btn-desbloquear"><i class="fa-solid fa-lock-open"></i> Desbloquear</button>
+                    </div>
+
+                    <div class="linha">
+                        <div class="aluno-info">
+                            <div class="foto-aluno azul">RP</div>
+                            <p>Rafael Pereira</p>
+                        </div>
+                        <p>rafaelpereira@email.com</p>
+                        <p>3° Informática</p>
+                        <p>18/05/2025 às 10:45</p>
+                        <button class="btn-desbloquear"><i class="fa-solid fa-lock-open"></i> Desbloquear</button>
+                    </div>
+
+                    <div class="linha">
+                        <div class="aluno-info">
+                            <div class="foto-aluno laranja">AS</div>
+                            <p>Ana Souza</p>
+                        </div>
+                        <p>anasouza@email.com</p>
+                        <p>2° Informática</p>
+                        <p>17/05/2025 às 09:30</p>
+                        <button class="btn-desbloquear"><i class="fa-solid fa-lock-open"></i> Desbloquear</button>
+                    </div>
+
+                    <div class="linha">
+                        <div class="aluno-info">
+                            <div class="foto-aluno rosa">GB</div>
+                            <p>Gabriel Barbosa</p>
+                        </div>
+                        <p>gabrielb@email.com</p>
+                        <p>1° Desenvolvimento</p>
+                        <p>16/05/2025 às 15:20</p>
+                        <button class="btn-desbloquear"><i class="fa-solid fa-lock-open"></i> Desbloquear</button>
+                    </div>
+
+                </div>
+
+                <!-- CARD INFO -->
+                <div class="info-bloqueio">
+                    <div class="icone-info">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <div>
+                        <h3>Sobre alunos bloqueados</h3>
+                        <p>Alunos bloqueados não têm acesso à plataforma, aulas ou comunicados. Ao desbloquear, o aluno voltará a ter acesso normalmente.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
