@@ -33,6 +33,10 @@ ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = 'accounts.Usuario'
 
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'refeicoes:homepage'  # fallback; login usa redirect por perfil
+LOGOUT_REDIRECT_URL = 'accounts:login'
+
 # Application definition
 
 INSTALLED_APPS = [

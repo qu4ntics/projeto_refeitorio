@@ -8,3 +8,4 @@ class Usuario(AbstractUser):
         ('refeitorio', 'Refeitório'),
     ]
     perfil = models.CharField(max_length=20, choices=PERFIS, default='aluno')
+    turma = models.CharField(max_length=100, blank=True)
