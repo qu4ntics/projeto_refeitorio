@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}ReservaIF{% endblock %}</title>
 
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 
   {% block extra_css %}{% endblock %}
@@ -18,11 +18,16 @@
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="logo-area">
-      <div class="logo">
-        <i class="fa-solid fa-utensils"></i>
+    <div class="topbar-left">
+      <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="logo-area">
+        <div class="logo">
+          <i class="fa-solid fa-utensils"></i>
+        </div>
+        <h1>ReservaIF</h1>
       </div>
-      <h1>ReservaIF</h1>
     </div>
 
     <div class="user-top">
@@ -40,6 +45,9 @@
       {% else %}
         <i class="fa-regular fa-bell"></i>
       {% endif %}
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+        <i class="fa-solid fa-moon" id="theme-icon"></i>
+      </button>
 
       <form method="POST" action="{% url 'accounts:logout' %}" style="display:inline; margin:0;">
         {% csrf_token %}
@@ -50,10 +58,12 @@
     </div>
   </header>
 
+  <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+
   <div class="container">
 
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="profile-card">
         <div class="avatar">
           <h3>{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</h3>
@@ -88,19 +98,19 @@
         <div class="menu-title">MENU</div>
 
         {% if user.perfil == 'aluno' %}
-          <a href="{% url 'refeicoes:cardapio' %}" class="menu-item {% block menu_cardapio %}{% endblock %}">
+          <a href="{% url 'refeicoes:homepage' %}" class="menu-item {% block menu_cardapio %}{% endblock %}">
             <i class="fa-solid fa-utensils"></i>
             <span>CARDÁPIO</span>
           </a>
-          <a href="{% url 'reservas:minhas_reservas' %}" class="menu-item {% block menu_reservas %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_reservas %}{% endblock %}">
             <i class="fa-solid fa-calendar-check"></i>
             <span>MINHAS RESERVAS</span>
           </a>
-          <a href="{% url 'reservas:historico_strikes' %}" class="menu-item {% block menu_strikes %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_strikes %}{% endblock %}">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span>STRIKES</span>
           </a>
-          <a href="{% url 'accounts:perfil' %}" class="menu-item {% block menu_perfil %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_perfil %}{% endblock %}">
             <i class="fa-solid fa-gear"></i>
             <span>MEU PERFIL</span>
           </a>
@@ -110,19 +120,19 @@
             <i class="fa-solid fa-house"></i>
             <span>PAINEL</span>
           </a>
-          <a href="{% url 'administrativo:listar_refeicoes' %}" class="menu-item {% block menu_refeicoes %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_refeicoes %}{% endblock %}">
             <i class="fa-solid fa-utensils"></i>
             <span>REFEIÇÕES</span>
           </a>
-          <a href="{% url 'administrativo:listar_alunos' %}" class="menu-item {% block menu_alunos %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_alunos %}{% endblock %}">
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
           </a>
-          <a href="{% url 'administrativo:listar_bloqueados' %}" class="menu-item {% block menu_bloqueados %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_bloqueados %}{% endblock %}">
             <i class="fa-solid fa-lock"></i>
             <span>BLOQUEADOS</span>
           </a>
-          <a href="{% url 'administrativo:configurar_janela' %}" class="menu-item {% block menu_config %}{% endblock %}">
+          <a href="#" class="menu-item {% block menu_config %}{% endblock %}">
             <i class="fa-solid fa-gear"></i>
             <span>CONFIGURAÇÕES</span>
           </a>
@@ -137,10 +147,14 @@
       </div>
     </aside>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="content">
 
-      <!-- MENSAGENS DO DJANGO -->
+  {% else %}
+  <!-- PÁGINAS SEM SIDEBAR (login, cadastro) -->
+    <main class="content-auth">
+
+  {% endif %}
+
       {% if messages %}
         <div class="messages">
           {% for message in messages %}
@@ -156,30 +170,15 @@
 
       {% block content %}{% endblock %}
 
+  {% if user.is_authenticated %}
     </main>
   </div>
 
   {% else %}
-  <!-- PÁGINAS SEM SIDEBAR (login, cadastro) -->
-  <main class="content-auth">
-    {% if messages %}
-      <div class="messages">
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}">
-            {{ message }}
-            <button class="alert-close" onclick="this.parentElement.remove()">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    {% block content %}{% endblock %}
-  </main>
+    </main>
   {% endif %}
 
-  <script src="{% static 'js/main.js' %}"></script>
+  <script src="{% static 'js/base.js' %}"></script>
   {% block extra_js %}{% endblock %}
 
 </body>

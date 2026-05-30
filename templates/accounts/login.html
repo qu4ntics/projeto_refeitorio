@@ -1,29 +1,100 @@
+{% load static %}
+
 <!DOCTYPE html>
+
 <html lang="pt-br">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Login</title>
-    <link rel="stylesheet" href="login-style.css">
+
+    <link rel="stylesheet" href="{% static 'css/base.css'%}">
+
+    <link rel="stylesheet" href="{% static 'css/login-style.css' %}">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
 </head>
+
 <body>
+
     <div class="caixa-login">
-        <img src="../administrativo/logo.png" alt="logo">
-        <h1>Bem-vindo</h1>
-        <h4>Sistema de reservas do refeitório</h4>
-        <form>
-            <input type="email" placeholder="E-mail" required>
-            <div class="grupo-senha">
-                <div class="caixa-senha">
-                    <input type="password" placeholder="Senha" id="senha" required>
-                    <i class="bi bi-eye" id="btn-senha" onclick="mostrarSenha()"></i>
-                </div>
+
+        <img src="{% static 'images/logo.png' %}" alt="logo">
+
+
+
+        <div class="texto">
+
+            <h1>Bem-vindo!</h1>
+
+            <p>Sistema de reservas do refeitório</p>
+
+        </div>
+
+
+
+        <form method="post" action="{% url 'accounts:login' %}" class="form-login">
+
+            {% csrf_token %}
+
+
+
+            <div class="campo-outline">
+
+                <label for="username">E-mail</label>
+
+                <input type="email" name="username" id="username" placeholder=" " required autocomplete="email">
+
             </div>
+
+
+
+            <div class="campo-outline campo-senha">
+
+                <label for="senha">Senha</label>
+
+                <input type="password" name="password" id="senha" placeholder=" " required autocomplete="current-password">
+
+                <button type="button" class="btn-toggle-senha" id="btn-senha" onclick="mostrarSenha()" aria-label="Mostrar senha">
+
+                    <i class="bi bi-eye"></i>
+
+                </button>
+
+            </div>
+
+
+
+            <input type="hidden" name="next" value="{{ next }}">
+
             <input type="submit" value="Entrar">
+
         </form>
+
+
+
+        {% if form.errors %}
+
+            <p class="erro-login">E-mail ou senha incorretos. Tente novamente.</p>
+
+        {% endif %}
+
+        <hr>
+
         <a href="cadastrar.html">Não tem conta? Cadastre-se!</a>
+
     </div>
-    <script src="login-script.js"></script>
+
+
+
+    <script src="{% static 'js/login-script.js' %}"></script>
+
 </body>
+
 </html>
+
