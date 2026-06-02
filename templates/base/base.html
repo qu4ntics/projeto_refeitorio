@@ -31,8 +31,8 @@
     </div>
 
     <div class="user-top">
-      <span>Olá, {{ user.first_name }}
-        {% if user.perfil == 'aluno' %} - {{ user.turma }}{% endif %}
+      <span>Olá, {{ user.first_name|default:user.username }}
+        {% if user.perfil == 'aluno' %} - {{ user.get_turma_display }}{% endif %}
       </span>
 
       {% if user.perfil == 'nutricionista' %}
@@ -66,12 +66,12 @@
     <aside class="sidebar" id="sidebar">
       <div class="profile-card">
         <div class="avatar">
-          <h3>{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</h3>
+          <h3>{{ user.first_name|default:user.username|slice:":2"|upper }}</h3>
         </div>
-        <h2>{{ user.get_full_name }}</h2>
+        <h2>{{ user.get_full_name|default:user.username }}</h2>
 
         {% if user.perfil == 'aluno' %}
-          <p>{{ user.turma }}</p>
+          <p>{{ user.get_turma_display }}</p>
           <div class="strike-area">
             <div class="strike-top">
               <span>strikes ativos</span>

@@ -46,9 +46,14 @@
 
             <div class="campo-outline">
 
-                <label for="username">E-mail</label>
+                <label for="username">Usuário</label>
 
-                <input type="email" name="username" id="username" placeholder=" " required autocomplete="email">
+                <input type="text"
+                name="username"
+                id="username"
+                placeholder=" "
+                required
+                autocomplete="username">
 
             </div>
 
@@ -86,14 +91,13 @@
 
         <hr>
 
-        <a href="cadastrar.html">Não tem conta? Cadastre-se!</a>
+        <a href="{% url 'accounts:cadastro' %}">Não tem conta? Cadastre-se!</a>
 
     </div>
 
 
 
     <script src="{% static 'js/login-script.js' %}"></script>
-
 </body>
 
 </html>
