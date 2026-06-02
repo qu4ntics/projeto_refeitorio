@@ -28,29 +28,6 @@
   letter-spacing: 1px;
 }
 
-.painel-nutri .header-refeicoes {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.painel-nutri .btn-adicionar {
-  display: inline-block;
-  padding: 10px 18px;
-  border-radius: 12px;
-  background: #2d7ff9;
-  color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-  transition: background .2s ease;
-}
-
-.painel-nutri .btn-adicionar:hover {
-  background: #1f63d7;
-}
-
 .painel-nutri .card-refeicao {
   background: var(--bg-card);
   border: 1px solid var(--border);

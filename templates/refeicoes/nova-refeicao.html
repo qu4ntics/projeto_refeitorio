@@ -1,90 +1,97 @@
-{% extends "base/base.html" %}
-{% load static %}
-
-{% block title %}Nova Refeição{% endblock %}
-
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/nutricionista.css' %}">
-{% endblock %}
-
-{% block content %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Nutricionista</title>
+    <link rel="stylesheet" href="nova-refeicao-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <!-- MENU DA PARTE DE CIMA -->
+    <header class="topo">
+        <div class="logo-topo">
+            <div class="logo-area">
+                <img src="../accounts/assets/logo.png" alt="Logo">
+                <div class="titulo-logo">
+                    <h1>Refeitório</h1>
+                    <span>NUTRICIONISTA</span>
+                </div>
+            </div>
+        </div>
+        <div class="topo-direita">
+            <p>[Dia da Semana], [Data do mês]</p>
+            <button><i class="fa-regular fa-bell"></i></button>
+            <button><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </div>
+    </header>
     <div class="container-dashboard">
         <div class="caixa-receita">
             <div class="voltar">
-                <a href="{% url 'refeicoes:nutricionista_lista' %}">&larr;</a>
+                <a href=" ">&larr;</a>
                 <p>Nova refeição</p>
             </div>
 
             <div class="forumlario">
-                <form method="post">
-                    {% csrf_token %}
-
-                    {% if form.non_field_errors %}
-                        <div class="alert-error">
-                            {% for error in form.non_field_errors %}
-                                <p>{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-
+                <form>
                     <div class="form-linha">
-                        <div class="form-grupo tamanho-data {% if form.data.errors %}has-error{% endif %}">
-                            {{ form.data.label_tag }}
-                            {{ form.data }}
-                            {% for error in form.data.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
+                        <div class="form-grupo tamanho-data">
+                            <label for="data">Data</label>
+                            <input type="date" name="data" id="data" required>
                         </div>
-
-                        <div class="form-grupo expandir {% if form.tipo.errors %}has-error{% endif %}">
-                            {{ form.tipo.label_tag }}
-                            {{ form.tipo }}
-                            {% for error in form.tipo.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
+                        
+                        <div class="form-grupo expandir">
+                            <label for="tipo">Tipo de refeição</label>
+                            <select name="tipo" id="tipo" required>
+                                <option value="1">Café da manhã</option>
+                                <option value="2">Lanche da manhã</option>
+                                <option value="3">Almoço</option>
+                                <option value="4">Lanche da tarde</option>
+                                <option value="5">Jantar</option>
+                            </select>
                         </div>
                     </div>
-
-                    <div class="form-grupo {% if form.descricao.errors %}has-error{% endif %}">
-                        {{ form.descricao.label_tag }}
-                        {{ form.descricao }}
-                        {% for error in form.descricao.errors %}
-                            <span class="form-error">{{ error }}</span>
-                        {% endfor %}
+                    
+                    <div class="form-grupo">
+                        <label for="desc">Descrição do prato</label>
+                        <textarea name="descricao" id="desc" rows="4"></textarea>
                     </div>
-
+                    
                     <div class="form-linha alinhamento-meio">
-                        <div class="toggle-exigencia {% if form.exige_reserva.errors %}has-error{% endif %}">
+                        <div class="toggle-exigencia">
                             <div class="toggle-container">
                                 <div class="toggle-texto">
                                     <span class="toggle-titulo">Exige reserva</span>
                                     <p class="toggle-subtitulo">Se desativado, a refeição é apenas informativa</p>
                                 </div>
                                 <div class="toggle-switch">
-                                    {{ form.exige_reserva }}
+                                    <input type="checkbox" id="exigirReserva" class="toggle-checkbox" checked>
+                                    <label for="exigirReserva" class="toggle-label"></label>
                                 </div>
                             </div>
-                            {% for error in form.exige_reserva.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
                         </div>
-
-                        <div class="form-grupo-horizontal {% if form.limite_vagas.errors %}has-error{% endif %}">
-                            {{ form.limite_vagas.label_tag }}
-                            {{ form.limite_vagas }}
+                        
+                        <div class="form-grupo-horizontal">
+                            <label for="limite">Limite de reservas:</label>
+                            <input type="number" id="limite" value="180" required>
                         </div>
                     </div>
-
-                    {% for error in form.limite_vagas.errors %}
-                        <span class="form-error">{{ error }}</span>
-                    {% endfor %}
-
+                    
+                    <div class="tempo-reserva">
+                        <span class="tempo-titulo">Janela de reserva desta refeição</span>
+                        <p class="tempo-subtitulo">Abertura: <strong>{}/strong> do dia anterior - Encerramento: <strong>{}</strong> do dia</p>
+                        <a href="#">Alterar nas configurações</a>
+                    </div>
+                    
                     <div class="botoes-acoes">
-                        <a href="{% url 'refeicoes:nutricionista_lista' %}" class="btn-cancelar">CANCELAR</a>
+                        <button type="button" class="btn-cancelar">CANCELAR</button>
                         <input type="submit" value="SALVAR" class="btn-salvar">
                     </div>
-                </form>
+            </form>
             </div>
         </div>
+        </main>
     </div>
-{% endblock %}
+</body>
+</html>
