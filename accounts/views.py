@@ -18,7 +18,7 @@ def cadastro_view(request):
             )
             if usuario is not None:
                 login(request, usuario)
-                return redirect('cardapio')
+                return redirect('refeicoes:homepage')
             else:
                 form = CadastroForm()
     else:
@@ -35,6 +35,11 @@ REDIRECT_POR_PERFIL = {
 
 class LoginPerfilView(LoginView):
     template_name = 'accounts/login.html'
+
+    def form_invalid(self, form):
+        print("POST:", self.request.POST)
+        print("ERROS:", form.errors)
+        return super().form_invalid(form)
 
     def get_success_url(self):
         redirect_to = self.get_redirect_url()
