@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Refeições - Nutricionista{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/painel-nutricionista.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="painel-nutri">
+    <section class="secao-refeicoes">
+      <div class="lado-esquerdo">
+        <h2>REFEIÇÕES DESTA SEMANA</h2>
+        <p><a href="{% url 'refeicoes:nutricionista_nova' %}" class="btn-adicionar">Adicionar nova refeição</a></p>
+
+        {% for r in refeicoes %}
+          <div class="card-refeicao">
+            <div class="card-refeicao-topo">
+              <span class="tag-refeicao">{{ r.get_tipo_display }}</span>
+              <form method="post" action="{% url 'refeicoes:nutricionista_deletar' r.pk %}" onsubmit="return confirm('Tem certeza que deseja excluir essa refeição?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-excluir">Excluir</button>
+              </form>
+            </div>
+            <h3>{{ r.descricao|default:"(sem descrição)" }}</h3>
+            <p>{{ r.data }} - Vagas: {{ r.vagas_disponiveis }} / {{ r.limite_vagas }}</p>
+          </div>
+        {% empty %}
+          <p>Não existem refeições cadastradas para esta semana.</p>
+        {% endfor %}
+      </div>
+
+      <div class="painel-direito"></div>
+    </section>
+  </div>
+{% endblock %}
