@@ -1,332 +1,351 @@
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: Arial, Helvetica, sans-serif;
+/* Nova refeição — escopado ao layout ReservaIF (light + dark) */
+
+.nova-refeicao-page {
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-body{
-    background: #f5f5f5;
-    padding: 18px;
+.nova-refeicao-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 1.75rem 2rem 2rem;
 }
 
-/* MENU PARTE DE CIMA*/
+.nova-refeicao-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
 
-.topo{
+.nova-refeicao-voltar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+
+.nova-refeicao-voltar:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.nova-refeicao-titulo h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  margin: 0 0 0.2rem;
+}
+
+.nova-refeicao-titulo p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.nova-refeicao-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.nova-refeicao-form .campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.nova-refeicao-form .campo-grupo label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nova-refeicao-form .campo,
+.nova-refeicao-form input.campo,
+.nova-refeicao-form select.campo,
+.nova-refeicao-form textarea.campo {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.nova-refeicao-form .campo:focus,
+.nova-refeicao-form input.campo:focus,
+.nova-refeicao-form select.campo:focus,
+.nova-refeicao-form textarea.campo:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.nova-refeicao-form textarea.campo {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.nova-refeicao-linha {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 1rem;
+}
+
+.nova-refeicao-opcoes {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.nova-refeicao-toggle {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+}
+
+.nova-refeicao-toggle-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.nova-refeicao-toggle-texto .toggle-titulo {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.nova-refeicao-toggle-texto .toggle-subtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-light);
+  line-height: 1.35;
+}
+
+.nova-refeicao-toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.nova-refeicao-toggle-switch .toggle-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.nova-refeicao-toggle-switch .toggle-label {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background 0.25s;
+}
+
+.nova-refeicao-toggle-switch .toggle-label::before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--bg-card);
+  border-radius: 50%;
+  transition: transform 0.25s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.nova-refeicao-toggle-switch .toggle-checkbox:checked + .toggle-label {
+  background: var(--accent);
+}
+
+.nova-refeicao-toggle-switch .toggle-checkbox:checked + .toggle-label::before {
+  transform: translateX(22px);
+}
+
+.nova-refeicao-vagas {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 140px;
+  padding: 1rem 1.15rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.nova-refeicao-vagas label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nova-refeicao-vagas .campo-numero {
+  width: 100%;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.nova-refeicao-vagas.is-inativo {
+  opacity: 0.65;
+}
+
+.nova-refeicao-vagas.is-inativo .campo-numero {
+  cursor: not-allowed;
+  background: var(--bg-card);
+}
+
+.nova-refeicao-janela {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+}
+
+.nova-refeicao-janela-titulo {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
+
+.nova-refeicao-janela p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.nova-refeicao-janela strong {
+  color: var(--text-primary);
+}
+
+.nova-refeicao-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.nova-refeicao-acoes .btn-cancelar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.nova-refeicao-acoes .btn-cancelar:hover {
+  border-color: var(--text-light);
+  color: var(--text-primary);
+}
+
+.nova-refeicao-acoes .btn-salvar {
+  padding: 0.7rem 2rem;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  color: var(--primary);
+  background: var(--accent);
+  transition: background 0.2s, transform 0.15s;
+}
+
+.nova-refeicao-acoes .btn-salvar:hover {
+  background: var(--accent-hover);
+}
+
+.nova-refeicao-form .has-error .campo,
+.nova-refeicao-form .has-error input,
+.nova-refeicao-form .has-error select,
+.nova-refeicao-form .has-error textarea {
+  border-color: var(--danger);
+}
+
+.nova-refeicao-form .form-error,
+.nova-refeicao-form .alert-error {
+  color: var(--danger);
+  font-size: 0.8125rem;
+}
+
+.nova-refeicao-form .alert-error {
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: var(--radius);
+}
+
+.nova-refeicao-form .alert-error p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .nova-refeicao-card {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .nova-refeicao-linha {
+    grid-template-columns: 1fr;
+  }
+
+  .nova-refeicao-opcoes {
+    grid-template-columns: 1fr;
+  }
+
+  .nova-refeicao-acoes {
+    flex-direction: column-reverse;
+  }
+
+  .nova-refeicao-acoes .btn-cancelar,
+  .nova-refeicao-acoes .btn-salvar {
     width: 100%;
-    height: 74px;
-    background: white;
-    border: 1px solid #dcdcdc;
-    border-radius: 16px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 0 24px;
-
-    margin-bottom: 18px;
-}
-
-.logo-area{
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.logo-area img{
-    width: 60px;
-    height: 60px;
-    object-fit: contain;
-}
-
-.titulo-logo{
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.titulo-logo h1{
-    font-size: 22px;
-    color: #1f1f1f;
-    font-weight: 500;
-}
-
-.titulo-logo span{
-    background: #98e3b4;
-    color: #10884a;
-
-    padding: 6px 12px;
-
-    border-radius: 8px;
-
-    font-size: 14px;
-    font-weight: bold;
-
-    border: 1px solid #46c979;
-}
-
-.topo-direita{
-    display: flex;
-    align-items: center;
-    gap: 18px;
-}
-
-.topo-direita p{
-    color: #5f5f5f;
-    font-size: 16px;
-}
-
-.topo-direita button{
-    background: transparent;
-    border: none;
-    font-size: 22px;
-    cursor: pointer;
-}
-
-.container-dashboard{
-    display: flex;
-    min-height: 87vh;
-}
-
-/* FORM CENTRO */
-
-.caixa-receita{
-    width: 100%;
-    max-width: 750px;
-    background-color: white;
-    align-items: center;
-    margin: auto;
-    padding: 50px;
-    border-radius: 20px;
-}
-
-.voltar{
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-    margin-bottom: 15px;
-    font-size: 25px; 
-}
-
-.voltar p {
-    margin: 0;
-}
-.voltar a{
-    text-decoration: none;
-    color: #000;
-    border-top: none;
-}
-
-/* --- Ajustes Gerais do Formulário --- */
-form {
-    max-width: 100%; /* Removemos o limite antigo de 300px */
-    display: flex;
-    flex-direction: column;
-    gap: 20px; 
-    font-family: Arial, sans-serif;
-    color: #333;
-}
-
-/* Força os elementos de uma linha a ficarem lado a lado */
-.form-linha {
-    display: flex;
-    gap: 20px;
-    width: 100%;
-}
-
-.expandir {
-    flex: 1; /* Faz o campo (ex: Tipo de refeição) ocupar o resto do espaço disponível */
-}
-
-.tamanho-data {
-    width: 160px; /* Mantém o campo de data menorzinho, como no design */
-}
-
-.form-grupo {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-/* Modificadores de texto e labels */
-label {
-    font-size: 16px;
-    color: #666;
-}
-
-input, select, textarea {
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-    background-color: #fff;
-    box-sizing: border-box;
-}
-
-textarea {
-    resize: vertical;
-    width: 100%;
-}
-
-/* Alinhamento vertical do bloco do switch com o limite numérico */
-.alinhamento-meio {
-    align-items: center;
-    justify-content: space-between;
-}
-
-/* --- Estilização do Campo Limite de Reservas (Horizontal) --- */
-.form-grupo-horizontal {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.form-grupo-horizontal label {
-    white-space: nowrap;
-}
-.form-grupo-horizontal input {
-    width: 100px;
     text-align: center;
-}
-
-/* --- Estilização do Card de Exige Reserva (Toggle) --- */
-.toggle-exigencia {
-    background-color: #D3D4D8; /* Fundo cinza escuro do card */
-    padding: 10px 15px;
-    border-radius: 10px;
-    flex: 1;
-    max-width: 400px;
-}
-
-.toggle-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.toggle-texto {
-    display: flex;
-    flex-direction: column;
-}
-
-.toggle-titulo {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.toggle-subtitulo {
-    margin: 2px 0 0 0;
-    font-size: 12px;
-    color: #555;
-}
-
-/* Switch feito só com CSS */
-.toggle-switch {
-    position: relative;
-    width: 50px;
-    height: 26px;
-}
-
-.toggle-checkbox {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.toggle-label {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
-    border-radius: 34px;
-    transition: .4s;
-}
-
-.toggle-label:before {
-    position: absolute;
-    content: "";
-    height: 18px; width: 18px;
-    left: 4px; bottom: 4px;
-    background-color: white;
-    border-radius: 50%;
-    transition: .4s;
-}
-
-.toggle-checkbox:checked + .toggle-label {
-    background-color: #00bf63; /* Verde quando ativado */
-}
-
-.toggle-checkbox:checked + .toggle-label:before {
-    transform: translateX(24px);
-}
-
-/* --- Caixa Cinza Claro: Janela de Reserva --- */
-.tempo-reserva {
-    background-color: #E2E3E6;
-    padding: 20px;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.tempo-titulo {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.tempo-subtitulo {
-    margin: 0;
-    font-size: 14px;
-    color: #555;
-}
-
-.tempo-reserva a {
-    color: #007bff;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: bold;
-    align-self: flex-start;
-}
-
-.tempo-reserva a:hover {
-    text-decoration: underline;
-}
-
-/* --- Alinhamento e Aparência dos Botões Finais --- */
-.botoes-acoes {
-    display: flex;
-    justify-content: flex-end; /* Empurra os botões para a ponta direita */
-    gap: 15px;
-    margin-top: 10px;
-}
-
-.btn-cancelar {
-    background-color: #EFF0F3;
-    color: #000;
-    border: 1px solid #ccc;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-.btn-salvar {
-    background-color: #25a3ff;
-    color: white;
-    padding: 12px 45px;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 16px;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-salvar:hover {
-    opacity: 0.9;
-}
-.btn-cancelar:hover {
-    background-color: #e2e3e6;
+  }
 }

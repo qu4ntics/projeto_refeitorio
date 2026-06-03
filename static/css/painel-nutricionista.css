@@ -28,6 +28,46 @@
   letter-spacing: 1px;
 }
 
+.painel-nutri .header-refeicoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.painel-nutri .header-refeicoes h2 {
+  margin-bottom: 0;
+}
+
+.painel-nutri .btn-adicionar {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #2f6fed;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.painel-nutri .card-refeicao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.painel-nutri .btn-excluir {
+  border: 1px solid #d9534f;
+  background: #fff;
+  color: #d9534f;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
 .painel-nutri .card-refeicao {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -51,9 +91,18 @@
   font-size: 22px;
 }
 
-.painel-nutri .card-refeicao p {
+.painel-nutri .card-refeicao p,
+.painel-nutri .card-refeicao-meta {
   color: var(--text-secondary);
   font-size: 15px;
+}
+
+.painel-nutri .card-refeicao-meta .meta-sep {
+  margin: 0 6px;
+}
+
+.meal-info .meta-sep {
+  margin: 0 6px;
 }
 
 .painel-nutri .painel-direito {

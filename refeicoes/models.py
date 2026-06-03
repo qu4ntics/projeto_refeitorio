@@ -51,14 +51,32 @@ class Refeicao(UUIDModel):
         return f'{self.get_tipo_display()} - {self.data}'
 
     @property
+    def reservas_ativas_count(self):
+        if hasattr(self, 'reservas_ativas'):
+            return self.reservas_ativas
+        return self.reservas.filter(status='ativa').count()
+
+    @property
+    def descricao_exibicao(self):
+        partes = []
+        for prato in self.pratos.all():
+            texto = (prato.descricao or prato.nome).strip()
+            if texto:
+                partes.append(texto)
+        return ' · '.join(partes)
+
+    @property
+    def descricao(self):
+        return self.descricao_exibicao
+
+    @property
     def vagas_disponiveis(self):
-        reservas_ativas = self.reservas.filter(status='ativa').count()
-        return self.limite_vagas - reservas_ativas
+        return self.limite_vagas - self.reservas_ativas_count
 
     def clean(self):
         super().clean()
         if self.pk:
-            reservas_ativas = self.reservas.filter(status='ativa').count()
+            reservas_ativas = self.reservas_ativas_count
             if self.limite_vagas < reservas_ativas:
                 raise ValidationError({
                     'limite_vagas': (
