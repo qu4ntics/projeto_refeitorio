@@ -34,6 +34,11 @@ CSRF_TRUSTED_ORIGINS = ['https://projeto-refeitorio.onrender.com']
 
 AUTH_USER_MODEL = 'accounts.Usuario'
 
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'refeicoes:homepage'  # fallback; login usa redirect por perfil
 LOGOUT_REDIRECT_URL = 'accounts:login'
@@ -129,7 +134,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+#STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

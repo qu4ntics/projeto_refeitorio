@@ -1,25 +1,23 @@
-from django.db import models
-
-# Create your models here.
 from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from reservaif.models import UUIDModel
 
-# Presença única vinculada a uma reserva
-class Presenca(models.Model):
+
+class Presenca(UUIDModel):
     reserva = models.OneToOneField(
         'reservas.Reserva',
         on_delete=models.CASCADE,
-        related_name='presenca'
+        related_name='presenca',
     )
     confirmado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'perfil': 'refeitorio'},
-        related_name='presencas_confirmadas'
+        related_name='presencas_confirmadas',
     )
     compareceu = models.BooleanField()
     confirmado_em = models.DateTimeField(auto_now_add=True)
@@ -28,17 +26,16 @@ class Presenca(models.Model):
         return f'Presença de {self.reserva} - {"Sim" if self.compareceu else "Não"}'
 
 
-# Strike gerado a partir de uma presença, expira em 30 dias
-class Strike(models.Model):
+class Strike(UUIDModel):
     aluno = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='strikes'
+        related_name='strikes',
     )
     presenca = models.OneToOneField(
         Presenca,
         on_delete=models.CASCADE,
-        related_name='strike'
+        related_name='strike',
     )
     aplicado_em = models.DateTimeField(auto_now_add=True)
     expira_em = models.DateTimeField()
@@ -57,13 +54,12 @@ class Strike(models.Model):
         return f'Strike de {self.aluno} até {self.expira_em:%Y-%m-%d %H:%M}'
 
 
-# Configuração ativa de reservas usada pelo sistema
-class ConfigReserva(models.Model):
+class ConfigReserva(UUIDModel):
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'perfil': 'nutricionista'},
-        related_name='configuracoes_criadas'
+        related_name='configuracoes_criadas',
     )
     abertura = models.TimeField()
     encerramento = models.TimeField()
@@ -73,6 +69,7 @@ class ConfigReserva(models.Model):
     class Meta:
         verbose_name = 'Configuração de Reserva'
         verbose_name_plural = 'Configurações de Reserva'
+        ordering = ['-vigente_desde']
 
     def __str__(self):
         return f'Configuração desde {self.vigente_desde:%Y-%m-%d %H:%M}'

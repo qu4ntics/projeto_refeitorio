@@ -1,10 +1,11 @@
 from django.conf import settings
-from django.db import models
 from django.core.exceptions import ValidationError
+from django.db import models
+
+from reservaif.models import UUIDModel
 
 
-# Reserva de refeição feita por um aluno
-class Reserva(models.Model):
+class Reserva(UUIDModel):
     STATUS_CHOICES = [
         ('ativa', 'Ativa'),
         ('cancelada', 'Cancelada'),
@@ -14,13 +15,13 @@ class Reserva(models.Model):
     aluno = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={'perfil': 'aluno', 'bloqueado': False},
-        related_name='reservas'
+        limit_choices_to={'perfil': 'aluno'},
+        related_name='reservas',
     )
     refeicao = models.ForeignKey(
         'refeicoes.Refeicao',
         on_delete=models.CASCADE,
-        related_name='reservas'
+        related_name='reservas',
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ativa')
     reservado_em = models.DateTimeField(auto_now_add=True)
@@ -28,16 +29,16 @@ class Reserva(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['aluno', 'refeicao'], name='unique_reserva_aluno_refeicao'),
+            models.UniqueConstraint(
+                fields=['aluno', 'refeicao'],
+                condition=models.Q(status='ativa'),
+                name='unique_reserva_ativa_aluno_refeicao',
+            ),
         ]
 
     def __str__(self):
         return f'{self.aluno} — {self.refeicao} ({self.status})'
 
     def clean(self):
-        # Comentário: Validação para evitar reservas de usuários bloqueados.
-        # O modelo administrativo.Strike já gerencia os strikes dos alunos,
-        # com expiração automática em 30 dias. Esta validação garante
-        # que contas bloqueadas não façam novas reservas.
         if self.aluno.bloqueado:
             raise ValidationError('Não é possível fazer reservas com uma conta bloqueada.')
