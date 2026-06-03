@@ -10,7 +10,15 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(
-            name='Notificacao',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.DeleteModel(name='Notificacao'),
+            ],
+            database_operations=[
+                migrations.RunSQL(
+                    sql='DROP TABLE IF EXISTS administrativo_notificacao CASCADE;',
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
         ),
     ]
