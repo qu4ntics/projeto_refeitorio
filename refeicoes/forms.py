@@ -7,10 +7,9 @@ from .models import Refeicao
 class RefeicaoForm(forms.ModelForm):
     class Meta:
         model = Refeicao
-        fields = ['data', 'tipo', 'descricao', 'limite_vagas', 'exige_reserva']
+        fields = ['data', 'tipo', 'limite_vagas', 'exige_reserva']
         widgets = {
             'data': forms.DateInput(attrs={'type': 'date'}),
-            'descricao': forms.Textarea(attrs={'rows': 4}),
         }
 
     def clean_data(self):

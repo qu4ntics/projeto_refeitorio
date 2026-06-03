@@ -33,6 +33,11 @@ ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = 'accounts.Usuario'
 
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'refeicoes:homepage'  # fallback; login usa redirect por perfil
 LOGOUT_REDIRECT_URL = 'accounts:login'
