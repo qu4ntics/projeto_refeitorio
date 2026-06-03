@@ -29,7 +29,7 @@ table{
     border-color: black;
 }
 th{
-    background-color: var(--accent);]
+    background-color: var(--accent);
     padding: 10px;
 }
 td{
@@ -44,4 +44,7 @@ td{
 }
 .vazia{
     text-align: center;
+}
+.container-refeitorio i{
+    color: var(--text-primary);
 }
