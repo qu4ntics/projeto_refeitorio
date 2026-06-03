@@ -1,0 +1,113 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Cardápio da Semana{% endblock %}
+
+{% block menu_cardapio %}active{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="cardapio-header">
+  <div class="header-top">
+    <div>
+      <h1>CARDÁPIO</h1>
+      <p class="page-date">Semana de {{ semana_inicio|date:"d" }} a {{ semana_fim|date:"d \d\e F \d\e Y" }}</p>
+    </div>
+    <a href="{% url 'refeicoes:criar' %}" class="btn-nova-refeicao">
+      <i class="fa-solid fa-plus"></i> Nova Refeição
+    </a>
+  </div>
+</div>
+
+<div class="cardapio-divider"></div>
+
+<!-- Loop dos dias da semana -->
+<div class="week-tabs" role="tablist" aria-label="Dias da semana">
+
+  {% for dia in dias_semana %}
+  <button class="week-tab {% if forloop.first %}today-tab active{% endif %}" type="button" role="tab"
+          aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="painel-{{ dia.id }}" id="tab-{{ dia.id }}"
+          data-panel="painel-{{ dia.id }}">
+    {{ dia.id|upper }}
+  </button>
+  {% endfor %}
+
+  <button class="week-tab extra-tab" type="button" role="tab"
+          aria-selected="false" aria-controls="painel-extra" id="tab-extra"
+          data-panel="painel-extra">
+    EXTRA
+  </button>
+
+</div>
+
+{% for dia in dias_semana %}
+<div class="day-panel {% if forloop.first %}active{% endif %}" id="painel-{{ dia.id }}" role="tabpanel" aria-labelledby="tab-{{ dia.id }}">
+
+  <div class="day-label">
+    <span class="day-name">{{ dia.nome }}</span>
+    — {{ dia.data|date:"d \d\e F" }}
+    {% if dia.hoje %}<span class="day-today-badge">HOJE</span>{% endif %}
+  </div>
+
+  {% for refeicao in dia.refeicoes %}
+    <div class="meal-card">
+      <div class="badges">
+        <div class="badge yellow">{{ refeicao.tipo }}</div>
+        {% if refeicao.reservas %}
+          <div class="badge red">{{ refeicao.reservas }} reservas</div>
+        {% endif %}
+      </div>
+      <div class="meal-title">{{ refeicao.descricao }}</div>
+      <div class="meal-footer">
+        <div class="meal-info">{{ refeicao.horario }} — {{ refeicao.local }}</div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="day-empty">
+      <i class="fa-solid fa-bowl-food"></i>
+      <p>Nenhuma refeição cadastrada para este dia.</p>
+    </div>
+  {% endfor %}
+
+</div>
+{% endfor %}
+
+<div class="day-panel extra-panel" id="painel-extra" role="tabpanel" aria-labelledby="tab-extra">
+
+  <div class="day-label">
+    <span class="day-name">{{ dia_extra.nome }}</span>
+    {% if dia_extra.data %}— {{ dia_extra.data|date:"d \d\e F" }}{% endif %}
+    {% if dia_extra.hoje %}<span class="day-today-badge">HOJE</span>{% endif %}
+  </div>
+
+  {% for refeicao in dia_extra.refeicoes %}
+    <div class="meal-card">
+      <div class="badges">
+        <div class="badge yellow">{{ refeicao.tipo }}</div>
+        {% if refeicao.reservas %}
+          <div class="badge red">{{ refeicao.reservas }} reservas</div>
+        {% endif %}
+      </div>
+      <div class="meal-title">{{ refeicao.descricao }}</div>
+      <div class="meal-footer">
+        <div class="meal-info">{{ refeicao.horario }} — {{ refeicao.local }}</div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="day-empty">
+      <i class="fa-solid fa-bowl-food"></i>
+      <p>Nenhuma refeição cadastrada para este dia extra.</p>
+    </div>
+  {% endfor %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/cardapio_semana.js' %}"></script>
+{% endblock %}
