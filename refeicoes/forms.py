@@ -1,18 +1,72 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Prato, Refeicao, RefeicaoPrato
+from .models import Prato, Refeicao
+
+ORDEM_CATEGORIAS = Prato.ORDEM_CATEGORIAS
+
+
+def _label_prato(prato):
+    if prato.descricao:
+        return f'{prato.nome} — {prato.descricao}'
+    return prato.nome
+
+
+def _queryset_pratos_ordenados():
+    return Prato.objects.all().order_by('categoria', 'nome')
+
+
+def pratos_agrupados_por_categoria():
+    grupos = []
+    for cat, label in Prato.CATEGORIAS:
+        pratos = list(Prato.objects.filter(categoria=cat).order_by('nome'))
+        if pratos:
+            grupos.append({'categoria': cat, 'label': label, 'pratos': pratos})
+    return grupos
+
+
+def pratos_catalogo_por_categoria():
+    """Todas as categorias, inclusive vazias — para a tela de catálogo."""
+    return [
+        {
+            'categoria': cat,
+            'label': label,
+            'pratos': list(Prato.objects.filter(categoria=cat).order_by('nome')),
+        }
+        for cat, label in Prato.CATEGORIAS
+    ]
+
+
+class PratoForm(forms.ModelForm):
+    class Meta:
+        model = Prato
+        fields = ['nome', 'descricao', 'categoria']
+        widgets = {
+            'nome': forms.TextInput(attrs={
+                'class': 'campo',
+                'placeholder': 'Ex.: Frango grelhado',
+            }),
+            'descricao': forms.Textarea(attrs={
+                'class': 'campo',
+                'rows': 3,
+                'placeholder': 'Ingredientes ou modo de preparo (opcional)',
+            }),
+            'categoria': forms.Select(attrs={'class': 'campo'}),
+        }
+        labels = {
+            'nome': 'Nome',
+            'descricao': 'Descrição',
+            'categoria': 'Categoria',
+        }
 
 
 class RefeicaoForm(forms.ModelForm):
-    descricao = forms.CharField(
-        label='Descrição do prato',
-        widget=forms.Textarea(attrs={
-            'rows': 4,
-            'class': 'campo',
-            'placeholder': 'Ex.: Arroz, feijão, frango grelhado e salada',
-        }),
+    pratos = forms.ModelMultipleChoiceField(
+        queryset=Prato.objects.none(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'check-prato'}),
         required=True,
+        label='Pratos do cardápio',
+        error_messages={'required': 'Selecione pelo menos um prato.'},
     )
 
     class Meta:
@@ -40,6 +94,13 @@ class RefeicaoForm(forms.ModelForm):
         if not self.is_bound and self.initial.get('limite_vagas') is None:
             self.initial.setdefault('limite_vagas', 180)
 
+        queryset = _queryset_pratos_ordenados()
+        self.fields['pratos'].queryset = queryset
+        choices = []
+        for prato in queryset:
+            choices.append((prato.pk, _label_prato(prato)))
+        self.fields['pratos'].choices = choices
+
     def clean_data(self):
         data = self.cleaned_data.get('data')
         if data and data < timezone.localdate():
@@ -53,6 +114,12 @@ class RefeicaoForm(forms.ModelForm):
         if limite_vagas < 0:
             raise forms.ValidationError('O limite de vagas deve ser igual ou superior a zero.')
         return limite_vagas
+
+    def clean_pratos(self):
+        pratos = self.cleaned_data.get('pratos')
+        if pratos is not None and not pratos:
+            raise forms.ValidationError('Selecione pelo menos um prato.')
+        return pratos
 
     def clean(self):
         cleaned_data = super().clean()
@@ -72,13 +139,6 @@ class RefeicaoForm(forms.ModelForm):
 
     def save(self, commit=True):
         refeicao = super().save(commit=commit)
-        descricao = self.cleaned_data.get('descricao', '').strip()
-        if commit and descricao:
-            nome = descricao.split('\n')[0][:200]
-            prato = Prato.objects.create(
-                nome=nome,
-                descricao=descricao,
-                categoria='principal',
-            )
-            RefeicaoPrato.objects.create(refeicao=refeicao, prato=prato)
+        if commit:
+            refeicao.pratos.set(self.cleaned_data['pratos'])
         return refeicao

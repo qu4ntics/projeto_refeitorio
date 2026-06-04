@@ -12,4 +12,8 @@ urlpatterns = [
     path('nutricionista/', views.nutricionista_lista, name='nutricionista_lista'),
     path('nutricionista/nova/', views.criar_refeicao, name='nutricionista_nova'),
     path('nutricionista/<uuid:pk>/deletar/', views.nutricionista_deletar, name='nutricionista_deletar'),
+    path('pratos/', views.pratos_lista, name='pratos_lista'),
+    path('pratos/novo/', views.prato_criar, name='prato_criar'),
+    path('pratos/<uuid:pk>/editar/', views.prato_editar, name='prato_editar'),
+    path('pratos/<uuid:pk>/excluir/', views.prato_excluir, name='prato_excluir'),
 ]
