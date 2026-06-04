@@ -4,6 +4,21 @@ from django.db import models
 from reservaif.models import UUIDModel
 
 
+class PratoQuerySet(models.QuerySet):
+    def ativos(self):
+        return self.filter(ativo=True)
+
+
+class PratoAtivoManager(models.Manager):
+    def get_queryset(self):
+        return PratoQuerySet(self.model, using=self._db).ativos()
+
+
+class PratoTodosManager(models.Manager):
+    def get_queryset(self):
+        return PratoQuerySet(self.model, using=self._db)
+
+
 class Prato(UUIDModel):
     CATEGORIAS = [
         ('principal', 'Principal'),
@@ -11,11 +26,16 @@ class Prato(UUIDModel):
         ('salada', 'Salada'),
         ('sobremesa', 'Sobremesa'),
     ]
+    ORDEM_CATEGORIAS = [c[0] for c in CATEGORIAS]
 
     nome = models.CharField(max_length=200)
     descricao = models.TextField(blank=True)
     categoria = models.CharField(max_length=20, choices=CATEGORIAS)
+    ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    objects = PratoAtivoManager()
+    all_objects = PratoTodosManager()
 
     class Meta:
         verbose_name = 'Prato'
@@ -24,6 +44,10 @@ class Prato(UUIDModel):
 
     def __str__(self):
         return f'{self.nome} ({self.get_categoria_display()})'
+
+    def excluir_logicamente(self):
+        self.ativo = False
+        self.save(update_fields=['ativo'])
 
 
 class Refeicao(UUIDModel):
@@ -58,11 +82,27 @@ class Refeicao(UUIDModel):
 
     @property
     def descricao_exibicao(self):
-        partes = []
-        for prato in self.pratos.all():
+        pratos = [item.prato for item in self.itens_prato.select_related('prato').all()]
+        if not pratos:
+            return ''
+
+        ordem = {cat: i for i, cat in enumerate(Prato.ORDEM_CATEGORIAS)}
+        pratos.sort(key=lambda p: (ordem.get(p.categoria, 99), p.nome))
+
+        por_categoria = {}
+        for prato in pratos:
             texto = (prato.descricao or prato.nome).strip()
-            if texto:
-                partes.append(texto)
+            if not texto:
+                continue
+            por_categoria.setdefault(prato.categoria, []).append(texto)
+
+        partes = []
+        for cat in Prato.ORDEM_CATEGORIAS:
+            if cat not in por_categoria:
+                continue
+            label = dict(Prato.CATEGORIAS).get(cat, cat)
+            nomes = ', '.join(por_categoria[cat])
+            partes.append(f'{label}: {nomes}')
         return ' · '.join(partes)
 
     @property
