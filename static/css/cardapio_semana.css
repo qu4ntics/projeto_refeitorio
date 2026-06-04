@@ -1,0 +1,240 @@
+
+.cardapio-header {
+  margin-bottom: 1.5rem;
+}
+
+.cardapio-header .header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.cardapio-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.cardapio-header .page-date {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.cardapio-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 1rem 0 1.5rem;
+}
+
+/* TABS DA SEMANA */
+.week-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.75rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.week-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.week-tab {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.week-tab:hover {
+  color: var(--text-primary);
+}
+
+.week-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.week-tab.today-tab {
+  color: var(--accent);
+}
+
+.week-tab.today-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* PAINEL DE DIA */
+.day-panel {
+  display: none;
+}
+
+.day-panel.active {
+  display: block;
+  animation: fadeInPanel 0.18s ease;
+}
+
+@keyframes fadeInPanel {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* RÓTULO DO DIA */
+.day-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.day-label .day-name {
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.day-label .day-today-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ESTADO VAZIO */
+.day-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-light);
+}
+
+.day-empty i {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  display: block;
+  opacity: 0.4;
+}
+
+.day-empty p {
+  font-size: 13px;
+}
+
+/* DIA EXTRA — destaque visual */
+.week-tab.extra-tab {
+  color: var(--warning);
+}
+
+.week-tab.extra-tab.active {
+  border-bottom-color: var(--warning);
+  color: var(--warning);
+}
+
+.day-panel.extra-panel .day-label .day-name {
+  color: var(--warning);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 480px) {
+  .week-tab {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .cardapio-header h1 {
+    font-size: 18px;
+  }
+
+  .cardapio-header .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-nova-refeicao {
+    width: 100%;
+  }
+}
+
+/* BOTÃO NOVA REFEIÇÃO */
+.btn-nova-refeicao {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: var(--primary);
+  border: none;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.btn-nova-refeicao:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-nova-refeicao:active {
+  transform: translateY(0);
+}
+
+/* Card com ações (excluir) */
+.meal-card-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.meal-card-topo .badges {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.meal-card-excluir {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.btn-excluir-refeicao {
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
+  background: transparent;
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-excluir-refeicao:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: var(--danger);
+}

@@ -1,11 +1,17 @@
-from django.db import models
-from django.contrib.auth.models import AbstractUser
+import uuid
 
-class Usuario(AbstractUser): # A classe Usuario herda todos os atributos e métodos de AbstractUser
+from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.db import models
+
+
+class Usuario(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     PERFIS = [
-        ('aluno', 'Aluno'), #CRIA O PERFIL PARA ALUNO
-        ('nutricionista', 'Nutricionista'), #CRIA O PERFIL DO NUTRICIONISTA
-        ('refeitorio', 'Refeitório'),       #PERFIL DO REFEITORIO
+        ('aluno', 'Aluno'),
+        ('nutricionista', 'Nutricionista'),
+        ('refeitorio', 'Refeitório'),
     ]
     TURMAS = [
         ('1', '1º ano Administração'),
@@ -23,5 +29,13 @@ class Usuario(AbstractUser): # A classe Usuario herda todos os atributos e méto
     ]
     perfil = models.CharField(max_length=20, choices=PERFIS, default='aluno')
     email = models.EmailField(unique=True)
-    turma = models.CharField(max_length=50, choices=TURMAS)
+    turma = models.CharField(max_length=50, choices=TURMAS, blank=True, default='')
     bloqueado = models.BooleanField(default=False)
+
+    def clean(self):
+        super().clean()
+        if self.perfil == 'aluno' and not self.turma:
+            raise ValidationError({'turma': 'Turma é obrigatória para alunos.'})
+
+    def __str__(self):
+        return self.get_full_name() or self.username
