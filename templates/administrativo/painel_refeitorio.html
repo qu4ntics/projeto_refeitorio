@@ -1,10 +1,47 @@
 {% extends "base/base.html" %}
+{% load static %}
 
 {% block title %}Painel Refeitório{% endblock %}
 
 {% block menu_painel_ref %}active{% endblock %}
 
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/painel-nutricionista.css' %}">
+{% endblock %}
+
 {% block content %}
-  <h1>Painel do Refeitório</h1>
-  <p>Área para chamada e confirmação de presenças.</p>
+<div class="painel-nutri">
+    <section class="cards-topo">
+      <div class="card-pequeno"></div>
+      <div class="card-pequeno"></div>
+      <div class="card-pequeno"></div>
+      <div class="card-pequeno"></div>
+    </section>
+
+    <section class="secao-refeicoes">
+      <div class="lado-esquerdo">
+        <h2>REFEIÇÕES DESTA SEMANA</h2>
+
+        <div class="card-refeicao">
+          <span class="tag-refeicao">[Tipo refeição]</span>
+          <h3>[Refeição]</h3>
+          <p>[Hora] - [Local]</p>
+        </div>
+
+        <div class="card-refeicao">
+          <span class="tag-refeicao">Lanche</span>
+          <h3>Fruta e iogurte</h3>
+          <p>15h00 - pátio principal</p>
+        </div>
+
+        <div class="card-refeicao">
+          <span class="tag-refeicao">Almoço</span>
+          <h3>Feijão, Arroz e peixe</h3>
+          <p>12:30 - Refeitório</p>
+        </div>
+      </div>
+
+      <div class="painel-direito"></div>
+    </section>
+  </div>
 {% endblock %}

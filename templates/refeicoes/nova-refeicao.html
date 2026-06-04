@@ -7,6 +7,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pratos-style.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -49,10 +50,39 @@
           </div>
         </div>
 
-        <div class="campo-grupo {% if form.descricao.errors %}has-error{% endif %}">
-          {{ form.descricao.label_tag }}
-          {{ form.descricao }}
-          {% for error in form.descricao.errors %}
+        <div class="campo-grupo {% if form.pratos.errors %}has-error{% endif %}">
+          <label>{{ form.pratos.label }}</label>
+          {% if pratos_por_categoria %}
+            <div class="pratos-selecao">
+              {% for grupo in pratos_por_categoria %}
+                <fieldset class="pratos-grupo">
+                  <legend>{{ grupo.label }}</legend>
+                  <ul class="pratos-lista-check">
+                    {% for prato in grupo.pratos %}
+                      <li>
+                        <label class="prato-check-label">
+                          <input type="checkbox" name="pratos" value="{{ prato.pk }}"
+                            class="check-prato"
+                            {% if prato.pk|stringformat:"s" in pratos_selecionados %}checked{% endif %}>
+                          <span class="prato-check-nome">{{ prato.nome }}</span>
+                          {% if prato.descricao %}
+                            <span class="prato-check-desc">{{ prato.descricao }}</span>
+                          {% endif %}
+                        </label>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </fieldset>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="pratos-vazio">
+              Nenhum prato cadastrado.
+              <a href="{% url 'refeicoes:prato_criar' %}">Cadastre pratos</a>
+              antes de montar a refeição.
+            </p>
+          {% endif %}
+          {% for error in form.pratos.errors %}
             <span class="form-error">{{ error }}</span>
           {% endfor %}
         </div>
