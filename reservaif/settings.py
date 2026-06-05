@@ -32,6 +32,10 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ['https://projeto-refeitorio.onrender.com']
 
+# Configurações de Segurança
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
 AUTH_USER_MODEL = 'accounts.Usuario'
 
 AUTHENTICATION_BACKENDS = [

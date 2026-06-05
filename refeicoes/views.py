@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -55,9 +56,31 @@ def _montar_dias_semana(refeicoes):
 
 @perfil_required('aluno')
 def homepage(request):
-    return render(request, 'refeicoes/homepage.html')
+    hoje = timezone.localdate()
+    # Buscamos as refeições de hoje até os próximos 3 dias para popular as abas
+    refeicoes = _queryset_refeicoes_periodo(hoje, hoje + timedelta(days=3))
+    
+    # Mapeamos as reservas ativas do aluno para essas refeições (refeicao_id -> reserva_id)
+    from reservas.models import Reserva
+    reservas_ativas = {
+        res.refeicao_id: res.id 
+        for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=refeicoes)
+    }
 
+    dias_semana = _montar_dias_semana(refeicoes)
+    
+    # Vinculamos o ID da reserva à refeição para uso no template
+    for dia in dias_semana:
+        for refeicao in dia['refeicoes']:
+            refeicao.reserva_id = reservas_ativas.get(refeicao.id)
 
+    return render(request, 'refeicoes/homepage.html', {
+        'dias_semana': dias_semana,
+        'hoje': hoje
+    })
+
+@login_required
+@perfil_required('refeitorio')
 def lista_presenca(request):
     from datetime import date
     from django.db.models import Q

@@ -1,3 +1,184 @@
+from datetime import date, time, timedelta
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+from django.contrib.messages import get_messages
+from accounts.models import Usuario
+from refeicoes.models import Refeicao
+from administrativo.models import ConfigReserva
+from .models import Reserva
 
-# Create your tests here.
+class ReservaViewTests(TestCase):
+    def setUp(self):
+        # Criar usuário aluno
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_teste',
+            email='aluno@teste.com',
+            password='password123',
+            perfil='aluno',
+            bloqueado=False
+        )
+        self.client.login(username='aluno_teste', password='password123')
+
+        # Criar uma refeição padrão para amanhã (para cair dentro da janela de reserva)
+        self.amanha = timezone.localdate() + timedelta(days=1)
+        self.refeicao = Refeicao.objects.create(
+            data=self.amanha,
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True
+        )
+
+        # Configuração de janela (Abre 00:00 do dia anterior, fecha 23:59 do dia da refeição)
+        self.config = ConfigReserva.objects.create(
+            abertura=time(0, 0, 1),
+            encerramento=time(23, 59, 59),
+            minutos_cancelamento=60,
+            vigente_desde=timezone.now(),
+            criado_por=Usuario.objects.create_user(
+                username='nutri', 
+                email='nutri@teste.com', 
+                perfil='nutricionista'
+            )
+        )
+
+    def test_reserva_sucesso(self):
+        """Garante que uma reserva válida é criada com sucesso."""
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 1)
+        self.assertRedirects(response, reverse('refeicoes:homepage'))
+        
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("sucesso" in str(m).lower() for m in messages))
+
+    def test_validacao_aluno_bloqueado(self):
+        """Validação 1: Aluno bloqueado não pode reservar."""
+        self.aluno.bloqueado = True
+        self.aluno.save()
+
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 0)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("bloqueada" in str(m).lower() for m in messages))
+
+    def test_validacao_refeicao_sem_reserva(self):
+        """Validação 2: Refeição que não exige reserva não gera objeto Reserva."""
+        self.refeicao.exige_reserva = False
+        self.refeicao.save()
+
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 0)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("apenas informativa" in str(m).lower() for m in messages))
+
+    def test_validacao_janela_fechada(self):
+        """Validação 3: Barrar reserva fora do horário (Simulando encerramento no passado)."""
+        # Alteramos a configuração para fechar às 00:01 do dia da refeição
+        # Como a refeição é amanhã, e agora é hoje, ainda estaria aberta. 
+        # Para testar o erro, colocamos a refeição para HOJE e o encerramento em um horário que já passou.
+        self.refeicao.data = timezone.localdate()
+        self.refeicao.save()
+        
+        self.config.encerramento = time(0, 0, 1) # Encerrou no primeiro segundo do dia
+        self.config.save()
+
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 0)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("fora da janela" in str(m).lower() for m in messages))
+
+    def test_validacao_vagas_esgotadas(self):
+        """Validação 4: Barrar reserva se não houver mais vagas."""
+        self.refeicao.limite_vagas = 0
+        self.refeicao.save()
+
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 0)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("esgotadas" in str(m).lower() for m in messages))
+
+    def test_validacao_reserva_duplicada(self):
+        """Validação 5: Aluno não pode reservar a mesma refeição duas vezes."""
+        # Cria a primeira reserva
+        Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
+        
+        # Tenta criar a segunda via POST
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        # Deve continuar existindo apenas 1 reserva
+        self.assertEqual(Reserva.objects.filter(aluno=self.aluno, refeicao=self.refeicao).count(), 1)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("já possui uma reserva ativa" in str(m).lower() for m in messages))
+
+    def test_cancelamento_sucesso(self):
+        """Garante que o aluno pode cancelar sua própria reserva dentro do prazo."""
+        reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
+        
+        response = self.client.post(reverse('reservas:cancelar_reserva', args=[reserva.id]))
+        
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.status, 'cancelada')
+        self.assertIsNotNone(reserva.cancelado_em)
+        self.assertRedirects(response, reverse('refeicoes:homepage'))
+        
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("cancelada com sucesso" in str(m).lower() for m in messages))
+
+    def test_cancelamento_fora_do_prazo(self):
+        """Regra 3.2: Bloquear cancelamento após o prazo limite (config.minutos_cancelamento)."""
+        # Simulamos que a refeição é hoje
+        agora = timezone.now()
+        self.refeicao.data = agora.date()
+        self.refeicao.save()
+        
+        # Definimos o encerramento para agora. Como o limite de cancelamento é 60min antes, 
+        # qualquer tentativa agora deve ser barrada.
+        self.config.encerramento = agora.time()
+        self.config.save()
+        
+        reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
+        response = self.client.post(reverse('reservas:cancelar_reserva', args=[reserva.id]))
+        
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.status, 'ativa') # Não deve mudar para cancelada
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("não é mais possível cancelar" in str(m).lower() for m in messages))
+
+    def test_cancelamento_reserva_alheia(self):
+        """Segurança: Um aluno não pode cancelar a reserva de outro (deve retornar 404)."""
+        outro_aluno = Usuario.objects.create_user(
+            username='outro_aluno', 
+            email='outro@teste.com', 
+            password='123', 
+            perfil='aluno'
+        )
+        reserva_alheia = Reserva.objects.create(aluno=outro_aluno, refeicao=self.refeicao, status='ativa')
+        
+        response = self.client.post(reverse('reservas:cancelar_reserva', args=[reserva_alheia.id]))
+        
+        self.assertEqual(response.status_code, 404)
+
+    def test_seguranca_aluno_nao_acessa_lista_presenca(self):
+        """Segurança: Aluno tentando acessar lista de presença deve receber 403."""
+        # Testando a rota do app refeicoes que está protegida
+        url = reverse('refeicoes:lista-presenca')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_seguranca_aluno_nao_deleta_refeicao(self):
+        """Segurança: Aluno tentando deletar uma refeição deve receber 403."""
+        url = reverse('refeicoes:nutricionista_deletar', args=[self.refeicao.id])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_integridade_reserva_refeicao_inexistente(self):
+        """Integridade: Tentar reservar um UUID que não existe deve retornar 404."""
+        import uuid
+        url = reverse('reservas:criar_reserva', args=[uuid.uuid4()])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 404)

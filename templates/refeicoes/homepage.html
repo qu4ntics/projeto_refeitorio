@@ -7,36 +7,48 @@
 
 {% block content %}
   <h1>CARDÁPIO</h1>
-  <div class="date">[Dia], [Data do mes]</div>
+  <div class="date">{{ hoje|date:"l, d \d\e F" }}</div>
   <div class="line"></div>
 
   <div class="tabs">
-    <button class="tab active" type="button">HOJE</button>
-    <button class="tab" type="button">AMANHÃ</button>
-    <button class="tab" type="button">DEPOIS</button>
+    {% for dia in dias_semana %}
+      <button class="tab {% if dia.hoje %}active{% endif %}" type="button">{{ dia.nome|upper }}</button>
+    {% endfor %}
   </div>
 
-  <div class="today">Hoje — 20 de maio</div>
+  {% for dia in dias_semana %}
+    <div class="day-section {% if not dia.hoje %}d-none{% endif %}">
+      <div class="today">{{ dia.nome }} — {{ dia.data|date:"d \d\e F" }}</div>
 
-  <div class="meal-card">
-    <div class="badges">
-      <div class="badge yellow">Lanche da manhã</div>
+      {% for refeicao in dia.refeicoes %}
+        <div class="meal-card">
+          <div class="badges">
+            <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
+            {% if refeicao.exige_reserva %}
+              <div class="badge red">{{ refeicao.vagas_disponiveis }} vagas restantes</div>
+            {% endif %}
+          </div>
+          <div class="meal-title">{{ refeicao.descricao_exibicao }}</div>
+          <div class="meal-footer">
+            <div class="meal-info">Refeitório</div>
+            {% if refeicao.exige_reserva %}
+              {% if refeicao.reserva_id %}
+                <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post">
+                  {% csrf_token %}
+                  <button class="reserve-btn" type="submit" style="background-color: #dc3545;">CANCELAR</button>
+                </form>
+              {% else %}
+                <form action="{% url 'reservas:criar_reserva' refeicao.id %}" method="post">
+                  {% csrf_token %}
+                  <button class="reserve-btn" type="submit">RESERVAR</button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p>Nenhuma refeição cadastrada para este dia.</p>
+      {% endfor %}
     </div>
-    <div class="meal-title">Fruta e iogurte</div>
-    <div class="meal-footer">
-      <div class="meal-info">15h00 - pátio principal</div>
-    </div>
-  </div>
-
-  <div class="meal-card">
-    <div class="badges">
-      <div class="badge yellow">Almoço</div>
-      <div class="badge red">182 reservas</div>
-    </div>
-    <div class="meal-title">Arroz, feijão, frango grelhado e salada</div>
-    <div class="meal-footer">
-      <div class="meal-info">11h30 até 13h00 - Refeitório</div>
-      <button class="reserve-btn" type="button">RESERVAR</button>
-    </div>
-  </div>
+  {% endfor %}
 {% endblock %}
