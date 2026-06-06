@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.decorators import perfil_required
+from accounts.views import REDIRECT_POR_PERFIL
 from administrativo.models import ConfigReserva
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
@@ -54,41 +55,46 @@ def _montar_dias_semana(refeicoes):
     ]
 
 
-@perfil_required('aluno')
+@login_required
 def homepage(request):
-    hoje = timezone.localdate()
-    # Buscamos as refeições de hoje até os próximos 3 dias para popular as abas
-    refeicoes = _queryset_refeicoes_periodo(hoje, hoje + timedelta(days=3))
-    
-    # Mapeamos as reservas ativas do aluno para essas refeições (refeicao_id -> reserva_id)
+    if request.user.perfil != 'aluno':
+        url_name = REDIRECT_POR_PERFIL.get(request.user.perfil, 'refeicoes:homepage')
+        return redirect(url_name)
+
+    hoje, segunda, _ = _semana_atual()
+    semana_fim = segunda + timedelta(days=4)
+
+    refeicoes = _queryset_refeicoes_periodo(segunda, semana_fim)
+
     from reservas.models import Reserva
     reservas_ativas = {
-        res.refeicao_id: res.id 
+        res.refeicao_id: res.id
         for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=refeicoes)
     }
 
     dias_semana = _montar_dias_semana(refeicoes)
-    
-    # Vinculamos o ID da reserva à refeição para uso no template
+    tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'])
+
     for dia in dias_semana:
         for refeicao in dia['refeicoes']:
             refeicao.reserva_id = reservas_ativas.get(refeicao.id)
 
     return render(request, 'refeicoes/homepage.html', {
         'dias_semana': dias_semana,
-        'hoje': hoje
+        'semana_inicio': segunda,
+        'semana_fim': semana_fim,
+        'tab_inicial': tab_inicial,
     })
 
 @login_required
 @perfil_required('refeitorio')
 def lista_presenca(request):
-    from datetime import date
     from django.db.models import Q
     from reservas.models import Reserva
 
     pesquisa = request.GET.get('search', '').strip()
     reservas = (
-        Reserva.objects.filter(refeicao__data=date.today())
+        Reserva.objects.filter(refeicao__data=timezone.localdate())
         .select_related('aluno', 'refeicao')
         .prefetch_related('refeicao__itens_prato__prato')
     )
@@ -103,7 +109,7 @@ def lista_presenca(request):
  
 @perfil_required('nutricionista')
 def cardapio_semana(request):
-    hoje = date.today()
+    hoje = timezone.localdate()
     segunda = hoje - timedelta(days=hoje.weekday())
     semana_fim = segunda + timedelta(days=4)
 
