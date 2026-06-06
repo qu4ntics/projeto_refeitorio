@@ -521,6 +521,15 @@ body.sidebar-open {
   transform: none;
 }
 
+.reserve-btn--cancel {
+  background: var(--danger);
+  color: #fff;
+}
+
+.reserve-btn--cancel:hover {
+  background: color-mix(in srgb, var(--danger) 85%, #000);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

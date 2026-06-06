@@ -5,38 +5,58 @@
 
 {% block menu_cardapio %}active{% endblock %}
 
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+{% endblock %}
+
 {% block content %}
-  <h1>CARDÁPIO</h1>
-  <div class="date">[Dia], [Data do mes]</div>
-  <div class="line"></div>
 
-  <div class="tabs">
-    <button class="tab active" type="button">HOJE</button>
-    <button class="tab" type="button">AMANHÃ</button>
-    <button class="tab" type="button">DEPOIS</button>
-  </div>
-
-  <div class="today">Hoje — 20 de maio</div>
-
-  <div class="meal-card">
-    <div class="badges">
-      <div class="badge yellow">Lanche da manhã</div>
-    </div>
-    <div class="meal-title">Fruta e iogurte</div>
-    <div class="meal-footer">
-      <div class="meal-info">15h00 - pátio principal</div>
+<div class="cardapio-header">
+  <div class="header-top">
+    <div>
+      <h1>CARDÁPIO</h1>
+      <p class="page-date">Semana de {{ semana_inicio|date:"d" }} a {{ semana_fim|date:"d \d\e F \d\e Y" }}</p>
     </div>
   </div>
+</div>
 
-  <div class="meal-card">
-    <div class="badges">
-      <div class="badge yellow">Almoço</div>
-      <div class="badge red">182 reservas</div>
+<div class="cardapio-divider"></div>
+
+<div class="week-tabs week-tabs--full" role="tablist" aria-label="Dias da semana">
+  {% for dia in dias_semana %}
+    <button class="week-tab {% if dia.hoje %}today-tab{% endif %} {% if dia.id == tab_inicial %}active{% endif %}"
+            type="button" role="tab"
+            aria-selected="{% if dia.id == tab_inicial %}true{% else %}false{% endif %}"
+            aria-controls="painel-{{ dia.id }}" id="tab-{{ dia.id }}"
+            data-panel="painel-{{ dia.id }}">
+      {{ dia.nome|upper }}
+    </button>
+  {% endfor %}
+</div>
+
+{% for dia in dias_semana %}
+  <div class="day-panel {% if dia.id == tab_inicial %}active{% endif %}"
+       id="painel-{{ dia.id }}" role="tabpanel" aria-labelledby="tab-{{ dia.id }}">
+
+    <div class="day-label">
+      <span class="day-name">{{ dia.nome }}</span>
+      — {{ dia.data|date:"d \d\e F" }}
+      {% if dia.hoje %}<span class="day-today-badge">HOJE</span>{% endif %}
     </div>
-    <div class="meal-title">Arroz, feijão, frango grelhado e salada</div>
-    <div class="meal-footer">
-      <div class="meal-info">11h30 até 13h00 - Refeitório</div>
-      <button class="reserve-btn" type="button">RESERVAR</button>
-    </div>
+
+    {% for refeicao in dia.refeicoes %}
+      {% include "refeicoes/_meal_card_aluno.html" with refeicao=refeicao %}
+    {% empty %}
+      <div class="day-empty">
+        <i class="fa-solid fa-bowl-food"></i>
+        <p>Nenhuma refeição cadastrada para este dia.</p>
+      </div>
+    {% endfor %}
   </div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/cardapio_semana.js' %}"></script>
 {% endblock %}
