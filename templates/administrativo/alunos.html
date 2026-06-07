@@ -1,0 +1,112 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Alunos — ReservaIF{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/alunos.css' %}">
+{% endblock %}
+
+{% block menu_alunos %}active{% endblock %}
+
+{% block content %}
+<div class="alunos-page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Alunos</h1>
+      <p class="page-subtitle">Visualize e gerencie os alunos por turma.</p>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filtros-bar">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="input-busca" placeholder="Pesquisar por nome ou e-mail...">
+    </div>
+
+    <div class="filtros-direita">
+      <select id="filtro-turma">
+        <option value="">Todas as turmas</option>
+        <option value="1">1º ano Administração</option>
+        <option value="2">2º ano Administração</option>
+        <option value="3">3º ano Administração</option>
+        <option value="4">1º ano Agropecuária</option>
+        <option value="5">2º ano Agropecuária</option>
+        <option value="6">3º ano Agropecuária</option>
+        <option value="7">1º ano Informática</option>
+        <option value="8">2º ano Informática</option>
+        <option value="9">3º ano Informática</option>
+        <option value="10">1º ano Mineração</option>
+        <option value="11">2º ano Mineração</option>
+        <option value="12">3º ano Mineração</option>
+      </select>
+
+      <button id="btn-somente-bloqueados" class="btn-filtro-toggle" data-ativo="false">
+        <i class="fa-solid fa-lock"></i>
+        Somente bloqueados
+      </button>
+    </div>
+  </div>
+
+  <!--LOADING-->
+  <div id="estado-loading" class="estado-vazio" hidden>
+    <i class="fa-solid fa-circle-notch fa-spin"></i>
+    <p>Carregando alunos...</p>
+  </div>
+
+  <!--SE VAZIO-->
+  <div id="estado-vazio" class="estado-vazio" hidden>
+    <i class="fa-solid fa-users-slash"></i>
+    <p>Nenhum aluno encontrado.</p>
+  </div>
+
+  <!--SE ERRO-->
+  <div id="estado-erro" class="estado-vazio estado-erro" hidden>
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <p>Erro ao carregar dados. Tente novamente.</p>
+    <button class="btn btn-outline" onclick="carregarAlunos()">Tentar novamente</button>
+  </div>
+
+  <!-- TABELA -->
+  <div id="tabela-wrapper" class="tabela-wrapper">
+    <div class="tabela-header">
+      <span>ALUNO</span>
+      <span>E-MAIL</span>
+      <span>TURMA</span>
+      <span>STRIKES</span>
+      <span>STATUS</span>
+      <span>AÇÕES</span>
+    </div>
+    <div id="tabela-body">
+    
+    </div>
+  </div>
+
+</div>
+
+<!--CONFIRMAÇÃO -->
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-icon">
+      <i class="fa-solid fa-lock-open"></i>
+    </div>
+    <h2>Desbloquear aluno?</h2>
+    <p id="modal-desc">O aluno voltará a ter acesso normalmente à plataforma.</p>
+    <div class="modal-acoes">
+      <button class="btn btn-outline" id="btn-cancelar-modal">Cancelar</button>
+      <button class="btn btn-accent" id="btn-confirmar-desbloqueio">
+        <i class="fa-solid fa-lock-open"></i> Desbloquear
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast" hidden></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/alunos.js' %}"></script>
+{% endblock %}
