@@ -5,7 +5,7 @@ from .models import Reserva
 class ReservaAdmin(admin.ModelAdmin):
     list_display = ('aluno', 'refeicao', 'status', 'reservado_em')
     list_filter = ('status', 'refeicao__data', 'refeicao__tipo')
-    search_fields = ('aluno__username', 'aluno__first_name', 'aluno__last_name', 'aluno__turma')
+    search_fields = ('aluno__username', 'aluno__first_name', 'aluno__last_name', 'aluno__turma__nome')
     readonly_fields = ('reservado_em', 'cancelado_em')
     
     def get_queryset(self, request):

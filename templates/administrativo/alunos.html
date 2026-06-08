@@ -28,18 +28,9 @@
     <div class="filtros-direita">
       <select id="filtro-turma">
         <option value="">Todas as turmas</option>
-        <option value="1">1º ano Administração</option>
-        <option value="2">2º ano Administração</option>
-        <option value="3">3º ano Administração</option>
-        <option value="4">1º ano Agropecuária</option>
-        <option value="5">2º ano Agropecuária</option>
-        <option value="6">3º ano Agropecuária</option>
-        <option value="7">1º ano Informática</option>
-        <option value="8">2º ano Informática</option>
-        <option value="9">3º ano Informática</option>
-        <option value="10">1º ano Mineração</option>
-        <option value="11">2º ano Mineração</option>
-        <option value="12">3º ano Mineração</option>
+        {% for turma in turmas %}
+          <option value="{{ turma.id }}">{{ turma.nome }}</option>
+        {% endfor %}
       </select>
 
       <button id="btn-somente-bloqueados" class="btn-filtro-toggle" data-ativo="false">

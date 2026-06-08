@@ -32,7 +32,7 @@
 
     <div class="user-top">
       <span>Olá, {{ user.first_name|default:user.username }}
-        {% if user.perfil == 'aluno' %} - {{ user.get_turma_display }}{% endif %}
+        {% if user.perfil == 'aluno' and user.turma %} - {{ user.turma.nome }}{% endif %}
       </span>
 
       {% if user.perfil == 'nutricionista' %}
@@ -71,7 +71,7 @@
         <h2>{{ user.get_full_name|default:user.username }}</h2>
 
         {% if user.perfil == 'aluno' %}
-          <p>{{ user.get_turma_display }}</p>
+          <p>{{ user.turma.nome }}</p>
           <div class="strike-area">
             <div class="strike-top">
               <span>strikes ativos</span>
@@ -131,6 +131,10 @@
           <a href="{% url 'administrativo:alunos' %}" class="menu-item {% block menu_alunos %}{% endblock %}">
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
+          </a>
+          <a href="{% url 'administrativo:turmas_lista' %}" class="menu-item {% block menu_turmas %}{% endblock %}">
+            <i class="fa-solid fa-users-rectangle"></i>
+            <span>TURMAS</span>
           </a>
           <a href="#" class="menu-item {% block menu_bloqueados %}{% endblock %}">
             <i class="fa-solid fa-lock"></i>

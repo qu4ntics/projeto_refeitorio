@@ -1,3 +1,71 @@
+from django.contrib.messages import get_messages
 from django.test import TestCase
+from django.urls import reverse
 
-# Create your tests here.
+from accounts.models import Usuario
+from .models import Turma
+
+
+class TurmaCRUDTests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri',
+            email='nutri@test.com',
+            password='senha123',
+            perfil='nutricionista',
+        )
+        self.turma = Turma.objects.create(
+            nome='2º ano Administração',
+            turno='vespertino',
+            dias_contraturno=[4],
+        )
+        self.client.login(username='nutri', password='senha123')
+
+    def test_lista_turmas_requer_nutricionista(self):
+        response = self.client.get(reverse('administrativo:turmas_lista'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '2º ano Administração')
+
+    def test_aluno_nao_acessa_crud_turmas(self):
+        aluno = Usuario.objects.create_user(
+            username='aluno',
+            email='aluno@test.com',
+            password='senha123',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        self.client.logout()
+        self.client.login(username='aluno', password='senha123')
+        response = self.client.get(reverse('administrativo:turmas_lista'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_criar_turma(self):
+        response = self.client.post(reverse('administrativo:turma_criar'), {
+            'nome': 'Turma teste contraturno',
+            'turno': 'noturno',
+            'dias_contraturno': ['1', '3'],
+            'ativo': True,
+        })
+        self.assertRedirects(response, reverse('administrativo:turmas_lista'))
+        turma = Turma.objects.get(nome='Turma teste contraturno')
+        self.assertEqual(turma.dias_contraturno, [1, 3])
+
+    def test_excluir_turma_sem_alunos(self):
+        turma_vazia = Turma.objects.create(nome='Turma vazia', turno='matutino')
+        response = self.client.post(reverse('administrativo:turma_excluir', args=[turma_vazia.id]))
+        self.assertRedirects(response, reverse('administrativo:turmas_lista'))
+        self.assertFalse(Turma.objects.filter(pk=turma_vazia.id).exists())
+
+    def test_excluir_turma_com_alunos_bloqueado(self):
+        Usuario.objects.create_user(
+            username='aluno_turma',
+            email='aluno_turma@test.com',
+            password='senha123',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        response = self.client.post(reverse('administrativo:turma_excluir', args=[self.turma.id]))
+        self.assertRedirects(response, reverse('administrativo:turmas_lista'))
+        self.assertTrue(Turma.objects.filter(pk=self.turma.id).exists())
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('alunos vinculados' in str(m).lower() for m in messages))

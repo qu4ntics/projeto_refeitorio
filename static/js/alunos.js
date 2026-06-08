@@ -1,18 +1,3 @@
-const TURMAS = {
-  '1':  '1º Administração',
-  '2':  '2º Administração',
-  '3':  '3º Administração',
-  '4':  '1º Agropecuária',
-  '5':  '2º Agropecuária',
-  '6':  '3º Agropecuária',
-  '7':  '1º Informática',
-  '8':  '2º Informática',
-  '9':  '3º Informática',
-  '10': '1º Mineração',
-  '11': '2º Mineração',
-  '12': '3º Mineração',
-};
-
 const CORES_AVATAR = ['av-verde', 'av-roxo', 'av-azul', 'av-laranja', 'av-rosa', 'av-ciano'];
 
 let todosAlunos = [];
@@ -63,7 +48,7 @@ function aplicarFiltros() {
 
   const filtrados = todosAlunos.filter(a => {
     const matchBusca = !busca || a.nome_completo.toLowerCase().includes(busca) || a.email.toLowerCase().includes(busca);
-    const matchTurma = !turma || a.turma === TURMAS[turma];
+    const matchTurma = !turma || a.turma_id === turma;
     const matchBloc  = !soBloqueados || a.bloqueado;
     return matchBusca && matchTurma && matchBloc;
   });
