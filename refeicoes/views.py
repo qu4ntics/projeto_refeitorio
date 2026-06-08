@@ -95,14 +95,14 @@ def lista_presenca(request):
     pesquisa = request.GET.get('search', '').strip()
     reservas = (
         Reserva.objects.filter(refeicao__data=timezone.localdate())
-        .select_related('aluno', 'refeicao')
+        .select_related('aluno', 'aluno__turma', 'refeicao')
         .prefetch_related('refeicao__itens_prato__prato')
     )
     if pesquisa:
         reservas = reservas.filter(
             Q(aluno__first_name__icontains=pesquisa)
             | Q(aluno__last_name__icontains=pesquisa)
-            | Q(aluno__turma__icontains=pesquisa)
+            | Q(aluno__turma__nome__icontains=pesquisa)
         )
 
     return render(request, 'refeicoes/lista-presenca.html', {'reservas': reservas, 'pesquisa': pesquisa})

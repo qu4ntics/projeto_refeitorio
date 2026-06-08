@@ -11,6 +11,14 @@ from administrativo.models import ConfigReserva
 from refeicoes.models import Refeicao
 from .models import Reserva
 
+
+def _datetime_local(data, hora):
+    return timezone.make_aware(
+        datetime.combine(data, hora),
+        timezone.get_current_timezone(),
+    )
+
+
 @login_required
 @perfil_required('aluno')
 @transaction.atomic
@@ -35,10 +43,10 @@ def criar_reserva(request, refeicao_id):
     # 3. Validação: Janela de reserva
     config = ConfigReserva.get_config_ativa()
     if config:
-        agora = timezone.now()
-        data_abertura = refeicao.data - timezone.timedelta(days=1)
-        inicio_janela = timezone.make_aware(datetime.combine(data_abertura, config.abertura))
-        fim_janela = timezone.make_aware(datetime.combine(refeicao.data, config.encerramento))
+        agora = timezone.localtime()
+        data_abertura = refeicao.data - timedelta(days=1)
+        inicio_janela = _datetime_local(data_abertura, config.abertura)
+        fim_janela = _datetime_local(refeicao.data, config.encerramento)
 
         if not (inicio_janela <= agora <= fim_janela):
             messages.warning(
@@ -79,9 +87,8 @@ def cancelar_reserva(request, reserva_id):
     
     config = ConfigReserva.get_config_ativa()
     if config:
-        agora = timezone.now()
-        # Prazo limite: encerramento da janela menos os minutos de cancelamento configurados
-        encerramento = timezone.make_aware(datetime.combine(refeicao.data, config.encerramento))
+        agora = timezone.localtime()
+        encerramento = _datetime_local(refeicao.data, config.encerramento)
         limite_cancelamento = encerramento - timedelta(minutes=config.minutos_cancelamento)
         
         if agora > limite_cancelamento:
@@ -106,15 +113,14 @@ def lista_presenca(request):
     # Busca reservas ativas ou concluídas de hoje, trazendo o Usuário e a Refeição juntos
     reservas = Reserva.objects.filter(
         refeicao__data=hoje
-    ).exclude(status='cancelada').select_related('aluno', 'refeicao')
+    ).exclude(status='cancelada').select_related('aluno', 'aluno__turma', 'refeicao')
 
-    # Filtro de pesquisa por Nome, Sobrenome ou código da Turma
     pesquisa = request.GET.get('search')
     if pesquisa:
         reservas = reservas.filter(
-            Q(aluno__first_name__icontains=pesquisa) | 
-            Q(aluno__last_name__icontains=pesquisa) |
-            Q(aluno__turma__icontains=pesquisa)
+            Q(aluno__first_name__icontains=pesquisa)
+            | Q(aluno__last_name__icontains=pesquisa)
+            | Q(aluno__turma__nome__icontains=pesquisa)
         )
 
     return render(request, 'refeitorio/lista_presenca.html', {

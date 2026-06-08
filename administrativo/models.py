@@ -7,6 +7,45 @@ from django.utils import timezone
 from reservaif.models import UUIDModel
 
 
+class Turma(UUIDModel):
+    TURNOS = [
+        ('matutino', 'Matutino'),
+        ('vespertino', 'Vespertino'),
+        ('noturno', 'Noturno'),
+    ]
+    DIAS_SEMANA = [
+        (0, 'Segunda-feira'),
+        (1, 'Terça-feira'),
+        (2, 'Quarta-feira'),
+        (3, 'Quinta-feira'),
+        (4, 'Sexta-feira'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
+    ]
+
+    nome = models.CharField('Nome', max_length=100)
+    turno = models.CharField('Turno', max_length=20, choices=TURNOS, default='matutino')
+    dias_contraturno = models.JSONField(
+        'Dias de contraturno',
+        default=list,
+        blank=True,
+        help_text='Dias da semana (0=segunda … 6=domingo) em que a turma possui contraturno.',
+    )
+    ativo = models.BooleanField('Ativa', default=True)
+
+    class Meta:
+        ordering = ['nome']
+        verbose_name = 'Turma'
+        verbose_name_plural = 'Turmas'
+
+    def __str__(self):
+        return self.nome
+
+    def dias_contraturno_display(self):
+        labels = dict(self.DIAS_SEMANA)
+        return ', '.join(labels[d] for d in sorted(self.dias_contraturno or []) if d in labels)
+
+
 class Presenca(UUIDModel):
     reserva = models.OneToOneField(
         'reservas.Reserva',

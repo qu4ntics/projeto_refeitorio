@@ -1,0 +1,81 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Turmas — ReservaIF{% endblock %}
+
+{% block menu_turmas %}active{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/turmas.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="turmas-page">
+    <div class="turmas-card">
+      <header class="turmas-header">
+        <div class="turmas-header-esquerda">
+          <a href="{% url 'administrativo:painel_nutricionista' %}" class="nova-refeicao-voltar" title="Voltar">&larr;</a>
+          <div class="nova-refeicao-titulo">
+            <h1>Turmas</h1>
+            <p>Gerencie as turmas disponíveis para cadastro dos alunos.</p>
+          </div>
+        </div>
+        <a href="{% url 'administrativo:turma_criar' %}" class="btn-nova-turma">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          Nova turma
+        </a>
+      </header>
+
+      {% if turmas %}
+        <div class="turmas-tabela">
+          <div class="turmas-tabela-header">
+            <span>Nome</span>
+            <span>Turno</span>
+            <span>Contraturno</span>
+            <span>Status</span>
+            <span>Ações</span>
+          </div>
+          {% for turma in turmas %}
+            <div class="turmas-tabela-linha">
+              <span class="turma-nome">{{ turma.nome }}</span>
+              <span>{{ turma.get_turno_display }}</span>
+              <span>
+                {% if turma.dias_contraturno %}
+                  {{ turma.dias_contraturno_display }}
+                {% else %}
+                  —
+                {% endif %}
+              </span>
+              <span>
+                {% if turma.ativo %}
+                  <span class="status-badge status-ativo">Ativa</span>
+                {% else %}
+                  <span class="status-badge status-inativo">Inativa</span>
+                {% endif %}
+              </span>
+              <span class="turmas-acoes">
+                <a href="{% url 'administrativo:turma_editar' turma.pk %}" class="btn-acao btn-editar" title="Editar">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form method="post" action="{% url 'administrativo:turma_excluir' turma.pk %}" class="form-excluir">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-acao btn-excluir" title="Excluir"
+                          onclick="return confirm('Excluir a turma {{ turma.nome }}?')">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="turmas-vazio">
+          <i class="fa-solid fa-users-rectangle"></i>
+          <p>Nenhuma turma cadastrada.</p>
+          <a href="{% url 'administrativo:turma_criar' %}" class="btn-nova-turma">Cadastrar primeira turma</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

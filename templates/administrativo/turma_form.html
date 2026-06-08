@@ -1,0 +1,78 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo }} — ReservaIF{% endblock %}
+
+{% block menu_turmas %}active{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/turmas.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="nova-refeicao-page">
+    <div class="nova-refeicao-card">
+      <header class="nova-refeicao-header">
+        <a href="{% url 'administrativo:turmas_lista' %}" class="nova-refeicao-voltar" title="Voltar à lista">&larr;</a>
+        <div class="nova-refeicao-titulo">
+          <h1>{{ titulo }}</h1>
+          <p>{{ subtitulo }}</p>
+        </div>
+      </header>
+
+      <form method="post" class="nova-refeicao-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert-error">
+            {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="campo-grupo {% if form.nome.errors %}has-error{% endif %}">
+          {{ form.nome.label_tag }}
+          {{ form.nome }}
+          {% for error in form.nome.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="campo-grupo {% if form.turno.errors %}has-error{% endif %}">
+          {{ form.turno.label_tag }}
+          {{ form.turno }}
+          {% for error in form.turno.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="campo-grupo {% if form.dias_contraturno.errors %}has-error{% endif %}">
+          {{ form.dias_contraturno.label_tag }}
+          <div class="dias-contraturno-opcoes">
+            {{ form.dias_contraturno }}
+          </div>
+          {% for error in form.dias_contraturno.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="campo-grupo campo-checkbox {% if form.ativo.errors %}has-error{% endif %}">
+          <label class="checkbox-label">
+            {{ form.ativo }}
+            {{ form.ativo.label }}
+          </label>
+          {% for error in form.ativo.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="nova-refeicao-acoes">
+          <a href="{% url 'administrativo:turmas_lista' %}" class="btn-cancelar">Cancelar</a>
+          <button type="submit" class="btn-salvar">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
