@@ -5,18 +5,22 @@ from django.utils import timezone
 from django.contrib.messages import get_messages
 from accounts.models import Usuario
 from refeicoes.models import Refeicao
-from administrativo.models import ConfigReserva
+from administrativo.models import ConfigReserva, Turma
 from .models import Reserva
 
 class ReservaViewTests(TestCase):
     def setUp(self):
-        # Criar usuário aluno
+        self.turma = Turma.objects.create(
+            nome='1º ano Informática',
+            turno='matutino',
+        )
         self.aluno = Usuario.objects.create_user(
             username='aluno_teste',
             email='aluno@teste.com',
             password='password123',
             perfil='aluno',
-            bloqueado=False
+            bloqueado=False,
+            turma=self.turma,
         )
         self.client.login(username='aluno_teste', password='password123')
 
@@ -131,14 +135,11 @@ class ReservaViewTests(TestCase):
 
     def test_cancelamento_fora_do_prazo(self):
         """Regra 3.2: Bloquear cancelamento após o prazo limite (config.minutos_cancelamento)."""
-        # Simulamos que a refeição é hoje
-        agora = timezone.now()
-        self.refeicao.data = agora.date()
+        self.refeicao.data = timezone.localdate()
         self.refeicao.save()
-        
-        # Definimos o encerramento para agora. Como o limite de cancelamento é 60min antes, 
-        # qualquer tentativa agora deve ser barrada.
-        self.config.encerramento = agora.time()
+
+        # Encerramento à meia-noite do dia da refeição; com 60 min de antecedência, o prazo já expirou.
+        self.config.encerramento = time(0, 0, 0)
         self.config.save()
         
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
@@ -152,10 +153,11 @@ class ReservaViewTests(TestCase):
     def test_cancelamento_reserva_alheia(self):
         """Segurança: Um aluno não pode cancelar a reserva de outro (deve retornar 404)."""
         outro_aluno = Usuario.objects.create_user(
-            username='outro_aluno', 
-            email='outro@teste.com', 
-            password='123', 
-            perfil='aluno'
+            username='outro_aluno',
+            email='outro@teste.com',
+            password='123',
+            perfil='aluno',
+            turma=self.turma,
         )
         reserva_alheia = Reserva.objects.create(aluno=outro_aluno, refeicao=self.refeicao, status='ativa')
         
