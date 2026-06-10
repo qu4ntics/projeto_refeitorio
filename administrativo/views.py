@@ -38,7 +38,6 @@ def painel_refeitorio(request):
     return render(request, 'administrativo/painel_refeitorio.html')
 
 
-<<<<<<< HEAD
 @perfil_required('nutricionista')
 def configuracoes(request):
     form = RefeicaoForm()
@@ -46,7 +45,6 @@ def configuracoes(request):
         'form': form,
         'config_reserva': ConfigReserva.get_config_ativa(),
     })
-=======
 @login_required
 @perfil_required('nutricionista')
 def lista_alunos(request):
@@ -227,4 +225,3 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
             return JsonResponse({'erro': e.message_dict}, status=400)
         except Exception as e:
             return JsonResponse({'erro': str(e)}, status=400)
->>>>>>> 79d8ec4ec925dfb0f4b8d0bbe4eaf3cd9dd94c46
