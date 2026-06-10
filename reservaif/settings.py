@@ -39,8 +39,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 AUTH_USER_MODEL = 'accounts.Usuario'
 
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.EmailOrUsernameBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'accounts.backends.EmailBackend',
 ]
 
 LOGIN_URL = 'accounts:login'

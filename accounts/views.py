@@ -4,7 +4,7 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse
 
 
-from .forms import CadastroForm
+from .forms import CadastroForm, EmailAuthenticationForm
 
 def cadastro_view(request):
     if request.method == 'POST':
@@ -13,7 +13,7 @@ def cadastro_view(request):
             usuario = form.save()
             usuario = authenticate(
                 request,
-                username=usuario.username,
+                username=usuario.email,
                 password=form.cleaned_data['senha']
             )
             if usuario is not None:
@@ -35,6 +35,7 @@ REDIRECT_POR_PERFIL = {
 
 class LoginPerfilView(LoginView):
     template_name = 'accounts/login.html'
+    authentication_form = EmailAuthenticationForm
 
     def form_invalid(self, form):
         print("POST:", self.request.POST)

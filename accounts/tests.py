@@ -42,13 +42,47 @@ class UsuarioTurmaTests(TestCase):
 
     def test_cadastro_aluno_com_turma(self):
         response = self.client.post(reverse('accounts:cadastro'), {
-            'username': 'novo_aluno',
+            'nome_completo': 'João Silva',
             'email': 'novo@test.com',
             'turma': str(self.turma.id),
             'senha': 'senha12345',
             'confirmar_senha': 'senha12345',
         })
         self.assertEqual(response.status_code, 302)
-        aluno = Usuario.objects.get(username='novo_aluno')
+        aluno = Usuario.objects.get(email='novo@test.com')
+        self.assertEqual(aluno.first_name, 'João')
+        self.assertEqual(aluno.last_name, 'Silva')
+        self.assertEqual(aluno.username, 'novo')
         self.assertEqual(aluno.perfil, 'aluno')
         self.assertEqual(aluno.turma, self.turma)
+
+    def test_login_apenas_por_email(self):
+        Usuario.objects.create_user(
+            username='aluno_login',
+            email='login@test.com',
+            password='senha12345',
+            first_name='Maria',
+            last_name='Santos',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        response = self.client.post(reverse('accounts:login'), {
+            'username': 'login@test.com',
+            'password': 'senha12345',
+        })
+        self.assertRedirects(response, reverse('refeicoes:homepage'))
+
+    def test_login_por_username_nao_funciona(self):
+        Usuario.objects.create_user(
+            username='aluno_login',
+            email='outro@test.com',
+            password='senha12345',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        response = self.client.post(reverse('accounts:login'), {
+            'username': 'aluno_login',
+            'password': 'senha12345',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse('_auth_user_id' in self.client.session)
