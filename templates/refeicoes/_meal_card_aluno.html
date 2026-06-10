@@ -2,11 +2,12 @@
   <div class="badges">
     <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
     {% if refeicao.exige_reserva %}
-      <div class="badge green">{{ refeicao.vagas_disponiveis }} vaga{{ refeicao.vagas_disponiveis|pluralize }} restante{{ refeicao.vagas_disponiveis|pluralize:"s," }}</div>
+      <div class="badge green">{{ refeicao.vagas_display }}</div>
     {% else %}
       <div class="badge gray">Informativa</div>
     {% endif %}
   </div>
+
   <div class="meal-title">{% firstof refeicao.descricao_exibicao "(sem descrição)" %}</div>
   <div class="meal-footer">
     <div class="meal-info">{% include "refeicoes/_refeicao_meta.html" with refeicao=refeicao %}</div>

@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.contrib.messages import get_messages
 from accounts.models import Usuario
 from refeicoes.models import Refeicao
-from administrativo.models import ConfigReserva, Turma
+from administrativo.models import ConfigReserva, JanelaReserva, TipoRefeicao, Turma
 from .models import Reserva
 
 class ReservaViewTests(TestCase):
@@ -33,17 +33,31 @@ class ReservaViewTests(TestCase):
             exige_reserva=True
         )
 
-        # Configuração de janela (Abre 00:00 do dia anterior, fecha 23:59 do dia da refeição)
-        self.config = ConfigReserva.objects.create(
-            abertura=time(0, 0, 1),
-            encerramento=time(23, 59, 59),
-            minutos_cancelamento=60,
-            vigente_desde=timezone.now(),
-            criado_por=Usuario.objects.create_user(
-                username='nutri', 
-                email='nutri@teste.com', 
+        # Criar Tipo e Janela de Reserva
+        self.tipo_almoco = TipoRefeicao.objects.create(
+            nome='almoco'
+        )
+        self.janela = JanelaReserva.objects.create(
+            tipo_refeicao=self.tipo_almoco,
+            horario_abertura=time(0, 0),
+            horario_fechamento=time(11, 0)
+        )
+        # Garantimos que para os testes de sucesso, o "agora" esteja dentro da janela.
+        
+        # Criar nutricionista para fins de auditoria se necessário
+        self.nutri = Usuario.objects.create_user(
+                username='nutri',
+                email='nutri@teste.com',
+                password='123',
                 perfil='nutricionista'
-            )
+        )
+
+        # Criar Configuração Global para fallback e cancelamento
+        self.config = ConfigReserva.objects.create(
+            abertura=time(0, 0),
+            encerramento=time(23, 59),
+            minutos_cancelamento=60,
+            criado_por=self.nutri
         )
 
     def test_reserva_sucesso(self):
@@ -80,20 +94,19 @@ class ReservaViewTests(TestCase):
 
     def test_validacao_janela_fechada(self):
         """Validação 3: Barrar reserva fora do horário (Simulando encerramento no passado)."""
-        # Alteramos a configuração para fechar às 00:01 do dia da refeição
-        # Como a refeição é amanhã, e agora é hoje, ainda estaria aberta. 
-        # Para testar o erro, colocamos a refeição para HOJE e o encerramento em um horário que já passou.
+        # Para garantir que falhe, colocamos a refeição para HOJE e o encerramento no início do dia
         self.refeicao.data = timezone.localdate()
         self.refeicao.save()
-        
-        self.config.encerramento = time(0, 0, 1) # Encerrou no primeiro segundo do dia
-        self.config.save()
+
+        self.janela.horario_abertura = time(0, 0)
+        self.janela.horario_fechamento = time(0, 1)
+        self.janela.save()
 
         response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
         
         self.assertEqual(Reserva.objects.count(), 0)
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("fora da janela" in str(m).lower() for m in messages))
+        self.assertTrue(any("fora do período de reserva permitido" in str(m).lower() for m in messages))
 
     def test_validacao_vagas_esgotadas(self):
         """Validação 4: Barrar reserva se não houver mais vagas."""
@@ -139,7 +152,10 @@ class ReservaViewTests(TestCase):
         self.refeicao.save()
 
         # Encerramento à meia-noite do dia da refeição; com 60 min de antecedência, o prazo já expirou.
-        self.config.encerramento = time(0, 0, 0)
+        # Alteramos na Janela pois a view agora prioriza o tipo da refeição
+        self.janela.horario_fechamento = time(0, 0, 0)
+        self.janela.save()
+        self.config.minutos_cancelamento = 60
         self.config.save()
         
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
@@ -149,6 +165,32 @@ class ReservaViewTests(TestCase):
         self.assertEqual(reserva.status, 'ativa') # Não deve mudar para cancelada
         messages = list(get_messages(response.wsgi_request))
         self.assertTrue(any("não é mais possível cancelar" in str(m).lower() for m in messages))
+
+    def test_validacao_antecedencia_excessiva(self):
+        """Validação: Barrar reserva com antecedência excessiva (ex: reservar sexta na quarta)."""
+        # Refeição para depois de amanhã (fora da janela D-1)
+        depois_de_amanha = timezone.localdate() + timedelta(days=2)
+        self.refeicao.data = depois_de_amanha
+        self.refeicao.save()
+
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 0)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("abrem apenas às" in str(m).lower() for m in messages))
+
+    def test_validacao_data_passada(self):
+        """Validação: Barrar reserva para uma data que já passou."""
+        # Força uma data no passado (ontem)
+        ontem = timezone.localdate() - timedelta(days=1)
+        self.refeicao.data = ontem
+        self.refeicao.save()
+
+        response = self.client.post(reverse('reservas:criar_reserva', args=[self.refeicao.id]))
+        
+        self.assertEqual(Reserva.objects.count(), 0)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any("que já passaram" in str(m).lower() for m in messages))
 
     def test_cancelamento_reserva_alheia(self):
         """Segurança: Um aluno não pode cancelar a reserva de outro (deve retornar 404)."""
@@ -184,3 +226,4 @@ class ReservaViewTests(TestCase):
         url = reverse('reservas:criar_reserva', args=[uuid.uuid4()])
         response = self.client.post(url)
         self.assertEqual(response.status_code, 404)
+     

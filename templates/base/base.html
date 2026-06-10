@@ -35,16 +35,13 @@
         {% if user.perfil == 'aluno' and user.turma %} - {{ user.turma.nome }}{% endif %}
       </span>
 
-      {% if user.perfil == 'nutricionista' %}
-        <a href="{% url 'administrativo:painel_nutricionista' %}" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
-          <i class="fa-regular fa-bell"></i>
-          {% if notificacoes_nao_lidas %}
-            <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
-          {% endif %}
-        </a>
-      {% else %}
+      <a href="#" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
         <i class="fa-regular fa-bell"></i>
-      {% endif %}
+        {% if notificacoes_nao_lidas %}
+          <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
+        {% endif %}
+      </a>
+
       <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro" title="Alternar tema">
         <i class="fa-solid fa-moon" id="theme-icon"></i>
       </button>
