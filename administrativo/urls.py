@@ -13,4 +13,8 @@ urlpatterns = [
     path('turmas/nova/', views.turma_criar, name='turma_criar'),
     path('turmas/<uuid:pk>/editar/', views.turma_editar, name='turma_editar'),
     path('turmas/<uuid:pk>/excluir/', views.turma_excluir, name='turma_excluir'),
+    
+    # Janela de Horários
+    path('configuracoes/janela-horarios/', views.janela_horarios_api, name='janela_horarios_lista'),
+    path('configuracoes/janela-horarios/<uuid:tipo_refeicao_id>/', views.janela_horarios_api, name='janela_horarios_detalhe'),
 ]

@@ -1,9 +1,10 @@
+import json
 from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import Usuario
-from .models import Turma
+from .models import Turma, TipoRefeicao, JanelaReserva
 
 
 class TurmaCRUDTests(TestCase):
@@ -69,3 +70,33 @@ class TurmaCRUDTests(TestCase):
         self.assertTrue(Turma.objects.filter(pk=self.turma.id).exists())
         messages = list(get_messages(response.wsgi_request))
         self.assertTrue(any('alunos vinculados' in str(m).lower() for m in messages))
+
+
+class JanelaReservaAPITests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_api', email='nutri_api@test.com', 
+            password='123', perfil='nutricionista'
+        )
+        self.tipo = TipoRefeicao.objects.create(
+            nome='Almoço'
+        )
+        self.client.login(username='nutri_api', password='123')
+
+    def test_get_janelas(self):
+        url = reverse('administrativo:janela_horarios_lista')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_update_janela_sucesso(self):
+        url = reverse('administrativo:janela_horarios_detalhe', args=[self.tipo.id])
+        payload = {
+            'horario_abertura': '15:30',
+            'horario_fechamento': '09:00'
+        }
+        response = self.client.post(
+            url, data=json.dumps(payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.tipo.janela.refresh_from_db()
+        self.assertEqual(self.tipo.janela.horario_fechamento.strftime('%H:%M'), '09:00')

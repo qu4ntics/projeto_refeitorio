@@ -1,6 +1,7 @@
+from datetime import datetime, timedelta, time
 from django.core.exceptions import ValidationError
 from django.db import models
-
+from django.utils import timezone
 from reservaif.models import UUIDModel
 
 
@@ -112,6 +113,110 @@ class Refeicao(UUIDModel):
     @property
     def vagas_disponiveis(self):
         return self.limite_vagas - self.reservas_ativas_count
+
+    @property
+    def vagas_display(self):
+        """Retorna o texto das vagas com o aviso de expiração se necessário."""
+        v = self.vagas_disponiveis
+        # Pluralização em PT-BR: Apenas 1 é singular. 0 e > 1 são plural.
+        v_word = "vaga" if v == 1 else "vagas"
+        r_word = "restante" if v == 1 else "restantes"
+        texto = f"{v} {v_word} {r_word}"
+
+        if self.exige_reserva:
+            if self.reserva_encerrada:
+                return f"{texto} (Encerrada)"
+            
+            limites = self.get_janela_reserva()
+            if limites:
+                h_abre = limites['hora_abre'].strftime('%H:%M')
+                h_fecha = limites['hora_fecha'].strftime('%H:%M')
+                # Adiciona o horário ao lado das vagas sem quebrar o layout
+                texto += f" | {h_abre} às {h_fecha}"
+        return texto
+
+    def get_janela_reserva(self):
+        """
+        Retorna os limites de abertura e fechamento da reserva.
+        Evita importação circular importando models de administrativo internamente.
+        """
+        from administrativo.models import JanelaReserva, ConfigReserva
+        
+        janela = JanelaReserva.objects.filter(tipo_refeicao__nome__iexact=self.tipo).first()
+        config = ConfigReserva.get_config_ativa()
+
+        if not janela and not config:
+            return None
+
+        hora_abre = janela.horario_abertura if janela else config.abertura
+        hora_fecha = janela.horario_fechamento if janela else config.encerramento
+        minutos_cancelamento = config.minutos_cancelamento if config else 60
+
+        # Local helpers para converter para datetime aware
+        tz = timezone.get_current_timezone()
+        inicio = timezone.make_aware(datetime.combine(self.data - timedelta(days=1), hora_abre), tz)
+        fim = timezone.make_aware(datetime.combine(self.data, hora_fecha), tz)
+
+        return {
+            'inicio': inicio,
+            'fim': fim,
+            'hora_abre': hora_abre,
+            'hora_fecha': hora_fecha,
+            'minutos_cancelamento': minutos_cancelamento
+        }
+
+    @property
+    def abertura_reserva_display(self):
+        limites = self.get_janela_reserva()
+        if not limites: return "Não definida"
+        return f"{limites['inicio'].strftime('%d/%m')} às {limites['hora_abre'].strftime('%H:%M')}"
+
+    @property
+    def fechamento_reserva_display(self):
+        limites = self.get_janela_reserva()
+        if not limites: return "Não definida"
+        return f"{limites['fim'].strftime('%d/%m')} às {limites['hora_fecha'].strftime('%H:%M')}"
+
+    def get_status_reserva(self):
+        """Retorna uma string descritiva do status atual para o aluno."""
+        if not self.exige_reserva:
+            return "Informativa"
+        
+        limites = self.get_janela_reserva()
+        if not limites:
+            return "Disponível"
+
+        agora = timezone.localtime()
+        abertura_str = self.abertura_reserva_display
+        fechamento_str = self.fechamento_reserva_display
+
+        if agora < limites['inicio']:
+            return f"Reservas abrem em {abertura_str}"
+        elif limites['inicio'] <= agora <= limites['fim']:
+            return f"Aberta! Fecha em {fechamento_str}"
+        else:
+            return f"Encerrada (Prazo: {fechamento_str})"
+
+    @property
+    def reserva_aberta(self):
+        """Retorna True se a janela de reserva está aberta no momento."""
+        limites = self.get_janela_reserva()
+        if not limites: return True
+        return limites['inicio'] <= timezone.localtime() <= limites['fim']
+
+    @property
+    def reserva_futura(self):
+        """Retorna True se a reserva ainda não abriu."""
+        limites = self.get_janela_reserva()
+        if not limites: return False
+        return timezone.localtime() < limites['inicio']
+
+    @property
+    def reserva_encerrada(self):
+        """Retorna True se o prazo de reserva já expirou."""
+        limites = self.get_janela_reserva()
+        if not limites: return False
+        return timezone.localtime() > limites['fim']
 
     def clean(self):
         super().clean()

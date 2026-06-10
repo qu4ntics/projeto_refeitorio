@@ -14,7 +14,7 @@ class Reserva(UUIDModel):
 
     aluno = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         limit_choices_to={'perfil': 'aluno'},
         related_name='reservas',
     )
