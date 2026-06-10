@@ -79,6 +79,13 @@
   border-bottom-color: var(--accent);
 }
 
+/* Abas com nome completo do dia (visão aluno) */
+.week-tabs--full .week-tab {
+  font-size: 11px;
+  padding: 8px 12px;
+  letter-spacing: 0.3px;
+}
+
 /* PAINEL DE DIA */
 .day-panel {
   display: none;
@@ -157,6 +164,11 @@
   .week-tab {
     padding: 8px 12px;
     font-size: 11px;
+  }
+
+  .week-tabs--full .week-tab {
+    font-size: 10px;
+    padding: 8px 8px;
   }
 
   .cardapio-header h1 {

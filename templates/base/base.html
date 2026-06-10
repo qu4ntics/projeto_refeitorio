@@ -32,19 +32,16 @@
 
     <div class="user-top">
       <span>Olá, {{ user.first_name|default:user.username }}
-        {% if user.perfil == 'aluno' %} - {{ user.get_turma_display }}{% endif %}
+        {% if user.perfil == 'aluno' and user.turma %} - {{ user.turma.nome }}{% endif %}
       </span>
 
-      {% if user.perfil == 'nutricionista' %}
-        <a href="{% url 'administrativo:painel_nutricionista' %}" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
-          <i class="fa-regular fa-bell"></i>
-          {% if notificacoes_nao_lidas %}
-            <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
-          {% endif %}
-        </a>
-      {% else %}
+      <a href="#" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
         <i class="fa-regular fa-bell"></i>
-      {% endif %}
+        {% if notificacoes_nao_lidas %}
+          <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
+        {% endif %}
+      </a>
+
       <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro" title="Alternar tema">
         <i class="fa-solid fa-moon" id="theme-icon"></i>
       </button>
@@ -71,7 +68,7 @@
         <h2>{{ user.get_full_name|default:user.username }}</h2>
 
         {% if user.perfil == 'aluno' %}
-          <p>{{ user.get_turma_display }}</p>
+          <p>{{ user.turma.nome }}</p>
           <div class="strike-area">
             <div class="strike-top">
               <span>strikes ativos</span>
@@ -124,9 +121,17 @@
             <i class="fa-solid fa-utensils"></i>
             <span>REFEIÇÕES</span>
           </a>
-          <a href="#" class="menu-item {% block menu_alunos %}{% endblock %}">
+          <a href="{% url 'refeicoes:pratos_lista' %}" class="menu-item {% block menu_pratos %}{% endblock %}">
+            <i class="fa-solid fa-bowl-food"></i>
+            <span>PRATOS</span>
+          </a>
+          <a href="{% url 'administrativo:alunos' %}" class="menu-item {% block menu_alunos %}{% endblock %}">
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
+          </a>
+          <a href="{% url 'administrativo:turmas_lista' %}" class="menu-item {% block menu_turmas %}{% endblock %}">
+            <i class="fa-solid fa-users-rectangle"></i>
+            <span>TURMAS</span>
           </a>
           <a href="#" class="menu-item {% block menu_bloqueados %}{% endblock %}">
             <i class="fa-solid fa-lock"></i>

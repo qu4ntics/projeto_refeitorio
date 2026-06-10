@@ -3,17 +3,21 @@
     <div class="badges">
       <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
       {% if refeicao.exige_reserva %}
-        <div class="badge red">{{ refeicao.reservas_ativas_count }} reserva{{ refeicao.reservas_ativas_count|pluralize }}</div>
-        <div class="badge green">{{ refeicao.vagas_disponiveis }} vaga{{ refeicao.vagas_disponiveis|pluralize }} livre{{ refeicao.vagas_disponiveis|pluralize:"s," }}</div>
+        <div class="badge green">{{ refeicao.vagas_display }}</div>
       {% else %}
         <div class="badge gray">Informativa</div>
       {% endif %}
     </div>
-    <form method="post" action="{% url 'refeicoes:nutricionista_deletar' refeicao.pk %}" class="meal-card-excluir" onsubmit="return confirm('Tem certeza que deseja excluir essa refeição?');">
-      {% csrf_token %}
-      <button type="submit" class="btn-excluir-refeicao">Excluir</button>
-    </form>
+    <div class="meal-card-excluir">
+      <form method="post" action="{% url 'refeicoes:nutricionista_deletar' refeicao.pk %}" onsubmit="return confirm('Tem certeza que deseja excluir essa refeição?');">
+        {% csrf_token %}
+        <button type="submit" class="btn-excluir-refeicao" title="Excluir">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </form>
+    </div>
   </div>
+
   <div class="meal-title">{% firstof refeicao.descricao_exibicao "(sem descrição)" %}</div>
   <div class="meal-footer">
     <div class="meal-info">{% include "refeicoes/_refeicao_meta.html" with refeicao=refeicao %}</div>

@@ -31,8 +31,8 @@
             {% for reserva in reservas %}
             <tr>
                 <td>{{ reserva.aluno.get_full_name }}</td> 
-                <td>{{ reserva.aluno.get_turma_display }}</td> 
-                <td>{{ reserva.refeicao.nome }}</td> 
+                <td>{{ reserva.aluno.turma.nome|default:"—" }}</td> 
+                <td>{{ reserva.refeicao.get_tipo_display }} — {% firstof reserva.refeicao.descricao_exibicao "(sem pratos)" %}</td> 
                 <td class="check">
                     <input type="checkbox" 
                            class="check-presenca" 
