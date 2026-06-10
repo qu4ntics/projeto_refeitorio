@@ -6,4 +6,5 @@ app_name = 'administrativo'
 urlpatterns = [
     path('painel_nutricionista/', views.painel_nutricionista, name='painel_nutricionista'),
     path('painel_refeitorio/', views.painel_refeitorio, name='painel_refeitorio'),
+    path('configuracoes/', views.configuracoes, name='configuracoes'),
 ]
