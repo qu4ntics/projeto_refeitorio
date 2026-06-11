@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import Turma
+from .models import ConfigReserva
 
 
 class TurmaForm(forms.ModelForm):

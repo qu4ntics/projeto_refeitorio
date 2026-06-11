@@ -38,12 +38,74 @@ def painel_refeitorio(request):
     return render(request, 'administrativo/painel_refeitorio.html')
 
 
+@login_required
 @perfil_required('nutricionista')
 def configuracoes(request):
-    form = RefeicaoForm()
+    # Traz todos os tipos de refeições cadastrados no banco (Ex: Almoço, Café)
+    tipos_refeicao = TipoRefeicao.objects.all().order_by('nome')
+    
+    if request.method == 'POST':
+        erros_detectados = False
+        
+        for tipo in tipos_refeicao:
+            # Captura os dados do POST baseando-se no ID do TipoRefeicao
+            abertura_str = request.POST.get(f'abertura_{tipo.id}')
+            encerramento_str = request.POST.get(f'encerramento_{tipo.id}')
+            
+            # Só processa se o usuário enviou ambos os horários
+            if abertura_str and encerramento_str:
+                try:
+                    abertura_time = datetime.strptime(abertura_str, '%H:%M').time()
+                    encerramento_time = datetime.strptime(encerramento_str, '%H:%M').time()
+                    
+                    if abertura_time == encerramento_time:
+                        raise ValidationError("O horário de fechamento não pode ser idêntico ao de abertura.")
+                    
+                    # BUSCA OU CRIA A JANELA: Se não existir no banco, o Django cria o registro associado
+                    janela, created = JanelaReserva.objects.get_or_create(
+                        tipo_refeicao=tipo,
+                        defaults={
+                            'horario_abertura': abertura_time,
+                            'horario_fechamento': encerramento_time
+                        }
+                    )
+                    
+                    # Se ela já existia antes, apenas atualizamos os valores recebidos
+                    if not created:
+                        janela.horario_abertura = abertura_time
+                        janela.horario_fechamento = encerramento_time
+                        janela.save()
+                        
+                except ValidationError as e:
+                    erros_detectados = True
+                    messages.error(request, f"Erro em {tipo.nome}: {str(e)}")
+                except Exception as e:
+                    erros_detectados = True
+                    messages.error(request, f"Erro ao salvar {tipo.nome}: {str(e)}")
+            else:
+                erros_detectados = True
+                messages.error(request, f"Os horários para {tipo.nome} são obrigatórios.")
+
+        if not erros_detectados:
+            messages.success(request, 'Configurações de horários salvas com sucesso!')
+            return redirect('administrativo:configuracoes')
+
+    # Preparação segura dos dados para renderizar no HTML
+    dados_janelas = []
+    for tipo in tipos_refeicao:
+        # Tenta buscar a janela correspondente ao tipo, se houver
+        janela = JanelaReserva.objects.filter(tipo_refeicao=tipo).first()
+        
+        dados_janelas.append({
+            'id': tipo.id,
+            'nome': tipo.nome,
+            # Se a janela não existir no banco ainda, exibe um valor padrão para o usuário ajustar
+            'abertura': janela.horario_abertura.strftime('%H:%M') if janela else '15:00',
+            'encerramento': janela.horario_fechamento.strftime('%H:%M') if janela else '07:00'
+        })
+
     return render(request, 'administrativo/configuracoes.html', {
-        'form': form,
-        'config_reserva': ConfigReserva.get_config_ativa(),
+        'janelas': dados_janelas,
     })
 @login_required
 @perfil_required('nutricionista')
