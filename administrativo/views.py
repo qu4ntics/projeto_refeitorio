@@ -26,16 +26,79 @@ def painel_nutricionista(request):
     refeicoes = _queryset_refeicoes_periodo(start, end)[:5]
     return render(request, 'administrativo/painel_nutricionista.html', {'refeicoes': refeicoes})
 
-
 @login_required
 @perfil_required('refeitorio')
 def painel_refeitorio(request):
     return render(request, 'administrativo/painel_refeitorio.html')
 
+@login_required
+@perfil_required('nutricionista')
+def alunos_turmas(request):
+    """Nível 1 — grid de cards de turma (/administrativo/alunos/)."""
+    return render(request, 'administrativo/alunos_turma.html')
+
+@login_required
+@perfil_required('nutricionista')
+def alunos_turma(request, turma_id):
+    """Nível 2 — tabela de alunos de uma turma (/administrativo/alunos/<turma_id>/)."""
+    turma = get_object_or_404(Turma, pk=turma_id, ativo=True)
+    return render(request, 'administrativo/alunos.html', {'turma_id': turma_id})
+
+@login_required
+@perfil_required('nutricionista')
+def lista_turmas_json(request):
+    """JSON com lista de turmas para o grid do nível 1."""
+    turmas = Turma.objects.filter(ativo=True).order_by('nome')
+
+    NOMES_CURTOS = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
+
+    lista = []
+    for t in turmas:
+        total_alunos = t.alunos.count()
+        total_bloqueados = t.alunos.filter(bloqueado=True).count()
+        dias = [NOMES_CURTOS[d] for d in sorted(t.dias_contraturno or []) if d in NOMES_CURTOS]
+        lista.append({
+            'id': str(t.id),
+            'nome': t.nome,
+            'dias_contraturno': dias,
+            'total_alunos': total_alunos,
+            'total_bloqueados': total_bloqueados,
+        })
+
+    return JsonResponse({'turmas': lista})
+
+@login_required
+@perfil_required('nutricionista')
+def lista_alunos_turma(request, turma_id):
+    """JSON com dados da turma + alunos dela para o nível 2."""
+    agora = timezone.now()
+    turma = get_object_or_404(Turma, pk=turma_id, ativo=True)
+    alunos_qs = Usuario.objects.filter(perfil='aluno', turma=turma)
+
+    lista = []
+    for aluno in alunos_qs:
+        strikes_ativos = aluno.strikes.filter(expira_em__gt=agora)
+        proximo_expira = strikes_ativos.order_by('expira_em').first()
+        lista.append({
+            'id': str(aluno.id),
+            'nome_completo': aluno.get_full_name() or aluno.username,
+            'email': aluno.email,
+            'strikes_ativos': strikes_ativos.count(),
+            'bloqueado': aluno.bloqueado,
+            'proximo_strike_expira_em': (
+                proximo_expira.expira_em.isoformat() if proximo_expira else None
+            ),
+        })
+
+    return JsonResponse({
+        'turma': {'id': str(turma.id), 'nome': turma.nome},
+        'alunos': lista,
+    })
 
 @login_required
 @perfil_required('nutricionista')
 def lista_alunos(request):
+    """JSON global de alunos com filtros opcionais via query string."""
     agora = timezone.now()
     alunos = Usuario.objects.filter(perfil='aluno').select_related('turma')
 
@@ -74,7 +137,6 @@ def lista_alunos(request):
 
     return JsonResponse({'alunos': lista})
 
-
 @login_required
 @perfil_required('nutricionista')
 @require_POST
@@ -89,20 +151,11 @@ def desbloquear_aluno(request, aluno_id):
     aluno.strikes.filter(expira_em__gt=agora).update(expira_em=agora)
     return JsonResponse({'sucesso': True, 'id': str(aluno.id), 'bloqueado': aluno.bloqueado})
 
-
-@login_required
-@perfil_required('nutricionista')
-def alunos(request):
-    turmas = Turma.objects.filter(ativo=True).order_by('nome')
-    return render(request, 'administrativo/alunos.html', {'turmas': turmas})
-
-
 @login_required
 @perfil_required('nutricionista')
 def turmas_lista(request):
     turmas = Turma.objects.all()
     return render(request, 'administrativo/turmas_lista.html', {'turmas': turmas})
-
 
 @login_required
 @perfil_required('nutricionista')
@@ -120,7 +173,6 @@ def turma_criar(request):
         'titulo': 'Nova turma',
         'subtitulo': 'Cadastre uma turma para que os alunos possam selecioná-la no registro.',
     })
-
 
 @login_required
 @perfil_required('nutricionista')
@@ -140,7 +192,6 @@ def turma_editar(request, pk):
         'subtitulo': f'Atualize os dados de {turma.nome}.',
         'turma': turma,
     })
-
 
 @login_required
 @perfil_required('nutricionista')
@@ -162,7 +213,6 @@ def turma_excluir(request, pk):
                 'Esta turma não pode ser excluída porque possui alunos vinculados.',
             )
     return redirect('administrativo:turmas_lista')
-
 
 @login_required
 @perfil_required('nutricionista')
@@ -187,20 +237,19 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
     if request.method in ['POST', 'PUT']:
         if not tipo_refeicao_id:
             return JsonResponse({'erro': 'ID do tipo de refeição é obrigatório.'}, status=400)
-            
+
         try:
             payload = json.loads(request.body)
             tipo = get_object_or_404(TipoRefeicao, pk=tipo_refeicao_id)
-            
-            # Busca ou cria a janela para o tipo
+
             janela, _ = JanelaReserva.objects.get_or_create(tipo_refeicao=tipo)
-            
+
             janela.horario_abertura = datetime.strptime(payload['horario_abertura'], '%H:%M').time()
             janela.horario_fechamento = datetime.strptime(payload['horario_fechamento'], '%H:%M').time()
-            
-            janela.full_clean() # Executa a validação do Model (Clean)
+
+            janela.full_clean()
             janela.save()
-            
+
             return JsonResponse({
                 'sucesso': True,
                 'tipo_refeicao': tipo.nome,

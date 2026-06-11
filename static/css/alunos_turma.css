@@ -1,0 +1,245 @@
+[hidden] { display: none !important; }
+
+.turmas-alunos-page {
+  max-width: 1100px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-top: 3px;
+}
+
+/* ESTADOS CENTRAIS */
+.estado-central {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 4rem 2rem;
+  color: var(--text-light);
+  font-size: 14px;
+  text-align: center;
+}
+
+.estado-central i {
+  font-size: 36px;
+  opacity: 0.4;
+}
+
+.estado-central.estado-erro {
+  color: var(--danger);
+}
+
+.estado-central.estado-erro i {
+  opacity: 0.7;
+}
+
+/* GRID DE CARDS */
+.turmas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.turma-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.turma-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.turma-card::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: var(--accent);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-radius: 14px 14px 0 0;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.turma-card:hover::before {
+  opacity: 1;
+}
+
+.turma-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.turma-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(0, 176, 91, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.turma-card-icon i {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.turma-card-nome {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  flex: 1;
+  margin-top: 2px;
+}
+
+.badge-bloqueados {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-bloqueados.zero {
+  background: rgba(0, 176, 91, 0.1);
+  color: var(--accent);
+}
+
+.badge-bloqueados.tem-bloqueados {
+  background: rgba(224, 82, 82, 0.12);
+  color: var(--danger);
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 82, 82, 0.3); }
+  50%       { box-shadow: 0 0 0 4px rgba(224, 82, 82, 0); }
+}
+
+.turma-card-dias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 1rem;
+}
+
+.dia-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(26, 26, 46, 0.07);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.dark-mode .dia-chip {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.turma-card-sem-dias {
+  font-size: 12px;
+  color: var(--text-light);
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
+.turma-card-stats {
+  display: flex;
+  gap: 12px;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+}
+
+.stat-item i {
+  font-size: 13px;
+  color: var(--text-light);
+  width: 14px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-light);
+  display: block;
+  line-height: 1.2;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: block;
+  line-height: 1.2;
+}
+
+.stat-item.stat-danger .stat-value {
+  color: var(--danger);
+}
+
+.stat-item.stat-danger i {
+  color: var(--danger);
+}
+
+.turma-card-arrow {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-light);
+  transition: all 0.2s;
+}
+
+.turma-card:hover .turma-card-arrow {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--primary);
+}
+
+@media (max-width: 600px) {
+  .turmas-grid {
+    grid-template-columns: 1fr;
+  }
+}
