@@ -1,0 +1,47 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Alunos por Turma — ReservaIF{% endblock %}
+
+{% block menu_alunos %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/alunos_turma.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="turmas-alunos-page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Alunos</h1>
+      <p class="page-subtitle">Selecione uma turma para visualizar e gerenciar os alunos.</p>
+    </div>
+  </div>
+
+  <div id="estado-loading" class="estado-central" hidden>
+    <i class="fa-solid fa-circle-notch fa-spin"></i>
+    <p>Carregando turmas...</p>
+  </div>
+
+  <div id="estado-vazio" class="estado-central" hidden>
+    <i class="fa-solid fa-users-rectangle"></i>
+    <p>Nenhuma turma cadastrada.</p>
+  </div>
+
+  <div id="estado-erro" class="estado-central estado-erro" hidden>
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <p>Erro ao carregar turmas. Verifique sua conexão.</p>
+    <button class="btn btn-outline" onclick="carregarTurmas()">
+      <i class="fa-solid fa-rotate-right"></i> Tentar novamente
+    </button>
+  </div>
+
+  <div id="turmas-grid" class="turmas-grid" hidden></div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/alunos_turma.js' %}"></script>
+{% endblock %}
