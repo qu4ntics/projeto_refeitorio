@@ -1,0 +1,61 @@
+/* =============================================
+   AJUSTES EXCLUSIVOS DA TELA DE CONFIGURAÇÃO
+   ============================================= */
+
+.config-container-refeicoes {
+  display: flex;
+  flex-direction: column;
+  gap: 2.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.refeicao-config-box {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.refeicao-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+  margin-bottom: 0.25rem;
+}
+
+.status-janela {
+  margin-top: 0.25rem;
+}
+
+.refeicao-config-box .campo {
+  width: 100%;
+}
+
+.refeicao-config-box.has-error .campo {
+  border-color: var(--danger) !important;
+}
+
+.msg-erro-inline {
+  display: block;
+  color: var(--danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+
+/* Força especificamente o ícone nativo do relógio no Chrome/Edge a usar o ponteiro */
+.refeicao-config-box .campo::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+/* 2. Correção definitiva para o Google Chrome e Edge no Modo Escuro:
+   Inverte a cor do ícone nativo diretamente via filtro webkit */
+body.dark-mode .refeicao-config-box .campo::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .refeicao-config-box .campo::-webkit-calendar-picker-indicator {
+  filter: invert(1) !important;
+}
