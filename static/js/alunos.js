@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   carregarAlunos();
 
   document.getElementById('input-busca').addEventListener('input', aplicarFiltros);
-  document.getElementById('filtro-turma').addEventListener('change', aplicarFiltros);
 
   const btnBloqueados = document.getElementById('btn-somente-bloqueados');
   btnBloqueados.addEventListener('click', () => {
@@ -29,12 +28,25 @@ async function carregarAlunos() {
   mostrarEstado('loading');
 
   try {
-    const res = await fetch('/administrativo/alunos/json/');
+    const res = await fetch(`/administrativo/alunos/${TURMA_ID}/json/`);
     if (!res.ok) throw new Error('Erro na requisição');
     const data = await res.json();
-    todosAlunos = data.alunos;
+
+    todosAlunos = data.alunos || [];
+
+    if (data.turma) {
+      const nome = data.turma.nome;
+      const el = document.getElementById('titulo-turma');
+      if (el) el.textContent = nome;
+      const sub = document.getElementById('subtitulo-turma');
+      if (sub) sub.textContent = `${todosAlunos.length} aluno${todosAlunos.length !== 1 ? 's' : ''} nesta turma.`;
+      const bc = document.getElementById('breadcrumb-turma');
+      if (bc) bc.textContent = nome;
+    }
+
     mostrarEstado(null);
     aplicarFiltros();
+
   } catch (err) {
     console.error(err);
     mostrarEstado('erro');
@@ -43,14 +55,14 @@ async function carregarAlunos() {
 
 function aplicarFiltros() {
   const busca        = document.getElementById('input-busca').value.toLowerCase().trim();
-  const turma        = document.getElementById('filtro-turma').value;
   const soBloqueados = document.getElementById('btn-somente-bloqueados').dataset.ativo === 'true';
 
   const filtrados = todosAlunos.filter(a => {
-    const matchBusca = !busca || a.nome_completo.toLowerCase().includes(busca) || a.email.toLowerCase().includes(busca);
-    const matchTurma = !turma || a.turma_id === turma;
-    const matchBloc  = !soBloqueados || a.bloqueado;
-    return matchBusca && matchTurma && matchBloc;
+    const matchBusca = !busca ||
+      a.nome_completo.toLowerCase().includes(busca) ||
+      a.email.toLowerCase().includes(busca);
+    const matchBloc = !soBloqueados || a.bloqueado;
+    return matchBusca && matchBloc;
   });
 
   renderizarTabela(filtrados);
@@ -69,16 +81,20 @@ function renderizarTabela(alunos) {
   mostrarEstado(null);
   document.getElementById('tabela-wrapper').hidden = false;
 
-  corpo.innerHTML = alunos.map((a, i) => {
-    const iniciais   = iniciais2(a.nome_completo);
-    const cor        = CORES_AVATAR[somarChars(a.nome_completo) % CORES_AVATAR.length];
-    const strikeCls  = `strike-${Math.min(a.strikes_ativos, 2)}`;
-    const statusHtml = renderStatus(a);
-    const expiracao  = a.proximo_strike_expira_em
+  corpo.innerHTML = alunos.map(a => {
+    const iniciais  = extrairIniciais(a.nome_completo);
+    const cor       = CORES_AVATAR[somarChars(a.nome_completo) % CORES_AVATAR.length];
+    const strikeCls = `strike-${Math.min(a.strikes_ativos, 2)}`;
+
+    const expiracao = a.proximo_strike_expira_em
       ? `<span class="strike-expira">Expira ${formatarData(a.proximo_strike_expira_em)}</span>`
       : '';
-    const btnDesbl   = a.bloqueado
-      ? `<button class="btn-desbloquear" onclick="abrirModal('${a.id}', '${escapar(a.nome_completo)}')">
+
+    const statusHtml = renderStatus(a);
+
+    const btnDesbl = a.bloqueado
+      ? `<button class="btn-desbloquear"
+           onclick="abrirModal('${escapar(a.id)}', '${escapar(a.nome_completo)}')">
            <i class="fa-solid fa-lock-open"></i> Desbloquear
          </button>`
       : '<span style="color:var(--text-light);font-size:12px;">—</span>';
@@ -90,7 +106,6 @@ function renderizarTabela(alunos) {
           <span class="aluno-nome">${escapar(a.nome_completo)}</span>
         </div>
         <span class="email">${escapar(a.email)}</span>
-        <span class="turma">${escapar(a.turma)}</span>
         <div class="strikes-info">
           <span class="strike-badge ${strikeCls}">${a.strikes_ativos}/2</span>
           ${expiracao}
@@ -141,6 +156,7 @@ async function confirmarDesbloqueio() {
     fecharModal();
     await carregarAlunos();
     mostrarToast('Aluno desbloqueado com sucesso!', 'success');
+
   } catch {
     mostrarToast('Erro ao desbloquear. Tente novamente.', 'error');
   } finally {
@@ -153,7 +169,8 @@ function mostrarEstado(tipo) {
   document.getElementById('estado-loading').hidden = tipo !== 'loading';
   document.getElementById('estado-vazio').hidden   = tipo !== 'vazio';
   document.getElementById('estado-erro').hidden    = tipo !== 'erro';
-  document.getElementById('tabela-wrapper').hidden = tipo === 'loading' || tipo === 'erro';
+  const wrapper = document.getElementById('tabela-wrapper');
+  if (tipo === 'loading' || tipo === 'erro') wrapper.hidden = true;
 }
 
 function mostrarToast(msg, tipo = 'success') {
@@ -164,7 +181,7 @@ function mostrarToast(msg, tipo = 'success') {
   setTimeout(() => { toast.hidden = true; }, 3500);
 }
 
-function iniciais2(nome) {
+function extrairIniciais(nome) {
   const partes = nome.trim().split(' ').filter(Boolean);
   if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
@@ -175,12 +192,16 @@ function somarChars(str) {
 }
 
 function formatarData(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('pt-BR');
+  return new Date(iso).toLocaleDateString('pt-BR');
 }
 
 function escapar(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function getCookie(name) {

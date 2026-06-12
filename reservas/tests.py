@@ -33,14 +33,15 @@ class ReservaViewTests(TestCase):
             exige_reserva=True
         )
 
-        # Criar Tipo e Janela de Reserva
-        self.tipo_almoco = TipoRefeicao.objects.create(
-            nome='almoco'
-        )
-        self.janela = JanelaReserva.objects.create(
+        self.tipo_almoco = TipoRefeicao.objects.get(nome='almoco')
+        self.tipo_almoco.ativo = True
+        self.tipo_almoco.save(update_fields=['ativo'])
+        self.janela, _ = JanelaReserva.objects.get_or_create(
             tipo_refeicao=self.tipo_almoco,
-            horario_abertura=time(0, 0),
-            horario_fechamento=time(11, 0)
+            defaults={
+                'horario_abertura': time(0, 0),
+                'horario_fechamento': time(11, 0),
+            },
         )
         # Garantimos que para os testes de sucesso, o "agora" esteja dentro da janela.
         
@@ -177,7 +178,7 @@ class ReservaViewTests(TestCase):
         
         self.assertEqual(Reserva.objects.count(), 0)
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("abrem apenas às" in str(m).lower() for m in messages))
+        self.assertTrue(any("fora do período de reserva" in str(m).lower() for m in messages))
 
     def test_validacao_data_passada(self):
         """Validação: Barrar reserva para uma data que já passou."""

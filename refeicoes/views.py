@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
-from administrativo.models import ConfigReserva
+from administrativo.models import ConfigReserva, TipoRefeicao
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
 from .models import Prato, Refeicao
@@ -156,6 +156,7 @@ def nutricionista_nova(request):
         'config_reserva': ConfigReserva.get_config_ativa(),
         'pratos_por_categoria': pratos_agrupados_por_categoria(),
         'pratos_selecionados': pratos_selecionados,
+        'nenhum_tipo_habilitado': not TipoRefeicao.codigos_habilitados(),
     })
 
 

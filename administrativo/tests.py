@@ -1,4 +1,6 @@
 import json
+from datetime import time
+
 from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
@@ -72,14 +74,62 @@ class TurmaCRUDTests(TestCase):
         self.assertTrue(any('alunos vinculados' in str(m).lower() for m in messages))
 
 
+class ConfiguracoesTipoRefeicaoTests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_cfg',
+            email='nutri_cfg@test.com',
+            password='123',
+            perfil='nutricionista',
+        )
+        self.client.login(username='nutri_cfg', password='123')
+
+    def test_tipos_seed_existem(self):
+        self.assertEqual(TipoRefeicao.objects.count(), 5)
+
+    def test_habilitar_tipo_e_salvar_horarios(self):
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        response = self.client.post(reverse('administrativo:configuracoes'), {
+            'acao': 'salvar_refeicoes',
+            f'ativo_{tipo.id}': 'on',
+            f'abertura_{tipo.id}': '15:00',
+            f'encerramento_{tipo.id}': '07:00',
+        })
+        self.assertRedirects(response, reverse('administrativo:configuracoes'))
+        tipo.refresh_from_db()
+        self.assertTrue(tipo.ativo)
+        self.assertEqual(tipo.janela.horario_abertura.strftime('%H:%M'), '15:00')
+
+    def test_desabilitar_tipo_nao_exige_horarios(self):
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.save()
+        JanelaReserva.objects.create(
+            tipo_refeicao=tipo,
+            horario_abertura=time(15, 0),
+            horario_fechamento=time(7, 0),
+        )
+        response = self.client.post(reverse('administrativo:configuracoes'), {
+            'acao': 'salvar_refeicoes',
+        })
+        self.assertRedirects(response, reverse('administrativo:configuracoes'))
+        tipo.refresh_from_db()
+        self.assertFalse(tipo.ativo)
+
+
 class JanelaReservaAPITests(TestCase):
     def setUp(self):
         self.nutri = Usuario.objects.create_user(
             username='nutri_api', email='nutri_api@test.com', 
             password='123', perfil='nutricionista'
         )
-        self.tipo = TipoRefeicao.objects.create(
-            nome='Almoço'
+        self.tipo = TipoRefeicao.objects.get(nome='almoco')
+        JanelaReserva.objects.get_or_create(
+            tipo_refeicao=self.tipo,
+            defaults={
+                'horario_abertura': time(15, 0),
+                'horario_fechamento': time(7, 0),
+            },
         )
         self.client.login(username='nutri_api', password='123')
 

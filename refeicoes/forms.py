@@ -1,6 +1,8 @@
 from django import forms
 from django.utils import timezone
 
+from administrativo.models import TipoRefeicao
+
 from .models import Prato, Refeicao
 
 ORDEM_CATEGORIAS = Prato.ORDEM_CATEGORIAS
@@ -94,6 +96,10 @@ class RefeicaoForm(forms.ModelForm):
         if not self.is_bound and self.initial.get('limite_vagas') is None:
             self.initial.setdefault('limite_vagas', 180)
 
+        habilitados = set(TipoRefeicao.codigos_habilitados())
+        choices = [(c, l) for c, l in Refeicao.TIPOS if c in habilitados]
+        self.fields['tipo'].choices = [('', 'Selecione')] + choices
+
         queryset = _queryset_pratos_ordenados()
         self.fields['pratos'].queryset = queryset
         choices = []
@@ -106,6 +112,12 @@ class RefeicaoForm(forms.ModelForm):
         if data and data < timezone.localdate():
             raise forms.ValidationError('A data não pode ser anterior a hoje.')
         return data
+
+    def clean_tipo(self):
+        tipo = self.cleaned_data.get('tipo')
+        if tipo and tipo not in TipoRefeicao.codigos_habilitados():
+            raise forms.ValidationError('Este tipo de refeição não está habilitado no sistema.')
+        return tipo
 
     def clean_limite_vagas(self):
         limite_vagas = self.cleaned_data.get('limite_vagas')

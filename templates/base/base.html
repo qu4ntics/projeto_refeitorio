@@ -125,7 +125,7 @@
             <i class="fa-solid fa-bowl-food"></i>
             <span>PRATOS</span>
           </a>
-          <a href="{% url 'administrativo:alunos' %}" class="menu-item {% block menu_alunos %}{% endblock %}">
+          <a href="{% url 'administrativo:alunos_turmas' %}" class="menu-item {% block menu_alunos %}{% endblock %}">
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
           </a>
@@ -137,7 +137,7 @@
             <i class="fa-solid fa-lock"></i>
             <span>BLOQUEADOS</span>
           </a>
-          <a href="#" class="menu-item {% block menu_config %}{% endblock %}">
+          <a href="{% url 'administrativo:configuracoes' %}" class="menu-item {% block menu_config %}{% endblock %}">
             <i class="fa-solid fa-gear"></i>
             <span>CONFIGURAÇÕES</span>
           </a>

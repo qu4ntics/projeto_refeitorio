@@ -1,6 +1,12 @@
 from django import forms
 
+from refeicoes.models import Refeicao
+
 from .models import Turma
+
+
+def label_tipo_refeicao(codigo):
+    return dict(Refeicao.TIPOS).get(codigo, codigo)
 
 
 class TurmaForm(forms.ModelForm):
