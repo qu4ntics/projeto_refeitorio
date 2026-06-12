@@ -123,16 +123,8 @@ class Refeicao(UUIDModel):
         r_word = "restante" if v == 1 else "restantes"
         texto = f"{v} {v_word} {r_word}"
 
-        if self.exige_reserva:
-            if self.reserva_encerrada:
-                return f"{texto} (Encerrada)"
-            
-            limites = self.get_janela_reserva()
-            if limites:
-                h_abre = limites['hora_abre'].strftime('%H:%M')
-                h_fecha = limites['hora_fecha'].strftime('%H:%M')
-                # Adiciona o horário ao lado das vagas sem quebrar o layout
-                texto += f" | {h_abre} às {h_fecha}"
+        if self.exige_reserva and self.reserva_encerrada:
+            return f"{texto} (Encerrada)"
         return texto
 
     def get_janela_reserva(self):

@@ -32,6 +32,12 @@
           </div>
         {% endif %}
 
+        {% if nenhum_tipo_habilitado %}
+          <div class="alert-error">
+            <p>Nenhum tipo de refeição está habilitado. Acesse <a href="{% url 'administrativo:configuracoes' %}">Configurações</a> e habilite ao menos um tipo.</p>
+          </div>
+        {% endif %}
+
         <div class="nova-refeicao-linha">
           <div class="campo-grupo {% if form.data.errors %}has-error{% endif %}">
             {{ form.data.label_tag }}

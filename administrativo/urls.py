@@ -9,7 +9,6 @@ urlpatterns = [
     path('alunos/', views.alunos_turmas, name='alunos_turmas'),
     path('alunos/turmas/json/', views.lista_turmas_json, name='lista_turmas_json'),
     path('configuracoes/', views.configuracoes, name='configuracoes'),
-    path('alunos/', views.alunos, name='alunos'),
     path('alunos/json/', views.lista_alunos, name='lista_alunos'),
     path('alunos/<uuid:turma_id>/', views.alunos_turma, name='alunos_turma'),
     path('alunos/<uuid:turma_id>/json/', views.lista_alunos_turma, name='lista_alunos_turma'),
