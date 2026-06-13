@@ -17,4 +17,8 @@ urlpatterns = [
     # Janela de Horários
     path('configuracoes/janela-horarios/', views.janela_horarios_api, name='janela_horarios_lista'),
     path('configuracoes/janela-horarios/<uuid:tipo_refeicao_id>/', views.janela_horarios_api, name='janela_horarios_detalhe'),
+
+    path('refeitorio/atualizar-status-reserva/<uuid:reserva_id>/', views.atualizar_status_reserva, name='atualizar_status_reserva'),
+    path('refeitorio/finalizar-chamada/', views.finalizar_chamada, name='finalizar_chamada'),
+    path('refeitorio/reabrir-chamada/', views.reabrir_chamada, name='reabrir_chamada'),
 ]

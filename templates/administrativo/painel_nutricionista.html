@@ -21,6 +21,16 @@
     <section class="secao-refeicoes">
       <div class="lado-esquerdo">
         <div class="header-refeicoes">
+ <!-- Bloco de Navegação de Semana -->
+ <div class="navegacao-semana">
+     <a href="?data={{ semana_anterior }}" class="btn-navegacao">
+         <i class="fa-solid fa-chevron-left"></i> Semana Anterior
+     </a>
+     <span>Semana de {{ semana_inicio|date:"d/m" }} até {{ semana_fim|date:"d/m" }}</span>
+     <a href="?data={{ proxima_semana }}" class="btn-navegacao">
+         Próxima Semana <i class="fa-solid fa-chevron-right"></i>
+     </a>
+ </div>
           <div>
             <h2>REFEIÇÕES DESTA SEMANA</h2>
           </div>
