@@ -17,6 +17,9 @@
       <h1 class="page-title">Alunos</h1>
       <p class="page-subtitle">Selecione uma turma para visualizar e gerenciar os alunos.</p>
     </div>
+    <a href="{% url 'administrativo:turma_criar' %}" class="btn-nova-turma">
+      <i class="fa-solid fa-plus"></i> Nova Turma
+    </a>
   </div>
 
   <div id="estado-loading" class="estado-central" hidden>
