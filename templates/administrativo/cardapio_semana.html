@@ -21,6 +21,25 @@
       <i class="fa-solid fa-plus"></i> Nova Refeição
     </a>
   </div>
+
+  <!-- Barra de Navegação de Semanas -->
+  <div class="navegacao-semana">
+    <div class="nav-container">
+      <a href="?data={{ semana_anterior }}" class="btn-navegacao" title="Semana Anterior">
+        <i class="fa-solid fa-chevron-left"></i> Anterior
+      </a>
+      
+      {% if data_selecionada %}
+      <a href="." class="btn-hoje" title="Voltar para a semana atual">
+        <i class="fa-solid fa-calendar-day"></i> Hoje
+      </a>
+      {% endif %}
+
+      <a href="?data={{ proxima_semana }}" class="btn-navegacao" title="Próxima Semana">
+        Próxima <i class="fa-solid fa-chevron-right"></i>
+      </a>
+    </div>
+  </div>
 </div>
 
 <div class="cardapio-divider"></div>

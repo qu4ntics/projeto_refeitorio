@@ -140,13 +140,12 @@ class RefeicaoForm(forms.ModelForm):
 
         if not exige_reserva:
             cleaned_data['limite_vagas'] = limite_vagas if limite_vagas is not None else 0
-        elif limite_vagas is None:
-            self.add_error('limite_vagas', 'Informe o limite de vagas para refeições com reserva.')
-        elif limite_vagas <= 0:
-            self.add_error(
-                'limite_vagas',
-                'Informe um limite de vagas maior que zero para refeição com reserva.',
-            )
+        else:
+            if limite_vagas is None:
+                self.add_error('limite_vagas', 'Informe o limite de vagas para refeições com reserva.')
+            elif limite_vagas == 0:
+                self.add_error('limite_vagas', 'O limite deve ser maior que zero para permitir reservas.')
+
         return cleaned_data
 
     def save(self, commit=True):

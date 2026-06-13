@@ -1,47 +1,60 @@
 {% extends "base/base.html" %}
 {% load static %}
 
-{% block title %}Painel Refeitório{% endblock %}
+{% block title %}Painel do Refeitório{% endblock %}
 
-{% block menu_painel_ref %}active{% endblock %}
+{% block menu_refeitorio %}active{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/painel-nutricionista.css' %}">
+  <link rel="stylesheet" href="{% static 'css/painel-refeitorio.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="painel-nutri">
-    <section class="cards-topo">
-      <div class="card-pequeno"></div>
-      <div class="card-pequeno"></div>
-      <div class="card-pequeno"></div>
-      <div class="card-pequeno"></div>
-    </section>
 
-    <section class="secao-refeicoes">
-      <div class="lado-esquerdo">
-        <h2>REFEIÇÕES DESTA SEMANA</h2>
+<div class="painel-refeitorio">
+    <div class="painel-header">
+        <h1>Painel do Refeitório</h1>
+        <p class="page-date">Hoje é {{ hoje|date:"d \d\e F \d\e Y" }}</p>
+    </div>
 
-        <div class="card-refeicao">
-          <span class="tag-refeicao">[Tipo refeição]</span>
-          <h3>[Refeição]</h3>
-          <p>[Hora] - [Local]</p>
+    <div class="cards-resumo">
+        <div class="card-resumo">
+            <div class="card-icon">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <div class="card-info">
+                <span class="card-label">Presenças Confirmadas</span>
+                <span class="card-value">{{ presencas_confirmadas }}</span>
+            </div>
         </div>
 
-        <div class="card-refeicao">
-          <span class="tag-refeicao">Lanche</span>
-          <h3>Fruta e iogurte</h3>
-          <p>15h00 - pátio principal</p>
+        <div class="card-resumo">
+            <div class="card-icon total">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="card-info">
+                <span class="card-label">Total de Reservas Ativas</span>
+                <span class="card-value">{{ total_reservas_ativas }}</span>
+            </div>
         </div>
 
-        <div class="card-refeicao">
-          <span class="tag-refeicao">Almoço</span>
-          <h3>Feijão, Arroz e peixe</h3>
-          <p>12:30 - Refeitório</p>
+        <div class="card-resumo">
+            <div class="card-icon pendente">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            <div class="card-info">
+                <span class="card-label">Aguardando Confirmação</span>
+                <span class="card-value">{{ aguardando_confirmacao }}</span>
+            </div>
         </div>
-      </div>
+    </div>
 
-      <div class="painel-direito"></div>
-    </section>
-  </div>
+    <div class="painel-secoes">
+        <!-- Aqui você pode adicionar outras seções, como um link para a lista de presença -->
+        <a href="{% url 'refeicoes:lista-presenca' %}" class="btn-lista-presenca">
+            <i class="fa-solid fa-clipboard-list"></i> Ver Lista de Presença Completa
+        </a>
+    </div>
+</div>
+
 {% endblock %}
