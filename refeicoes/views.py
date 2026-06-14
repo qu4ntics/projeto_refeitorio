@@ -234,3 +234,41 @@ def prato_excluir(request, pk):
         messages.success(request, 'Prato removido do catálogo.')
         return redirect('refeicoes:pratos_lista')
     return redirect('refeicoes:pratos_lista')
+
+@perfil_required('nutricionista')
+def refeicao_editar(request, pk):
+    refeicao = get_object_or_404(Refeicao, pk=pk)
+
+    # Bloqueio 1: Verificação Inicial
+    if refeicao.refeicao_iniciada:
+        messages.error(request, 'Erro! Não é possível editar porque a refeição já foi iniciada.')
+        return redirect('refeicoes:cardapio_semana')
+
+    if request.method == 'POST':
+        # Bloqueio 2: Nova verificação no POST (race condition)
+        refeicao.refresh_from_db()
+        if refeicao.refeicao_iniciada:
+            messages.error(request, 'A refeição foi iniciada enquanto você editava. Alterações não salvas.')
+            return redirect('refeicoes:cardapio_semana')
+
+        form = RefeicaoForm(request.POST, instance=refeicao)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Refeição atualizada com sucesso.')
+            return redirect('refeicoes:cardapio_semana')
+        else:
+            messages.error(request, 'Corrija os erros abaixo para salvar.')
+            pratos_selecionados = set(request.POST.getlist('pratos'))
+    else:
+        form = RefeicaoForm(instance=refeicao)
+        pratos_selecionados = set(str(pk) for pk in refeicao.pratos.values_list('pk', flat=True))
+
+    return render(request, 'refeicoes/editar-refeicao.html', {
+        'form': form,
+        'refeicao': refeicao,
+        'titulo': 'Editar refeição',
+        'config_reserva': ConfigReserva.get_config_ativa(),
+        'pratos_por_categoria': pratos_agrupados_por_categoria(),
+        'pratos_selecionados': pratos_selecionados,
+    })
+       

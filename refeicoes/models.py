@@ -217,6 +217,14 @@ class Refeicao(UUIDModel):
         limites = self.get_janela_reserva()
         if not limites: return False
         return timezone.localtime() > limites['fim']
+    
+    @property
+    def refeicao_iniciada(self):
+        """Retorna true se alguma presença foi registrada para esta refeição."""
+        from administrativo.models import Presenca
+        return Presenca.objects.filter(
+            reserva__refeicao=self
+        ).exists()
 
     def clean(self):
         super().clean()
