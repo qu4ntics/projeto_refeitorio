@@ -263,7 +263,8 @@ def refeicao_editar(request, pk):
         form = RefeicaoForm(instance=refeicao)
         pratos_selecionados = set(str(pk) for pk in refeicao.pratos.values_list('pk', flat=True))
 
-    return render(request, 'refeicoes/editar-refeicao.html', {
+    
+    return render(request, 'refeicoes/nova-refeicao.html', {
         'form': form,
         'refeicao': refeicao,
         'titulo': 'Editar refeição',

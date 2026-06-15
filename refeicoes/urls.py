@@ -16,4 +16,5 @@ urlpatterns = [
     path('pratos/novo/', views.prato_criar, name='prato_criar'),
     path('pratos/<uuid:pk>/editar/', views.prato_editar, name='prato_editar'),
     path('pratos/<uuid:pk>/excluir/', views.prato_excluir, name='prato_excluir'),
+    path('nutricionista/<uuid:pk>/editar/', views.refeicao_editar, name= 'nutricionista_editar'),
 ]
