@@ -9,6 +9,12 @@
       {% endif %}
     </div>
     <div class="meal-card-excluir">
+      {% if not refeicao.refeicao_iniciada %}
+        <a href="{% url 'refeicoes:nutricionista_editar' refeicao.pk %}" class="btn-editar-refeicao" title="Editar">
+          <i class="fa-solid fa-pen"></i>
+        </a>
+      {% endif %}
+      
       <form method="post" action="{% url 'refeicoes:nutricionista_deletar' refeicao.pk %}" onsubmit="return confirm('Tem certeza que deseja excluir essa refeição?');">
         {% csrf_token %}
         <button type="submit" class="btn-excluir-refeicao" title="Excluir">
