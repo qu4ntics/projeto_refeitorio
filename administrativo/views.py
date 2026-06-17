@@ -37,44 +37,74 @@ def painel_refeitorio(request):
 @perfil_required('nutricionista')
 def alunos_turmas(request):
     """Nível 1 — grid de cards de turma (/administrativo/alunos/)."""
-    return render(request, 'administrativo/alunos_turma.html')
+    return render(request, 'administrativo/alunos_turma.html', {'arquivadas': False})
+
+
+@login_required
+@perfil_required('nutricionista')
+def alunos_turmas_arquivadas(request):
+    """Grid de turmas desativadas."""
+    return render(request, 'administrativo/alunos_turma.html', {'arquivadas': True})
+
+
+def _serialize_turmas_grid(arquivadas=False):
+    turmas = Turma.objects.filter(ativo=not arquivadas).order_by('nome')
+    nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
+    lista = []
+    for t in turmas:
+        total_alunos = t.alunos.count()
+        total_bloqueados = t.alunos.filter(bloqueado=True).count()
+        dias = [nomes_curtos[d] for d in sorted(t.dias_contraturno or []) if d in nomes_curtos]
+        lista.append({
+            'id': str(t.id),
+            'nome': t.nome,
+            'turno': t.turno,
+            'turno_display': t.get_turno_display(),
+            'dias_contraturno': dias,
+            'total_alunos': total_alunos,
+            'total_bloqueados': total_bloqueados,
+            'ativo': t.ativo,
+        })
+    return lista
+
 
 @login_required
 @perfil_required('nutricionista')
 def alunos_turma(request, turma_id):
     """Nível 2 — tabela de alunos de uma turma (/administrativo/alunos/<turma_id>/)."""
-    turma = get_object_or_404(Turma, pk=turma_id, ativo=True)
-    return render(request, 'administrativo/alunos.html', {'turma_id': turma_id})
+    turma = get_object_or_404(Turma, pk=turma_id)
+    total_alunos = turma.alunos.filter(perfil='aluno').count()
+    nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
+    dias_semana = [
+        {'valor': d, 'label': label, 'curto': nomes_curtos[d]}
+        for d, label in Turma.DIAS_SEMANA
+    ]
+    return render(request, 'administrativo/alunos.html', {
+        'turma': turma,
+        'turma_id': turma_id,
+        'total_alunos': total_alunos,
+        'dias_semana': dias_semana,
+        'dias_contraturno_set': set(turma.dias_contraturno or []),
+        'turma_arquivada': not turma.ativo,
+    })
+
 
 @login_required
 @perfil_required('nutricionista')
 def lista_turmas_json(request):
     """JSON com lista de turmas para o grid do nível 1."""
-    turmas = Turma.objects.filter(ativo=True).order_by('nome')
-
-    NOMES_CURTOS = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
-
-    lista = []
-    for t in turmas:
-        total_alunos = t.alunos.count()
-        total_bloqueados = t.alunos.filter(bloqueado=True).count()
-        dias = [NOMES_CURTOS[d] for d in sorted(t.dias_contraturno or []) if d in NOMES_CURTOS]
-        lista.append({
-            'id': str(t.id),
-            'nome': t.nome,
-            'dias_contraturno': dias,
-            'total_alunos': total_alunos,
-            'total_bloqueados': total_bloqueados,
-        })
-
-    return JsonResponse({'turmas': lista})
+    arquivadas = request.GET.get('arquivadas') == '1'
+    return JsonResponse({
+        'turmas': _serialize_turmas_grid(arquivadas=arquivadas),
+        'arquivadas': arquivadas,
+    })
 
 @login_required
 @perfil_required('nutricionista')
 def lista_alunos_turma(request, turma_id):
     """JSON com dados da turma + alunos dela para o nível 2."""
     agora = timezone.now()
-    turma = get_object_or_404(Turma, pk=turma_id, ativo=True)
+    turma = get_object_or_404(Turma, pk=turma_id)
     alunos_qs = Usuario.objects.filter(perfil='aluno', turma=turma)
 
     lista = []
@@ -92,10 +122,41 @@ def lista_alunos_turma(request, turma_id):
             ),
         })
 
+    NOMES_CURTOS = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
+
     return JsonResponse({
-        'turma': {'id': str(turma.id), 'nome': turma.nome},
+        'turma': {
+            'id': str(turma.id),
+            'nome': turma.nome,
+            'turno': turma.turno,
+            'turno_display': turma.get_turno_display(),
+            'dias_contraturno': turma.dias_contraturno or [],
+            'ativo': turma.ativo,
+            'total_alunos': alunos_qs.count(),
+        },
+        'dias_semana': [
+            {'valor': d, 'label': label, 'curto': NOMES_CURTOS[d]}
+            for d, label in Turma.DIAS_SEMANA
+        ],
         'alunos': lista,
     })
+
+
+@login_required
+@perfil_required('nutricionista')
+@require_POST
+def turma_atualizar_contraturno(request, turma_id):
+    turma = get_object_or_404(Turma, pk=turma_id)
+    try:
+        payload = json.loads(request.body)
+        dias = payload.get('dias_contraturno', [])
+        dias = sorted({int(d) for d in dias if 0 <= int(d) <= 6})
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return JsonResponse({'erro': 'Dados inválidos.'}, status=400)
+
+    turma.dias_contraturno = dias
+    turma.save(update_fields=['dias_contraturno'])
+    return JsonResponse({'sucesso': True, 'dias_contraturno': dias})
 
 def _dados_janelas_configuracao():
     tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
@@ -246,8 +307,7 @@ def desbloquear_aluno(request, aluno_id):
 @login_required
 @perfil_required('nutricionista')
 def turmas_lista(request):
-    turmas = Turma.objects.all()
-    return render(request, 'administrativo/turmas_lista.html', {'turmas': turmas})
+    return redirect('administrativo:alunos_turmas')
 
 @login_required
 @perfil_required('nutricionista')
@@ -257,7 +317,7 @@ def turma_criar(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Turma cadastrada com sucesso.')
-            return redirect('administrativo:turmas_lista')
+            return redirect('administrativo:alunos_turmas')
     else:
         form = TurmaForm()
     return render(request, 'administrativo/turma_form.html', {
@@ -270,12 +330,15 @@ def turma_criar(request):
 @perfil_required('nutricionista')
 def turma_editar(request, pk):
     turma = get_object_or_404(Turma, pk=pk)
+    origem = request.GET.get('origem') or request.POST.get('origem')
     if request.method == 'POST':
         form = TurmaForm(request.POST, instance=turma)
         if form.is_valid():
             form.save()
             messages.success(request, 'Turma atualizada com sucesso.')
-            return redirect('administrativo:turmas_lista')
+            if origem in ('alunos', 'arquivadas'):
+                return redirect('administrativo:alunos_turma', turma_id=pk)
+            return redirect('administrativo:alunos_turmas')
     else:
         form = TurmaForm(instance=turma)
     return render(request, 'administrativo/turma_form.html', {
@@ -283,6 +346,7 @@ def turma_editar(request, pk):
         'titulo': 'Editar turma',
         'subtitulo': f'Atualize os dados de {turma.nome}.',
         'turma': turma,
+        'origem': origem,
     })
 
 @login_required
@@ -290,6 +354,11 @@ def turma_editar(request, pk):
 @require_POST
 def turma_excluir(request, pk):
     turma = get_object_or_404(Turma, pk=pk)
+    origem = request.POST.get('origem')
+    if origem == 'arquivadas':
+        redirect_name = 'administrativo:alunos_turmas_arquivadas'
+    else:
+        redirect_name = 'administrativo:alunos_turmas'
     if turma.alunos.exists():
         messages.error(
             request,
@@ -304,7 +373,7 @@ def turma_excluir(request, pk):
                 request,
                 'Esta turma não pode ser excluída porque possui alunos vinculados.',
             )
-    return redirect('administrativo:turmas_lista')
+    return redirect(redirect_name)
 
 @login_required
 @perfil_required('nutricionista')

@@ -25,6 +25,7 @@
       <div class="logo-area">
         <div class="logo">
           <i class="fa-solid fa-utensils"></i>
+          <img src="{% static 'images/image.png' %}" style="width: 45px;" alt="logo">
         </div>
         <h1>ReservaIF</h1>
       </div>
@@ -128,10 +129,6 @@
           <a href="{% url 'administrativo:alunos_turmas' %}" class="menu-item {% block menu_alunos %}{% endblock %}">
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
-          </a>
-          <a href="{% url 'administrativo:turmas_lista' %}" class="menu-item {% block menu_turmas %}{% endblock %}">
-            <i class="fa-solid fa-users-rectangle"></i>
-            <span>TURMAS</span>
           </a>
           <a href="#" class="menu-item {% block menu_bloqueados %}{% endblock %}">
             <i class="fa-solid fa-lock"></i>

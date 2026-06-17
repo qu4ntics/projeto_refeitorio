@@ -4,7 +4,10 @@ async function carregarTurmas() {
   mostrarEstado('loading');
 
   try {
-    const res = await fetch('/administrativo/alunos/turmas/json/');
+    const url = ARQUIVADAS
+      ? '/administrativo/alunos/turmas/json/?arquivadas=1'
+      : '/administrativo/alunos/turmas/json/';
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Erro na requisição');
     const data = await res.json();
     const turmas = data.turmas;
@@ -31,6 +34,7 @@ function renderizarCards(turmas) {
 
 function criarCardHTML(t) {
   const temBloqueados = t.total_bloqueados > 0;
+  const arquivada = ARQUIVADAS || t.ativo === false;
 
   const badgeBloqueados = temBloqueados
     ? `<span class="badge-bloqueados tem-bloqueados">
@@ -39,6 +43,10 @@ function criarCardHTML(t) {
     : `<span class="badge-bloqueados zero">
          <i class="fa-solid fa-circle-check"></i> Sem bloqueios
        </span>`;
+
+  const badgeArquivada = arquivada
+    ? `<span class="badge-arquivada"><i class="fa-solid fa-box-archive"></i> Arquivada</span>`
+    : '';
 
   const diasHTML = t.dias_contraturno && t.dias_contraturno.length > 0
     ? `<div class="turma-card-dias">
@@ -50,13 +58,19 @@ function criarCardHTML(t) {
   const statBloqueadosIcon  = temBloqueados ? 'fa-solid fa-lock' : 'fa-solid fa-lock-open';
 
   return `
-    <a class="turma-card" href="/administrativo/alunos/${t.id}/" title="Ver alunos de ${escapar(t.nome)}">
+    <a class="turma-card${arquivada ? ' turma-card-arquivada' : ''}" href="/administrativo/alunos/${t.id}/" title="Ver alunos de ${escapar(t.nome)}">
       <div class="turma-card-header">
         <div class="turma-card-icon">
           <i class="fa-solid fa-users-rectangle"></i>
         </div>
-        <span class="turma-card-nome">${escapar(t.nome)}</span>
-        ${badgeBloqueados}
+        <div class="turma-card-titulo">
+          <span class="turma-card-nome">${escapar(t.nome)}</span>
+          <span class="turma-card-turno">${escapar(t.turno_display || '—')}</span>
+        </div>
+        <div class="turma-card-badges">
+          ${badgeArquivada}
+          ${badgeBloqueados}
+        </div>
       </div>
 
       ${diasHTML}

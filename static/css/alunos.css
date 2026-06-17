@@ -7,7 +7,194 @@
 }
 
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.turma-acoes-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-turma-acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-main);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-turma-editar {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+.btn-turma-editar:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-turma-excluir {
+  border: 1px solid rgba(224, 82, 82, 0.35);
+  background: rgba(224, 82, 82, 0.06);
+  color: var(--danger);
+}
+
+.btn-turma-excluir:hover:not(:disabled) {
+  background: rgba(224, 82, 82, 0.12);
+  border-color: var(--danger);
+}
+
+.btn-turma-excluir:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.turma-info-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.turma-info-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.turma-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+
+.turma-turno-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 176, 91, 0.1);
+  color: var(--accent);
+  width: fit-content;
+}
+
+.turma-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.turma-status-badge.status-ativa {
+  background: rgba(0, 176, 91, 0.1);
+  color: var(--accent);
+}
+
+.turma-status-badge.status-inativa {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-light);
+}
+
+.contraturno-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.contraturno-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.contraturno-salvando {
+  font-size: 12px;
+  color: var(--text-light);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dias-contraturno-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dia-checkbox {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dia-checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.dia-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.dia-checkbox input:checked + .dia-checkbox-label {
+  background: rgba(0, 176, 91, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dia-checkbox:hover .dia-checkbox-label {
+  border-color: var(--accent);
 }
 
 .page-subtitle {
@@ -354,6 +541,40 @@
   color: var(--accent);
 }
 
+.modal-icon-danger {
+  background: rgba(224, 82, 82, 0.12);
+}
+
+.modal-icon-danger i {
+  color: var(--danger);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-main);
+  transition: opacity 0.2s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .modal h2 {
   font-size: 18px;
   font-weight: 700;
@@ -429,6 +650,19 @@
 }
 
 @media (max-width: 600px) {
+  .page-header {
+    flex-direction: column;
+  }
+
+  .turma-acoes-header {
+    width: 100%;
+  }
+
+  .btn-turma-acao {
+    flex: 1;
+    justify-content: center;
+  }
+
   .filtros-bar {
     flex-direction: column;
     align-items: stretch;

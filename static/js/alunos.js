@@ -2,6 +2,8 @@ const CORES_AVATAR = ['av-verde', 'av-roxo', 'av-azul', 'av-laranja', 'av-rosa',
 
 let todosAlunos = [];
 let alunoParaDesbloquear = null;
+let salvandoContraturno = false;
+let timeoutContraturno = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarAlunos();
@@ -16,11 +18,21 @@ document.addEventListener('DOMContentLoaded', () => {
     aplicarFiltros();
   });
 
-  document.getElementById('btn-cancelar-modal').addEventListener('click', fecharModal);
-  document.getElementById('btn-confirmar-desbloqueio').addEventListener('click', confirmarDesbloqueio);
-
-  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  document.getElementById('btn-cancelar-modal')?.addEventListener('click', fecharModal);
+  document.getElementById('btn-confirmar-desbloqueio')?.addEventListener('click', confirmarDesbloqueio);
+  document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) fecharModal();
+  });
+
+  document.getElementById('btn-excluir-turma')?.addEventListener('click', abrirModalExcluir);
+  document.getElementById('btn-cancelar-excluir')?.addEventListener('click', fecharModalExcluir);
+  document.getElementById('btn-confirmar-excluir')?.addEventListener('click', confirmarExcluirTurma);
+  document.getElementById('modal-excluir-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) fecharModalExcluir();
+  });
+
+  document.querySelectorAll('#dias-contraturno-grid input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', agendarSalvarContraturno);
   });
 });
 
@@ -34,14 +46,10 @@ async function carregarAlunos() {
 
     todosAlunos = data.alunos || [];
 
-    if (data.turma) {
-      const nome = data.turma.nome;
-      const el = document.getElementById('titulo-turma');
-      if (el) el.textContent = nome;
-      const sub = document.getElementById('subtitulo-turma');
-      if (sub) sub.textContent = `${todosAlunos.length} aluno${todosAlunos.length !== 1 ? 's' : ''} nesta turma.`;
-      const bc = document.getElementById('breadcrumb-turma');
-      if (bc) bc.textContent = nome;
+    const sub = document.getElementById('subtitulo-turma');
+    if (sub && data.turma) {
+      const total = data.turma.total_alunos ?? todosAlunos.length;
+      sub.textContent = `${total} aluno${total !== 1 ? 's' : ''} nesta turma.`;
     }
 
     mostrarEstado(null);
@@ -51,6 +59,65 @@ async function carregarAlunos() {
     console.error(err);
     mostrarEstado('erro');
   }
+}
+
+function agendarSalvarContraturno() {
+  clearTimeout(timeoutContraturno);
+  timeoutContraturno = setTimeout(salvarContraturno, 400);
+}
+
+async function salvarContraturno() {
+  if (salvandoContraturno) return;
+
+  const grid = document.getElementById('dias-contraturno-grid');
+  const indicador = document.getElementById('contraturno-salvando');
+  const dias = [...grid.querySelectorAll('input[type="checkbox"]:checked')].map(cb => Number(cb.value));
+
+  salvandoContraturno = true;
+  if (indicador) indicador.hidden = false;
+
+  try {
+    const res = await fetch(`/administrativo/alunos/${TURMA_ID}/contraturno/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({ dias_contraturno: dias }),
+    });
+    if (!res.ok) throw new Error();
+    mostrarToast('Dias de contraturno atualizados.', 'success');
+  } catch {
+    mostrarToast('Erro ao salvar contraturno. Tente novamente.', 'error');
+  } finally {
+    salvandoContraturno = false;
+    if (indicador) indicador.hidden = true;
+  }
+}
+
+function abrirModalExcluir() {
+  const total = TURMA_TOTAL_ALUNOS ?? todosAlunos.length;
+  const desc = document.getElementById('modal-excluir-desc');
+  const btnConfirmar = document.getElementById('btn-confirmar-excluir');
+
+  if (total > 0) {
+    desc.textContent = `A turma "${TURMA_NOME}" possui ${total} aluno${total !== 1 ? 's' : ''} vinculado${total !== 1 ? 's' : ''} e não pode ser excluída.`;
+    btnConfirmar.disabled = true;
+  } else {
+    desc.textContent = `Deseja excluir a turma "${TURMA_NOME}"? Esta ação não pode ser desfeita.`;
+    btnConfirmar.disabled = false;
+  }
+  document.getElementById('modal-excluir-overlay').hidden = false;
+}
+
+function fecharModalExcluir() {
+  document.getElementById('modal-excluir-overlay').hidden = true;
+}
+
+function confirmarExcluirTurma() {
+  const btn = document.getElementById('btn-confirmar-excluir');
+  if (btn.disabled) return;
+  document.getElementById('form-excluir-turma').submit();
 }
 
 function aplicarFiltros() {
@@ -170,7 +237,7 @@ function mostrarEstado(tipo) {
   document.getElementById('estado-vazio').hidden   = tipo !== 'vazio';
   document.getElementById('estado-erro').hidden    = tipo !== 'erro';
   const wrapper = document.getElementById('tabela-wrapper');
-  if (tipo === 'loading' || tipo === 'erro') wrapper.hidden = true;
+  if (tipo === 'loading' || tipo === 'erro' || tipo === 'vazio') wrapper.hidden = true;
 }
 
 function mostrarToast(msg, tipo = 'success') {

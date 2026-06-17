@@ -3,7 +3,7 @@
 
 {% block title %}{{ titulo }} — ReservaIF{% endblock %}
 
-{% block menu_turmas %}active{% endblock %}
+{% block menu_alunos %}active{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
@@ -14,7 +14,7 @@
   <div class="nova-refeicao-page">
     <div class="nova-refeicao-card">
       <header class="nova-refeicao-header">
-        <a href="{% url 'administrativo:turmas_lista' %}" class="nova-refeicao-voltar" title="Voltar à lista">&larr;</a>
+        <a href="{% url 'administrativo:alunos_turmas' %}" class="nova-refeicao-voltar" title="Voltar à lista">&larr;</a>
         <div class="nova-refeicao-titulo">
           <h1>{{ titulo }}</h1>
           <p>{{ subtitulo }}</p>
@@ -23,6 +23,7 @@
 
       <form method="post" class="nova-refeicao-form">
         {% csrf_token %}
+        {% if origem %}<input type="hidden" name="origem" value="{{ origem }}">{% endif %}
 
         {% if form.non_field_errors %}
           <div class="alert-error">
@@ -69,7 +70,13 @@
         </div>
 
         <div class="nova-refeicao-acoes">
-          <a href="{% url 'administrativo:turmas_lista' %}" class="btn-cancelar">Cancelar</a>
+          {% if origem == 'arquivadas' and turma %}
+            <a href="{% url 'administrativo:alunos_turma' turma.pk %}" class="btn-cancelar">Cancelar</a>
+          {% elif origem == 'alunos' and turma %}
+            <a href="{% url 'administrativo:alunos_turma' turma.pk %}" class="btn-cancelar">Cancelar</a>
+          {% else %}
+            <a href="{% url 'administrativo:alunos_turmas' %}" class="btn-cancelar">Cancelar</a>
+          {% endif %}
           <button type="submit" class="btn-salvar">Salvar</button>
         </div>
       </form>

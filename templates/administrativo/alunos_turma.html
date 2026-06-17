@@ -1,25 +1,42 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}Alunos por Turma — ReservaIF{% endblock %}
+{% block title %}{% if arquivadas %}Turmas Arquivadas{% else %}Alunos por Turma{% endif %} — ReservaIF{% endblock %}
 
 {% block menu_alunos %}active{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/alunos_turma.css' %}">
+<link rel="stylesheet" href="{% static 'css/alunos_turma.css' %}?v=5">
 {% endblock %}
 
 {% block content %}
-<div class="turmas-alunos-page">
+<div class="turmas-alunos-page{% if arquivadas %} turmas-arquivadas-page{% endif %}">
 
   <div class="page-header">
     <div>
-      <h1 class="page-title">Alunos</h1>
-      <p class="page-subtitle">Selecione uma turma para visualizar e gerenciar os alunos.</p>
+      <h1 class="page-title">{% if arquivadas %}Turmas arquivadas{% else %}Alunos{% endif %}</h1>
+      <p class="page-subtitle" id="page-subtitulo">
+        {% if arquivadas %}
+          Turmas desativadas que ainda podem ser consultadas e editadas.
+        {% else %}
+          Selecione uma turma para visualizar e gerenciar os alunos.
+        {% endif %}
+      </p>
     </div>
-    <a href="{% url 'administrativo:turma_criar' %}" class="btn-nova-turma">
-      <i class="fa-solid fa-plus"></i> Nova Turma
-    </a>
+    <div class="page-header-acoes">
+      {% if arquivadas %}
+        <a href="{% url 'administrativo:alunos_turmas' %}" class="btn-link-turmas">
+          <i class="fa-solid fa-arrow-left"></i> Turmas ativas
+        </a>
+      {% else %}
+        <a href="{% url 'administrativo:alunos_turmas_arquivadas' %}" class="btn-link-turmas">
+          <i class="fa-solid fa-box-archive"></i> Turmas arquivadas
+        </a>
+        <a href="{% url 'administrativo:turma_criar' %}" class="btn-nova-turma">
+          <i class="fa-solid fa-plus"></i> Nova Turma
+        </a>
+      {% endif %}
+    </div>
   </div>
 
   <div id="estado-loading" class="estado-central" hidden>
@@ -28,8 +45,10 @@
   </div>
 
   <div id="estado-vazio" class="estado-central" hidden>
-    <i class="fa-solid fa-users-rectangle"></i>
-    <p>Nenhuma turma cadastrada.</p>
+    <i class="fa-solid fa-{% if arquivadas %}box-archive{% else %}users-rectangle{% endif %}"></i>
+    <p id="estado-vazio-texto">
+      {% if arquivadas %}Nenhuma turma arquivada.{% else %}Nenhuma turma cadastrada.{% endif %}
+    </p>
   </div>
 
   <div id="estado-erro" class="estado-central estado-erro" hidden>
@@ -46,5 +65,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/alunos_turma.js' %}"></script>
+<script>
+  const ARQUIVADAS = {{ arquivadas|yesno:"true,false" }};
+</script>
+<script src="{% static 'js/alunos_turma.js' %}?v=3"></script>
 {% endblock %}
