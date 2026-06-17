@@ -1,30 +1,80 @@
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}Alunos da Turma — ReservaIF{% endblock %}
+{% block title %}{{ turma.nome }} — ReservaIF{% endblock %}
 
 {% block menu_alunos %}active{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/alunos.css' %}">
+<link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
 <div class="alunos-page">
 
   <div class="breadcrumb">
+    {% if turma_arquivada %}
+    <a href="{% url 'administrativo:alunos_turmas_arquivadas' %}" class="breadcrumb-link">
+      <i class="fa-solid fa-arrow-left"></i>
+      Turmas arquivadas
+    </a>
+    {% else %}
     <a href="{% url 'administrativo:alunos_turmas' %}" class="breadcrumb-link">
       <i class="fa-solid fa-arrow-left"></i>
       Turmas
     </a>
+    {% endif %}
     <span class="breadcrumb-sep">/</span>
-    <span class="breadcrumb-atual" id="breadcrumb-turma">...</span>
+    <span class="breadcrumb-atual">{{ turma.nome }}</span>
   </div>
 
   <div class="page-header">
     <div>
-      <h1 class="page-title" id="titulo-turma">Alunos da Turma</h1>
-      <p class="page-subtitle" id="subtitulo-turma">Visualize e gerencie os alunos desta turma.</p>
+      <h1 class="page-title">{{ turma.nome }}</h1>
+      <p class="page-subtitle" id="subtitulo-turma">
+        {{ total_alunos }} aluno{{ total_alunos|pluralize }} nesta turma.
+      </p>
+    </div>
+    <div class="turma-acoes-header">
+      <a href="{% url 'administrativo:turma_editar' turma.pk %}?origem={% if turma_arquivada %}arquivadas{% else %}alunos{% endif %}" class="btn-turma-acao btn-turma-editar" title="Editar turma">
+        <i class="fa-solid fa-pen"></i> Editar
+      </a>
+      <button type="button" id="btn-excluir-turma" class="btn-turma-acao btn-turma-excluir"
+              title="{% if total_alunos %}Não é possível excluir turma com alunos vinculados{% else %}Excluir turma{% endif %}"
+              {% if total_alunos %}disabled{% endif %}>
+        <i class="fa-solid fa-trash"></i> Excluir
+      </button>
+    </div>
+  </div>
+
+  <div class="turma-info-card">
+    <div class="turma-info-meta">
+      <div class="turma-meta-item">
+        <span class="meta-label">Turno</span>
+        <span class="turma-turno-badge">{{ turma.get_turno_display }}</span>
+      </div>
+      <div class="turma-meta-item">
+        <span class="meta-label">Status</span>
+        <span class="turma-status-badge {% if turma.ativo %}status-ativa{% else %}status-inativa{% endif %}">
+          {% if turma.ativo %}Ativa{% else %}Inativa{% endif %}
+        </span>
+      </div>
+    </div>
+    <div class="turma-contraturno">
+      <div class="contraturno-cabecalho">
+        <span class="contraturno-label">Dias de contraturno</span>
+        <span class="contraturno-salvando" id="contraturno-salvando" hidden>
+          <i class="fa-solid fa-circle-notch fa-spin"></i> Salvando...
+        </span>
+      </div>
+      <div class="dias-contraturno-grid" id="dias-contraturno-grid">
+        {% for dia in dias_semana %}
+        <label class="dia-checkbox">
+          <input type="checkbox" value="{{ dia.valor }}" {% if dia.valor in dias_contraturno_set %}checked{% endif %}>
+          <span class="dia-checkbox-label" title="{{ dia.label }}">{{ dia.curto }}</span>
+        </label>
+        {% endfor %}
+      </div>
     </div>
   </div>
 
@@ -59,7 +109,7 @@
     </button>
   </div>
 
-  <div id="tabela-wrapper" class="tabela-wrapper">
+  <div id="tabela-wrapper" class="tabela-wrapper" hidden>
     <div class="tabela-header">
       <span>ALUNO</span>
       <span>E-MAIL</span>
@@ -88,6 +138,27 @@
   </div>
 </div>
 
+<div id="modal-excluir-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-icon modal-icon-danger">
+      <i class="fa-solid fa-trash"></i>
+    </div>
+    <h2>Excluir turma?</h2>
+    <p id="modal-excluir-desc">Esta ação não pode ser desfeita.</p>
+    <div class="modal-acoes">
+      <button class="btn btn-outline" id="btn-cancelar-excluir">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-excluir">
+        <i class="fa-solid fa-trash"></i> Excluir turma
+      </button>
+    </div>
+  </div>
+</div>
+
+<form id="form-excluir-turma" method="post" action="{% url 'administrativo:turma_excluir' turma.pk %}" hidden>
+  {% csrf_token %}
+  <input type="hidden" name="origem" value="alunos">
+</form>
+
 <div id="toast" class="toast" hidden></div>
 
 {% endblock %}
@@ -95,6 +166,8 @@
 {% block extra_js %}
 <script>
   const TURMA_ID = "{{ turma_id }}";
+  const TURMA_NOME = "{{ turma.nome|escapejs }}";
+  const TURMA_TOTAL_ALUNOS = {{ total_alunos }};
 </script>
-<script src="{% static 'js/alunos.js' %}"></script>
+<script src="{% static 'js/alunos.js' %}?v=2"></script>
 {% endblock %}
