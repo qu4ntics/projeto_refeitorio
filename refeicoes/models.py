@@ -62,9 +62,10 @@ class Refeicao(UUIDModel):
 
     data = models.DateField()
     tipo = models.CharField(max_length=20, choices=TIPOS)
-    limite_vagas = models.IntegerField()
+    limite_vagas = models.PositiveIntegerField()
     exige_reserva = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    chamada_finalizada = models.BooleanField(default=False, verbose_name="Chamada Finalizada")
     pratos = models.ManyToManyField(Prato, through='RefeicaoPrato', related_name='refeicoes')
 
     class Meta:
@@ -83,7 +84,7 @@ class Refeicao(UUIDModel):
 
     @property
     def descricao_exibicao(self):
-        pratos = [item.prato for item in self.itens_prato.select_related('prato').all()]
+        pratos = [item.prato for item in self.itens_prato.all()]
         if not pratos:
             return ''
 
@@ -123,16 +124,8 @@ class Refeicao(UUIDModel):
         r_word = "restante" if v == 1 else "restantes"
         texto = f"{v} {v_word} {r_word}"
 
-        if self.exige_reserva:
-            if self.reserva_encerrada:
-                return f"{texto} (Encerrada)"
-            
-            limites = self.get_janela_reserva()
-            if limites:
-                h_abre = limites['hora_abre'].strftime('%H:%M')
-                h_fecha = limites['hora_fecha'].strftime('%H:%M')
-                # Adiciona o horário ao lado das vagas sem quebrar o layout
-                texto += f" | {h_abre} às {h_fecha}"
+        if self.exige_reserva and self.reserva_encerrada:
+            return f"{texto} (Encerrada)"
         return texto
 
     def get_janela_reserva(self):
@@ -203,6 +196,16 @@ class Refeicao(UUIDModel):
         limites = self.get_janela_reserva()
         if not limites: return True
         return limites['inicio'] <= timezone.localtime() <= limites['fim']
+
+    @property
+    def pode_cancelar(self):
+        """Verifica se ainda é permitido cancelar a reserva baseado no prazo de minutos."""
+        limites = self.get_janela_reserva()
+        if not limites:
+            return True
+        agora = timezone.localtime()
+        limite_cancelamento = limites['fim'] - timedelta(minutes=limites['minutos_cancelamento'])
+        return agora <= limite_cancelamento
 
     @property
     def reserva_futura(self):

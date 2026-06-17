@@ -13,10 +13,16 @@
     <div class="meal-info">{% include "refeicoes/_refeicao_meta.html" with refeicao=refeicao %}</div>
     {% if refeicao.exige_reserva %}
       {% if refeicao.reserva_id %}
-        <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post">
-          {% csrf_token %}
-          <button class="reserve-btn reserve-btn--cancel" type="submit">CANCELAR</button>
-        </form>
+        {% if refeicao.pode_cancelar %}
+          <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post">
+            {% csrf_token %}
+            <button class="reserve-btn reserve-btn--cancel" type="submit">CANCELAR</button>
+          </form>
+        {% else %}
+          <button class="reserve-btn" disabled title="Prazo de cancelamento encerrado">
+            <i class="fa-solid fa-check"></i> RESERVADO
+          </button>
+        {% endif %}
       {% else %}
         <form action="{% url 'reservas:criar_reserva' refeicao.id %}" method="post">
           {% csrf_token %}

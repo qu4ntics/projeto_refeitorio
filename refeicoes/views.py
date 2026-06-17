@@ -1,22 +1,34 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Value
+from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
-from administrativo.models import ConfigReserva
+from administrativo.models import ConfigReserva, TipoRefeicao
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
 from .models import Prato, Refeicao
 
 
-def _semana_atual():
+def _obter_semana(data_ref_str=None):
+    """
+    Retorna a data de hoje e o intervalo da semana (Segunda a Domingo)
+    baseado em uma data de referência.
+    """
     hoje = timezone.localdate()
-    segunda = hoje - timedelta(days=hoje.weekday())
+    if data_ref_str:
+        try:
+            ref = datetime.strptime(data_ref_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            ref = hoje
+    else:
+        ref = hoje
+    segunda = ref - timedelta(days=ref.weekday())
     return hoje, segunda, segunda + timedelta(days=6)
 
 
@@ -29,9 +41,8 @@ def _queryset_refeicoes_periodo(inicio, fim):
     )
 
 
-def _montar_dias_semana(refeicoes):
+def _montar_dias_semana(refeicoes, segunda):
     hoje = timezone.localdate()
-    segunda = hoje - timedelta(days=hoje.weekday())
     dias = [
         ('Segunda-feira', 'seg', segunda),
         ('Terça-feira', 'ter', segunda + timedelta(1)),
@@ -54,78 +65,114 @@ def _montar_dias_semana(refeicoes):
         for nome, id_dia, data_dia in dias
     ]
 
+def _preparar_contexto_semana(request, data_ref_str):
+    """Centraliza a lógica de geração de dados da semana para evitar inconsistências entre views."""
+    hoje, segunda, semana_fim = _obter_semana(data_ref_str)
+    refeicoes = _queryset_refeicoes_periodo(segunda, semana_fim)
+    dias_semana = _montar_dias_semana(refeicoes, segunda)
+    
+    return {
+        'hoje': hoje,
+        'semana_inicio': segunda,
+        'semana_fim': semana_fim,
+        'dias_semana': dias_semana,
+        'proxima_semana': (segunda + timedelta(days=7)).strftime('%Y-%m-%d'),
+        'semana_anterior': (segunda - timedelta(days=7)).strftime('%Y-%m-%d'),
+        'refeicoes_raw': refeicoes,
+        'data_selecionada': data_ref_str # Flag para mostrar o botão 'Voltar para Hoje'
+    }
 
 @login_required
 def homepage(request):
-    if request.user.perfil != 'aluno':
-        url_name = REDIRECT_POR_PERFIL.get(request.user.perfil, 'refeicoes:homepage')
-        return redirect(url_name)
+    perfil = getattr(request.user, 'perfil', 'aluno')
+    if perfil != 'aluno':
+        # Se for nutricionista, redireciona para a gestão de cardápio; senão usa o padrão do perfil
+        if perfil == 'nutricionista':
+            return redirect('refeicoes:cardapio_semana')
+        return redirect(REDIRECT_POR_PERFIL.get(perfil, 'refeicoes:homepage'))
 
-    hoje, segunda, _ = _semana_atual()
-    semana_fim = segunda + timedelta(days=4)
-
-    refeicoes = _queryset_refeicoes_periodo(segunda, semana_fim)
-
+    ctx = _preparar_contexto_semana(request, request.GET.get('data'))
+    
     from reservas.models import Reserva
     reservas_ativas = {
         res.refeicao_id: res.id
-        for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=refeicoes)
+        for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=ctx['refeicoes_raw'])
     }
 
-    dias_semana = _montar_dias_semana(refeicoes)
+    dias_semana = ctx['dias_semana']
     tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'])
 
     for dia in dias_semana:
         for refeicao in dia['refeicoes']:
             refeicao.reserva_id = reservas_ativas.get(refeicao.id)
 
-    return render(request, 'refeicoes/homepage.html', {
-        'dias_semana': dias_semana,
-        'semana_inicio': segunda,
-        'semana_fim': semana_fim,
+    ctx.update({
         'tab_inicial': tab_inicial,
     })
+    return render(request, 'refeicoes/homepage.html', ctx)
+
+ 
+@perfil_required('nutricionista')
+def cardapio_semana(request):
+    ctx = _preparar_contexto_semana(request, request.GET.get('data'))
+    dias_semana = ctx['dias_semana']
+    # No painel da nutri, se não for a semana atual, foca na segunda-feira
+    tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), 'seg')
+
+    ctx.update({
+        'tab_inicial': tab_inicial,
+        'dia_extra': {'nome': 'Dia Extra', 'data': None, 'hoje': False, 'refeicoes': []},
+    })
+    return render(request, 'administrativo/cardapio_semana.html', ctx)
+
 
 @login_required
 @perfil_required('refeitorio')
 def lista_presenca(request):
-    from django.db.models import Q
+    # Filtro de data: padrão é hoje se não for especificado
+    data_param = request.GET.get('data')
+    if data_param:
+        try:
+            data_filtro = datetime.strptime(data_param, '%Y-%m-%d').date()
+        except ValueError:
+            data_filtro = timezone.localdate()
+    else:
+        data_filtro = timezone.localdate()
+
     from reservas.models import Reserva
 
-    pesquisa = request.GET.get('search', '').strip()
+    # Busca todas as reservas da data (inclusive canceladas) ordenadas por nome
     reservas = (
-        Reserva.objects.filter(refeicao__data=timezone.localdate())
+        Reserva.objects.filter(refeicao__data=data_filtro)
         .select_related('aluno', 'aluno__turma', 'refeicao')
-        .prefetch_related('refeicao__itens_prato__prato')
+        .order_by('aluno__first_name', 'aluno__last_name')
     )
+
+    pesquisa = request.GET.get('search', '').strip()
     if pesquisa:
-        reservas = reservas.filter(
+        tipos_correspondentes = [k for k, v in Refeicao.TIPOS if pesquisa.lower() in v.lower()]
+
+        reservas = reservas.annotate(
+            full_name=Concat('aluno__first_name', Value(' '), 'aluno__last_name')
+        ).filter(
             Q(aluno__first_name__icontains=pesquisa)
             | Q(aluno__last_name__icontains=pesquisa)
+            | Q(full_name__icontains=pesquisa)
+            | Q(aluno__username__icontains=pesquisa)
             | Q(aluno__turma__nome__icontains=pesquisa)
+            | Q(refeicao__tipo__in=tipos_correspondentes)
         )
 
-    return render(request, 'refeicoes/lista-presenca.html', {'reservas': reservas, 'pesquisa': pesquisa})
- 
-@perfil_required('nutricionista')
-def cardapio_semana(request):
-    hoje = timezone.localdate()
-    segunda = hoje - timedelta(days=hoje.weekday())
-    semana_fim = segunda + timedelta(days=4)
+    # Performance: Verifica se o dia está finalizado em uma única query
+    refeicoes_info = Refeicao.objects.filter(data=data_filtro).values_list('chamada_finalizada', flat=True)
+    dia_finalizado = len(refeicoes_info) > 0 and all(refeicoes_info)
 
-    refeicoes = _queryset_refeicoes_periodo(segunda, semana_fim)
-
-    dias_semana = _montar_dias_semana(refeicoes)
-    tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'] if dias_semana else 'seg')
-
-    context = {
-        'semana_inicio': segunda,
-        'semana_fim': semana_fim,
-        'dias_semana': dias_semana,
-        'tab_inicial': tab_inicial,
-        'dia_extra': {'nome': 'Dia Extra', 'data': None, 'hoje': False, 'refeicoes': []},
-    }
-    return render(request, 'administrativo/cardapio_semana.html', context)
+    return render(request, 'refeicoes/lista-presenca.html', {
+        'reservas': reservas, 
+        'pesquisa': pesquisa,
+        'data_filtro': data_filtro,
+        'dia_finalizado': dia_finalizado
+    })
 
 
 @perfil_required('nutricionista')
@@ -156,6 +203,7 @@ def nutricionista_nova(request):
         'config_reserva': ConfigReserva.get_config_ativa(),
         'pratos_por_categoria': pratos_agrupados_por_categoria(),
         'pratos_selecionados': pratos_selecionados,
+        'nenhum_tipo_habilitado': not TipoRefeicao.codigos_habilitados(),
     })
 
 

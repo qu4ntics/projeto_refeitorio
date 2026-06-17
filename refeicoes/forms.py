@@ -1,6 +1,8 @@
 from django import forms
 from django.utils import timezone
 
+from administrativo.models import TipoRefeicao
+
 from .models import Prato, Refeicao
 
 ORDEM_CATEGORIAS = Prato.ORDEM_CATEGORIAS
@@ -76,15 +78,61 @@ class RefeicaoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['pratos'].queryset = Prato.objects.all()
+        self.fields['limite_vagas'].required = False
+        if not self.is_bound and self.initial.get('limite_vagas') is None:
+            self.initial.setdefault('limite_vagas', 180)
 
-        # Novo: validar mínimo de vagas em edição
-        if self.instance.pk:
-            reservas_ativas = self.instance.reservas_ativas_count
-            self.fields['limite_vagas'].help_text = (
-                f'Mínimo: {reservas_ativas} (reservas confirmadas)'
-            )
-            self.fields['limite_vagas'].min_value = reservas_ativas
+        habilitados = set(TipoRefeicao.codigos_habilitados())
+        choices = [(c, l) for c, l in Refeicao.TIPOS if c in habilitados]
+        self.fields['tipo'].choices = [('', 'Selecione')] + choices
+
+        queryset = _queryset_pratos_ordenados()
+        self.fields['pratos'].queryset = queryset
+        choices = []
+        for prato in queryset:
+            choices.append((prato.pk, _label_prato(prato)))
+        self.fields['pratos'].choices = choices
+
+    def clean_data(self):
+        data = self.cleaned_data.get('data')
+        if data and data < timezone.localdate():
+            raise forms.ValidationError('A data não pode ser anterior a hoje.')
+        return data
+
+    def clean_tipo(self):
+        tipo = self.cleaned_data.get('tipo')
+        if tipo and tipo not in TipoRefeicao.codigos_habilitados():
+            raise forms.ValidationError('Este tipo de refeição não está habilitado no sistema.')
+        return tipo
+
+    def clean_limite_vagas(self):
+        limite_vagas = self.cleaned_data.get('limite_vagas')
+        if limite_vagas in (None, ''):
+            return None
+        if limite_vagas < 0:
+            raise forms.ValidationError('O limite de vagas deve ser igual ou superior a zero.')
+        return limite_vagas
+
+    def clean_pratos(self):
+        pratos = self.cleaned_data.get('pratos')
+        if pratos is not None and not pratos:
+            raise forms.ValidationError('Selecione pelo menos um prato.')
+        return pratos
+
+    def clean(self):
+        cleaned_data = super().clean()
+        exige_reserva = cleaned_data.get('exige_reserva')
+        limite_vagas = cleaned_data.get('limite_vagas')
+
+        if not exige_reserva:
+            cleaned_data['limite_vagas'] = limite_vagas if limite_vagas is not None else 0
+        else:
+            if limite_vagas is None:
+                self.add_error('limite_vagas', 'Informe o limite de vagas para refeições com reserva.')
+            elif limite_vagas == 0:
+                self.add_error('limite_vagas', 'O limite deve ser maior que zero para permitir reservas.')
+
+        return cleaned_data
 
     def clean_limite_vagas(self):
         """Validação no backend: vagas não podem ser menores que reservas ativas"""
