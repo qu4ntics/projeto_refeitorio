@@ -309,6 +309,22 @@ def desbloquear_aluno(request, aluno_id):
 def turmas_lista(request):
     return redirect('administrativo:alunos_turmas')
 
+def _context_turma_form(form, **extra):
+    nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
+    dias_semana = [
+        {'valor': d, 'label': label, 'curto': nomes_curtos[d]}
+        for d, label in Turma.DIAS_SEMANA
+    ]
+    raw = form['dias_contraturno'].value() or []
+    dias_contraturno_set = {int(d) for d in raw}
+    return {
+        'form': form,
+        'dias_semana': dias_semana,
+        'dias_contraturno_set': dias_contraturno_set,
+        **extra,
+    }
+
+
 @login_required
 @perfil_required('nutricionista')
 def turma_criar(request):
@@ -320,11 +336,11 @@ def turma_criar(request):
             return redirect('administrativo:alunos_turmas')
     else:
         form = TurmaForm()
-    return render(request, 'administrativo/turma_form.html', {
-        'form': form,
-        'titulo': 'Nova turma',
-        'subtitulo': 'Cadastre uma turma para que os alunos possam selecioná-la no registro.',
-    })
+    return render(request, 'administrativo/turma_form.html', _context_turma_form(
+        form,
+        titulo='Nova turma',
+        subtitulo='Cadastre uma turma para que os alunos possam selecioná-la no registro.',
+    ))
 
 @login_required
 @perfil_required('nutricionista')
@@ -341,13 +357,13 @@ def turma_editar(request, pk):
             return redirect('administrativo:alunos_turmas')
     else:
         form = TurmaForm(instance=turma)
-    return render(request, 'administrativo/turma_form.html', {
-        'form': form,
-        'titulo': 'Editar turma',
-        'subtitulo': f'Atualize os dados de {turma.nome}.',
-        'turma': turma,
-        'origem': origem,
-    })
+    return render(request, 'administrativo/turma_form.html', _context_turma_form(
+        form,
+        titulo='Editar turma',
+        subtitulo=f'Atualize os dados de {turma.nome}.',
+        turma=turma,
+        origem=origem,
+    ))
 
 @login_required
 @perfil_required('nutricionista')

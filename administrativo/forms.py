@@ -21,7 +21,12 @@ class TurmaForm(forms.ModelForm):
         model = Turma
         fields = ['nome', 'turno', 'ativo']
         widgets = {
-            'nome': forms.TextInput(attrs={'placeholder': 'Ex.: 1º ano Informática'}),
+            'nome': forms.TextInput(attrs={
+                'class': 'campo',
+                'placeholder': 'Ex.: 1º ano Informática',
+            }),
+            'turno': forms.RadioSelect(),
+            'ativo': forms.CheckboxInput(attrs={'class': 'toggle-checkbox'}),
         }
 
     def __init__(self, *args, **kwargs):
