@@ -74,10 +74,28 @@ class RefeicaoForm(forms.ModelForm):
     class Meta:
         model = Refeicao
         fields = ['data', 'tipo', 'limite_vagas', 'exige_reserva']
-        # ... widgets ...
+        widgets = {
+            'data': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'type': 'date', 'class': 'campo'},
+            ),
+            'tipo': forms.Select(attrs={'class': 'campo'}),
+            'limite_vagas': forms.NumberInput(attrs={
+                'class': 'campo campo-numero',
+                'min': 0,
+                'placeholder': '180',
+            }),
+            'exige_reserva': forms.CheckboxInput(attrs={'class': 'toggle-checkbox'}),
+        }
+        labels = {
+            'data': 'Data',
+            'tipo': 'Tipo de refeição',
+            'limite_vagas': 'Limite de vagas',
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['data'].input_formats = ['%Y-%m-%d']
         self.fields['limite_vagas'].required = False
         if not self.is_bound and self.initial.get('limite_vagas') is None:
             self.initial.setdefault('limite_vagas', 180)
@@ -111,6 +129,13 @@ class RefeicaoForm(forms.ModelForm):
             return None
         if limite_vagas < 0:
             raise forms.ValidationError('O limite de vagas deve ser igual ou superior a zero.')
+        if self.instance.pk:
+            reservas_ativas = self.instance.reservas_ativas_count
+            if limite_vagas < reservas_ativas:
+                raise forms.ValidationError(
+                    f'O limite de vagas não pode ser menor que {reservas_ativas} '
+                    f'(número de reservas confirmadas).'
+                )
         return limite_vagas
 
     def clean_pratos(self):
@@ -134,16 +159,8 @@ class RefeicaoForm(forms.ModelForm):
 
         return cleaned_data
 
-    def clean_limite_vagas(self):
-        """Validação no backend: vagas não podem ser menores que reservas ativas"""
-        limite = self.cleaned_data.get('limite_vagas')
-        
-        if self.instance.pk:  # Só valida em edição, não em criação
-            reservas_ativas = self.instance.reservas_ativas_count
-            if limite < reservas_ativas:
-                raise forms.ValidationError(
-                    f'O limite de vagas não pode ser menor que {reservas_ativas} '
-                    f'(número de reservas confirmadas).'
-                )
-        
-        return limite
+    def save(self, commit=True):
+        refeicao = super().save(commit=commit)
+        if commit:
+            refeicao.pratos.set(self.cleaned_data['pratos'])
+        return refeicao

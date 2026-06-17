@@ -1,8 +1,11 @@
+from datetime import date
+
 from django.test import TestCase
 
 from administrativo.models import TipoRefeicao
 
 from .forms import RefeicaoForm
+from .models import Refeicao
 
 
 class RefeicaoFormTipoTests(TestCase):
@@ -25,3 +28,15 @@ class RefeicaoFormTipoTests(TestCase):
         })
         self.assertFalse(form.is_valid())
         self.assertIn('tipo', form.errors)
+
+    def test_form_preenche_data_na_edicao(self):
+        TipoRefeicao.objects.filter(nome='almoco').update(ativo=True)
+        refeicao = Refeicao.objects.create(
+            data=date(2099, 3, 15),
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+        form = RefeicaoForm(instance=refeicao)
+        self.assertEqual(form['data'].value(), date(2099, 3, 15))
+        self.assertIn('2099-03-15', str(form['data']))
