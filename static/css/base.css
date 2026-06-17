@@ -23,7 +23,8 @@
   --text-light: #999;
   --bg: #f5f5f0;
   --bg-card: #ffffff;
-  --border: #e8e8e0;
+  --border: #e7e7df;
+  --border-dark: #d3d3d3;
   --sidebar-width: 240px;
   --topbar-height: 60px;
   --radius: 10px;
@@ -46,6 +47,7 @@
   --bg: #09090f;
   --bg-card: #161622;
   --border: #2a2a3d;
+  --border-dark: #1a1a2e;
   --shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
   --shadow-hover: 0 6px 28px rgba(0, 0, 0, 0.55);
 }

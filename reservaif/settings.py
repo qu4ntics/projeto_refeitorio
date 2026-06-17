@@ -39,8 +39,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 AUTH_USER_MODEL = 'accounts.Usuario'
 
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.EmailOrUsernameBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'accounts.backends.EmailBackend',
 ]
 
 LOGIN_URL = 'accounts:login'
@@ -85,6 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'administrativo.context_processors.global_context',
             ],
         },
     },

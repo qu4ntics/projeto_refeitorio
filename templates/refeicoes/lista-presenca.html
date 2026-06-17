@@ -9,44 +9,91 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{% static 'css/lista-presenca-style.css' %}">
+
+<div id="toast-container" class="toast-container"></div>
+
 <div class="container-refeitorio">
-    <h2>Lista de Presença</h2>
+    <header class="lista-presenca-header">
+        <h2>Lista de Presença — {{ data_filtro|date:"d/m/Y" }} 
+            {% if dia_finalizado %}<span class="badge-finalizado">FINALIZADA</span>{% endif %}
+        </h2>
+    </header>
 
     {% csrf_token %}
-    <form method="GET" action=""">
-        <input type="text" name="search" value="{{ pesquisa|default:'' }}" placeholder="Pesquisar por nome ou turma...">
-        <button type="submit"><i class="bi bi-search"></i></button>
+    <form method="GET" action="." class="filtro-presenca">
+        <div class="busca-grupo">
+            <input type="date" name="data" value="{{ data_filtro|date:'Y-m-d' }}" class="input-data">
+            <input type="text" name="search" value="{{ pesquisa|default:'' }}" placeholder="Pesquisar por nome ou turma...">
+            <button type="submit" class="btn-filtrar"><i class="bi bi-search"></i> Filtrar</button>
+            
+            {% if pesquisa or request.GET.data %}
+                <a href="." class="btn-limpar"><i class="bi bi-x-circle"></i> Limpar</a>
+            {% endif %}
+        </div>
     </form>
+
     <div class="tabela">
-        <table border="1.2">
+        <table>
         <thead>
             <tr>
                 <th>Aluno</th>
                 <th>Turma</th>
                 <th>Refeição</th>
+                <th>Reservado em</th>
                 <th>Presença</th>
             </tr>
         </thead>
         <tbody>
             {% for reserva in reservas %}
-            <tr>
-                <td>{{ reserva.aluno.get_full_name }}</td> 
+            <tr class="status-{{ reserva.status }}">
+                <td>{{ reserva.aluno.get_full_name|default:reserva.aluno.username }}</td> 
                 <td>{{ reserva.aluno.turma.nome|default:"—" }}</td> 
                 <td>{{ reserva.refeicao.get_tipo_display }} — {% firstof reserva.refeicao.descricao_exibicao "(sem pratos)" %}</td> 
+                <td>{{ reserva.reservado_em|date:"d/m H:i" }}</td>
                 <td class="check">
-                    <input type="checkbox" 
-                           class="check-presenca" 
-                           data-reserva-id="{{ reserva.id }}" 
-                           {% if reserva.status == 'concluida' %}checked{% endif %}>
+                    {% if reserva.status == 'cancelada' %}
+                        <span class="badge-status cancelado">Cancelada</span>
+                    {% else %}
+                        <input type="checkbox" 
+                               class="check-presenca" 
+                               name="reserva_{{ reserva.id }}"
+                               data-reserva-id="{{ reserva.id }}" 
+                               autocomplete="off"
+                               {% if reserva.refeicao.chamada_finalizada %}disabled{% endif %}
+                               {% if reserva.status == 'concluida' %}checked{% endif %}>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td class="vazia" colspan="4">Nenhuma reserva para hoje.</td>
+                <td class="vazia" colspan="5">Nenhuma reserva encontrada para este dia ou busca.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+
+    <div class="lista-presenca-acoes">
+        <input type="hidden" name="data" value="{{ data_filtro|date:'Y-m-d' }}">
+        
+        {% if dia_finalizado %}
+            <form method="POST" action="{% url 'administrativo:reabrir_chamada' %}">
+                {% csrf_token %}
+                <input type="hidden" name="data" value="{{ data_filtro|date:'Y-m-d' }}">
+                <button type="submit" class="btn-reabrir">
+                    <i class="fa-solid fa-lock-open"></i> Reabrir Chamada para Correções
+                </button>
+            </form>
+        {% else %}
+            <form method="POST" action="{% url 'administrativo:finalizar_chamada' %}" id="form-finalizar-chamada">
+                {% csrf_token %}
+                <input type="hidden" name="data" value="{{ data_filtro|date:'Y-m-d' }}">
+                <button type="submit" class="btn-salvar-presenca" 
+                        {% if not reservas %}disabled title="Não há reservas para finalizar"{% endif %}>
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Finalizar Registro de Presenças
+                </button>
+            </form>
+        {% endif %}
     </div>
     
 </div>

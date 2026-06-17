@@ -1,26 +1,19 @@
-from datetime import datetime, timedelta
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.decorators import perfil_required
-from administrativo.models import ConfigReserva
+from accounts.models import Usuario
+from administrativo.models import Notificacao
 from refeicoes.models import Refeicao
 from .models import Reserva
 
-
-def _datetime_local(data, hora):
-    return timezone.make_aware(
-        datetime.combine(data, hora),
-        timezone.get_current_timezone(),
-    )
-
-
 @login_required
 @perfil_required('aluno')
+@require_POST
 @transaction.atomic
 def criar_reserva(request, refeicao_id):
     """
@@ -40,20 +33,22 @@ def criar_reserva(request, refeicao_id):
         messages.error(request, "Esta refeição é apenas informativa e não requer reserva.")
         return redirect('refeicoes:homepage')
 
-    # 3. Validação: Janela de reserva
-    config = ConfigReserva.get_config_ativa()
-    if config:
-        agora = timezone.localtime()
-        data_abertura = refeicao.data - timedelta(days=1)
-        inicio_janela = _datetime_local(data_abertura, config.abertura)
-        fim_janela = _datetime_local(refeicao.data, config.encerramento)
+    # 3. Validação: Data e Janela de reserva
+    hoje = timezone.localdate()
+    
+    # Bloqueio imediato para datas passadas
+    if refeicao.data < hoje:
+        messages.error(request, "Não é possível realizar reservas para datas que já passaram.")
+        return redirect('refeicoes:homepage')
 
-        if not (inicio_janela <= agora <= fim_janela):
-            messages.warning(
-                request, 
-                f"Fora da janela de reserva. O horário limite para esta refeição é às {config.encerramento.strftime('%H:%M')}."
-            )
-            return redirect('refeicoes:homepage')
+    # 3. Validação: Janela de reserva unificada com o Model
+    if not refeicao.reserva_aberta:
+        status_msg = refeicao.get_status_reserva()
+        if refeicao.reserva_futura:
+            messages.info(request, f"Reserva ainda não disponível. {status_msg}")
+        else:
+            messages.warning(request, f"Não foi possível reservar: {status_msg}")
+        return redirect('refeicoes:homepage')
 
     # 4. Validação: Vagas disponíveis
     if refeicao.vagas_disponiveis <= 0:
@@ -73,30 +68,49 @@ def criar_reserva(request, refeicao_id):
 
     # Se passar por tudo, persiste no banco
     Reserva.objects.create(aluno=usuario, refeicao=refeicao, status='ativa')
+
+    # Notificação para Nutricionistas se as vagas esgotarem
+    if refeicao.vagas_disponiveis == 0:
+        nutris = Usuario.objects.filter(perfil='nutricionista')
+        notificacoes = [
+            Notificacao(
+                usuario=nutri,
+                titulo="Vagas Esgotadas!",
+                mensagem=f"As vagas para a refeição {refeicao.get_tipo_display()} do dia {refeicao.data} acabaram de esgotar."
+            ) for nutri in nutris
+        ]
+        Notificacao.objects.bulk_create(notificacoes)
+
     messages.success(request, f"Reserva para {refeicao.get_tipo_display()} realizada com sucesso!")
     return redirect('refeicoes:homepage')
 
 @login_required
 @perfil_required('aluno')
+@require_POST
+@transaction.atomic
 def cancelar_reserva(request, reserva_id):
     """
     Permite ao aluno cancelar sua própria reserva ativa, validando o prazo configurado.
     """
-    reserva = get_object_or_404(Reserva, pk=reserva_id, aluno=request.user, status='ativa')
+    # select_for_update evita race conditions se o aluno clicar rápido demais
+    reserva = get_object_or_404(Reserva.objects.select_for_update(), pk=reserva_id, aluno=request.user)
+    
+    if reserva.status == 'cancelada':
+        messages.info(request, "Esta reserva já foi cancelada.")
+        return redirect('refeicoes:homepage')
+        
+    if reserva.status != 'ativa':
+        messages.error(request, "Apenas reservas ativas podem ser canceladas.")
+        return redirect('refeicoes:homepage')
+
     refeicao = reserva.refeicao
     
-    config = ConfigReserva.get_config_ativa()
-    if config:
-        agora = timezone.localtime()
-        encerramento = _datetime_local(refeicao.data, config.encerramento)
-        limite_cancelamento = encerramento - timedelta(minutes=config.minutos_cancelamento)
-        
-        if agora > limite_cancelamento:
-            messages.error(
-                request, 
-                f"Não é mais possível cancelar. O prazo expirou às {limite_cancelamento.strftime('%H:%M')}."
-            )
-            return redirect('refeicoes:homepage')
+    if not refeicao.pode_cancelar:
+        messages.error(
+            request, 
+            "O prazo para cancelamento desta refeição já expirou."
+        )
+        return redirect('refeicoes:homepage')
 
     reserva.status = 'cancelada'
     reserva.cancelado_em = timezone.now()
@@ -108,22 +122,9 @@ def cancelar_reserva(request, reserva_id):
 @login_required
 @perfil_required('refeitorio')
 def lista_presenca(request):
-    hoje = timezone.now().date()
-    
-    # Busca reservas ativas ou concluídas de hoje, trazendo o Usuário e a Refeição juntos
-    reservas = Reserva.objects.filter(
-        refeicao__data=hoje
-    ).exclude(status='cancelada').select_related('aluno', 'aluno__turma', 'refeicao')
-
-    pesquisa = request.GET.get('search')
-    if pesquisa:
-        reservas = reservas.filter(
-            Q(aluno__first_name__icontains=pesquisa)
-            | Q(aluno__last_name__icontains=pesquisa)
-            | Q(aluno__turma__nome__icontains=pesquisa)
-        )
-
-    return render(request, 'refeitorio/lista_presenca.html', {
-        'reservas': reservas, 
-        'pesquisa': pesquisa
-    })
+    """
+    Redireciona para a view centralizada em refeicoes para evitar duplicidade de código
+    e garantir que o trabalho de todos os integrantes seja preservado em um único lugar.
+    """
+    from refeicoes.views import lista_presenca as lista_centralizada
+    return lista_centralizada(request)

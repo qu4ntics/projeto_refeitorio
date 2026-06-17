@@ -1,0 +1,37 @@
+/* Define o cursor padrão como seta para todo o corpo da página */
+html, body {
+    cursor: default;
+    /* Opcional: impede seleção de texto em áreas não interativas para um look mais "app" */
+    user-select: none;
+}
+
+/* Elementos interativos: mostram o cursor de "mãozinha" (pointer) */
+a, 
+button, 
+select, 
+label, 
+.clickable,
+input[type="submit"], 
+input[type="button"],
+input[type="checkbox"],
+input[type="radio"] {
+    cursor: pointer;
+    user-select: auto;
+}
+
+/* Campos de texto: mostram o cursor de inserção de texto (I-beam) */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="number"], 
+input[type="search"], 
+textarea {
+    cursor: text;
+    user-select: auto;
+}
+
+/* Elementos desabilitados: mostram cursor de proibido */
+button:disabled, 
+input:disabled {
+    cursor: not-allowed !important;
+}

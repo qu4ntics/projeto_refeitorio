@@ -1,0 +1,91 @@
+/* =============================================
+   AJUSTES EXCLUSIVOS DA TELA DE CONFIGURAÇÃO
+   ============================================= */
+
+.config-tabs {
+  margin-bottom: 1.75rem;
+}
+
+.config-tab-panel {
+  display: none;
+}
+
+.config-tab-panel.active {
+  display: block;
+}
+
+.config-container-refeicoes {
+  display: flex;
+  flex-direction: column;
+  gap: 2.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.refeicao-config-box {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.refeicao-config-box:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.refeicao-config-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.refeicao-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+  margin-bottom: 0;
+}
+
+.refeicao-toggle-habilitar {
+  margin: 0;
+}
+
+.refeicao-config-box.is-inativo .refeicao-horarios {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.status-janela {
+  margin-top: 0.25rem;
+}
+
+.refeicao-config-box .campo {
+  width: 100%;
+}
+
+.refeicao-config-box.has-error .campo {
+  border-color: var(--danger) !important;
+}
+
+.msg-erro-inline {
+  display: block;
+  color: var(--danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.refeicao-config-box .campo::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+body.dark-mode .refeicao-config-box .campo::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .refeicao-config-box .campo::-webkit-calendar-picker-indicator {
+  filter: invert(1) !important;
+}

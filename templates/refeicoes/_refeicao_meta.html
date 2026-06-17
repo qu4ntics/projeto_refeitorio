@@ -1,7 +1,1 @@
-{% if refeicao.exige_reserva %}
-  <span>Vagas: {{ refeicao.vagas_disponiveis }} / {{ refeicao.limite_vagas }}</span>
-  <span class="meta-sep">·</span>
-  <span>{{ refeicao.reservas_ativas_count }} reserva{{ refeicao.reservas_ativas_count|pluralize }}</span>
-{% else %}
-  <span>Somente informativa (sem reserva)</span>
-{% endif %}
+<span class="vagas-meta">{{ refeicao.vagas_display }}</span>
