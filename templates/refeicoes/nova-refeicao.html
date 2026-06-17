@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
 {% load static %}
 
-{% block title %}Nova Refeição{% endblock %}
+{% block title %}{{ titulo|default:"Nova Refeição" }}{% endblock %}
 
 {% block menu_refeicoes %}active{% endblock %}
 
@@ -16,8 +16,8 @@
       <header class="nova-refeicao-header">
         <a href="{% url 'refeicoes:cardapio_semana' %}" class="nova-refeicao-voltar" title="Voltar ao cardápio">&larr;</a>
         <div class="nova-refeicao-titulo">
-          <h1>Nova refeição</h1>
-          <p>Cadastre uma refeição para o cardápio da semana.</p>
+          <h1>{{ titulo|default:"Nova refeição" }}</h1>
+          <p>{{ subtitulo|default:"Cadastre uma refeição para o cardápio da semana." }}</p>
         </div>
       </header>
 
@@ -131,7 +131,9 @@
 
         <div class="nova-refeicao-acoes">
           <a href="{% url 'refeicoes:cardapio_semana' %}" class="btn-cancelar">Cancelar</a>
-          <button type="submit" class="btn-salvar">Salvar refeição</button>
+          <button type="submit" class="btn-salvar">
+            {% if refeicao %}Salvar alterações{% else %}Salvar refeição{% endif %}
+          </button>
         </div>
       </form>
     </div>

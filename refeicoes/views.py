@@ -316,6 +316,7 @@ def refeicao_editar(request, pk):
         'form': form,
         'refeicao': refeicao,
         'titulo': 'Editar refeição',
+        'subtitulo': 'Altere os dados da refeição e salve suas alterações.',
         'config_reserva': ConfigReserva.get_config_ativa(),
         'pratos_por_categoria': pratos_agrupados_por_categoria(),
         'pratos_selecionados': pratos_selecionados,
