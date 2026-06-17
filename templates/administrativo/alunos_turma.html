@@ -63,10 +63,6 @@
 
 </div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
-  const ARQUIVADAS = {{ arquivadas|yesno:"true,false" }};
-</script>
-<script src="{% static 'js/alunos_turma.js' %}?v=3"></script>
+<script src="{% static 'js/alunos_turma.js' %}"></script>
 {% endblock %}

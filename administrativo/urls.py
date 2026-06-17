@@ -10,6 +10,7 @@ urlpatterns = [
     path('alunos/arquivadas/', views.alunos_turmas_arquivadas, name='alunos_turmas_arquivadas'),
     path('alunos/turmas/json/', views.lista_turmas_json, name='lista_turmas_json'),
     path('configuracoes/', views.configuracoes, name='configuracoes'),
+    #path('alunos/', views.alunos, name='alunos'),
     path('alunos/json/', views.lista_alunos, name='lista_alunos'),
     path('alunos/<uuid:turma_id>/', views.alunos_turma, name='alunos_turma'),
     path('alunos/<uuid:turma_id>/json/', views.lista_alunos_turma, name='lista_alunos_turma'),
@@ -23,4 +24,8 @@ urlpatterns = [
     # Janela Horarios
     path('configuracoes/janela-horarios/', views.janela_horarios_api, name='janela_horarios_lista'),
     path('configuracoes/janela-horarios/<uuid:tipo_refeicao_id>/', views.janela_horarios_api, name='janela_horarios_detalhe'),
+
+    path('refeitorio/atualizar-status-reserva/<uuid:reserva_id>/', views.atualizar_status_reserva, name='atualizar_status_reserva'),
+    path('refeitorio/finalizar-chamada/', views.finalizar_chamada, name='finalizar_chamada'),
+    path('refeitorio/reabrir-chamada/', views.reabrir_chamada, name='reabrir_chamada'),
 ]

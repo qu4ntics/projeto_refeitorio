@@ -1,50 +1,285 @@
-.container-refeitorio{
-    margin: 0 auto;
+/* Estrutura Geral */
+.container-refeitorio {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    margin: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-form{
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-button{
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    
-}
-input{
-    padding: 5px;
-    width: min(300px, 100%);
-    border: var(--radius);
-    border-color: var(--border);
-}
-input:focus{
-    border-color: var(--accent);
 
+.lista-presenca-header {
+    margin-bottom: 25px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 15px;
 }
-table{
-    width: 100%;
-    text-align: left;
-    border-collapse: collapse;
-    border-color: black;
+
+.lista-presenca-header h2 {
+    margin: 0;
+    color: #333;
+    font-weight: 700;
+    color: var(--primary);
 }
-th{
+
+/* Filtros */
+.filtro-presenca {
+    margin-bottom: 25px;
+}
+
+.busca-grupo {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.input-data, .busca-grupo input[type="text"] {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.btn-filtrar {
     background-color: var(--accent);
-    padding: 10px;
+    color: var(--primary);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 800;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
-td{
-    padding: 10px;
+
+.btn-filtrar:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
 }
-.check{
+
+.btn-limpar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.btn-limpar:hover {
+    color: var(--danger);
+}
+
+/* Tabela e Status Solicitados */
+.tabela table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tabela th, .tabela td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.tabela th {
+    background-color: #f9fbf9; /* Fundo verde quase imperceptível */
+    color: var(--accent);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    border-top: 2px solid var(--accent);
+}
+
+.tabela tbody tr:hover {
+    background-color: #fcfcfc;
+}
+
+/* Estilo para reserva concluída (presença marcada) */
+.tabela tr.status-concluida,
+.tabela tr:has(.check-presenca:checked) {
+    background-color: #eafaf1 !important; /* Verde suave para indicar sucesso */
+    transition: background-color 0.3s ease;
+}
+
+.tabela tr.status-concluida td,
+.tabela tr:has(.check-presenca:checked) td {
+    color: #1b5e20;
+}
+
+/* Estilo para reserva cancelada */
+.status-cancelada {
+    background-color: #fcfcfc;
+}
+
+.status-cancelada td {
+    color: #a0a0a0;
+    font-style: italic;
+}
+
+/* Estilo para o Badge de Status */
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-status.cancelado {
+    background-color: #ffe5e5;
+    color: #d9534f;
+    border: 1px solid #ffcccc;
+}
+
+.check {
     text-align: center;
 }
-.tabela{
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+
+.check-presenca {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
-.vazia{
+
+.vazia {
     text-align: center;
+    color: #999;
+    padding: 40px !important;
 }
-.container-refeitorio i{
-    color: var(--text-primary);
+
+/* Responsividade para tablets e celulares */
+@media (max-width: 768px) {
+    .container-refeitorio {
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .lista-presenca-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .busca-grupo {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .busca-grupo input, 
+    .busca-grupo button {
+        width: 100%;
+    }
+
+    .tabela {
+        overflow-x: auto; /* Permite scroll horizontal em telas muito pequenas */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabela table {
+        min-width: 650px; /* Mantém a estrutura legível sem esmagar os nomes */
+    }
+}
+
+/* Feedback visual durante o processamento AJAX */
+.tabela tr.processando-presenca {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.tabela tr.processando-presenca .check::after {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin-presenca 0.6s linear infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin-presenca {
+    to { transform: rotate(360deg); }
+}
+
+.lista-presenca-acoes {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    padding-bottom: 40px;
+}
+
+.btn-salvar-presenca {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow);
+}
+
+.btn-salvar-presenca:hover {
+    background-color: var(--accent);
+    color: var(--primary);
+    transform: translateY(-2px);
+}
+
+/* Estilos para o Toast */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    min-width: 250px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.toast-success { background-color: var(--success); }
+.toast-error { background-color: var(--danger); }
+
+.toast.hide {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }

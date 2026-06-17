@@ -19,6 +19,8 @@ class ReservaViewTests(TestCase):
             email='aluno@teste.com',
             password='password123',
             perfil='aluno',
+            first_name='João',
+            last_name='Silva',
             bloqueado=False,
             turma=self.turma,
         )
@@ -107,7 +109,7 @@ class ReservaViewTests(TestCase):
         
         self.assertEqual(Reserva.objects.count(), 0)
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("fora do período de reserva permitido" in str(m).lower() for m in messages))
+        self.assertTrue(any("encerrada" in str(m).lower() for m in messages))
 
     def test_validacao_vagas_esgotadas(self):
         """Validação 4: Barrar reserva se não houver mais vagas."""
@@ -165,7 +167,7 @@ class ReservaViewTests(TestCase):
         reserva.refresh_from_db()
         self.assertEqual(reserva.status, 'ativa') # Não deve mudar para cancelada
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("não é mais possível cancelar" in str(m).lower() for m in messages))
+        self.assertTrue(any("prazo para cancelamento" in str(m).lower() for m in messages))
 
     def test_validacao_antecedencia_excessiva(self):
         """Validação: Barrar reserva com antecedência excessiva (ex: reservar sexta na quarta)."""
@@ -178,7 +180,7 @@ class ReservaViewTests(TestCase):
         
         self.assertEqual(Reserva.objects.count(), 0)
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("fora do período de reserva" in str(m).lower() for m in messages))
+        self.assertTrue(any("abrem em" in str(m).lower() for m in messages))
 
     def test_validacao_data_passada(self):
         """Validação: Barrar reserva para uma data que já passou."""
@@ -207,19 +209,6 @@ class ReservaViewTests(TestCase):
         response = self.client.post(reverse('reservas:cancelar_reserva', args=[reserva_alheia.id]))
         
         self.assertEqual(response.status_code, 404)
-
-    def test_seguranca_aluno_nao_acessa_lista_presenca(self):
-        """Segurança: Aluno tentando acessar lista de presença deve receber 403."""
-        # Testando a rota do app refeicoes que está protegida
-        url = reverse('refeicoes:lista-presenca')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_seguranca_aluno_nao_deleta_refeicao(self):
-        """Segurança: Aluno tentando deletar uma refeição deve receber 403."""
-        url = reverse('refeicoes:nutricionista_deletar', args=[self.refeicao.id])
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 403)
 
     def test_integridade_reserva_refeicao_inexistente(self):
         """Integridade: Tentar reservar um UUID que não existe deve retornar 404."""

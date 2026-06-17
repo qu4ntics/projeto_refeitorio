@@ -6,6 +6,7 @@
 {% block menu_painel %}active{% endblock %}
 
 {% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
   <link rel="stylesheet" href="{% static 'css/painel-nutricionista.css' %}">
 {% endblock %}
 
@@ -22,9 +23,29 @@
       <div class="lado-esquerdo">
         <div class="header-refeicoes">
           <div>
-            <h2>REFEIÇÕES DESTA SEMANA</h2>
+            <h2>REFEIÇÕES DA SEMANA</h2>
+            <p class="page-date">Semana de {{ semana_inicio|date:"d/m" }} até {{ semana_fim|date:"d/m" }}</p>
           </div>
           <a href="{% url 'refeicoes:cardapio_semana' %}" class="btn-adicionar">Gerenciar refeições</a>
+        </div>
+
+        <!-- Barra de Navegação de Semanas -->
+        <div class="navegacao-semana">
+          <div class="nav-container">
+            <a href="?data={{ semana_anterior }}" class="btn-navegacao" title="Semana Anterior">
+              <i class="fa-solid fa-chevron-left"></i> Anterior
+            </a>
+            
+            {% if data_selecionada %}
+            <a href="." class="btn-hoje" title="Voltar para a semana atual">
+              <i class="fa-solid fa-calendar-day"></i> Hoje
+            </a>
+            {% endif %}
+
+            <a href="?data={{ proxima_semana }}" class="btn-navegacao" title="Próxima Semana">
+              Próxima <i class="fa-solid fa-chevron-right"></i>
+            </a>
+          </div>
         </div>
 
         {% for r in refeicoes %}
