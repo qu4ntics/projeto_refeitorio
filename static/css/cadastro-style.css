@@ -186,6 +186,28 @@ body {
     padding-left: 18px;
 }
 
+.mensagem-status {
+    display: grid;
+    gap: 12px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.mensagem-status h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.2;
+}
+
+.mensagem-status p {
+    margin: 0;
+    color: #424242;
+}
+
+.mensagem-status-erro h1 {
+    color: #c62828;
+}
+
 /* Link inferior */
 .caixa-login > a {
     text-align: center;

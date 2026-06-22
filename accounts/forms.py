@@ -40,6 +40,7 @@ class CadastroForm(forms.ModelForm):
     def save(self, commit=True):
         usuario = super().save(commit=False)
         usuario.perfil = 'aluno'
+        usuario.is_active = False
         usuario.set_password(self.cleaned_data['senha'])
 
         if commit:

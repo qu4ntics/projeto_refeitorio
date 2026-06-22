@@ -47,6 +47,15 @@ LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'refeicoes:homepage'  # fallback; login usa redirect por perfil
 LOGOUT_REDIRECT_URL = 'accounts:login'
 
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.getenv(
+    'DEFAULT_FROM_EMAIL',
+    'ReservaIF <no-reply@reservaif.local>',
+)
+
 # Application definition
 
 INSTALLED_APPS = [
