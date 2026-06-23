@@ -1,6 +1,12 @@
 from django import forms
 
+from refeicoes.models import Refeicao
+
 from .models import Turma
+
+
+def label_tipo_refeicao(codigo):
+    return dict(Refeicao.TIPOS).get(codigo, codigo)
 
 
 class TurmaForm(forms.ModelForm):
@@ -15,7 +21,12 @@ class TurmaForm(forms.ModelForm):
         model = Turma
         fields = ['nome', 'turno', 'ativo']
         widgets = {
-            'nome': forms.TextInput(attrs={'placeholder': 'Ex.: 1º ano Informática'}),
+            'nome': forms.TextInput(attrs={
+                'class': 'campo',
+                'placeholder': 'Ex.: 1º ano Informática',
+            }),
+            'turno': forms.RadioSelect(),
+            'ativo': forms.CheckboxInput(attrs={'class': 'toggle-checkbox'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -1,6 +1,8 @@
 from django import forms
 from django.utils import timezone
 
+from administrativo.models import TipoRefeicao
+
 from .models import Prato, Refeicao
 
 ORDEM_CATEGORIAS = Prato.ORDEM_CATEGORIAS
@@ -73,7 +75,10 @@ class RefeicaoForm(forms.ModelForm):
         model = Refeicao
         fields = ['data', 'tipo', 'limite_vagas', 'exige_reserva']
         widgets = {
-            'data': forms.DateInput(attrs={'type': 'date', 'class': 'campo'}),
+            'data': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'type': 'date', 'class': 'campo'},
+            ),
             'tipo': forms.Select(attrs={'class': 'campo'}),
             'limite_vagas': forms.NumberInput(attrs={
                 'class': 'campo campo-numero',
@@ -90,9 +95,14 @@ class RefeicaoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['data'].input_formats = ['%Y-%m-%d']
         self.fields['limite_vagas'].required = False
         if not self.is_bound and self.initial.get('limite_vagas') is None:
             self.initial.setdefault('limite_vagas', 180)
+
+        habilitados = set(TipoRefeicao.codigos_habilitados())
+        choices = [(c, l) for c, l in Refeicao.TIPOS if c in habilitados]
+        self.fields['tipo'].choices = [('', 'Selecione')] + choices
 
         queryset = _queryset_pratos_ordenados()
         self.fields['pratos'].queryset = queryset
@@ -106,6 +116,27 @@ class RefeicaoForm(forms.ModelForm):
         if data and data < timezone.localdate():
             raise forms.ValidationError('A data não pode ser anterior a hoje.')
         return data
+
+    def clean_tipo(self):
+        tipo = self.cleaned_data.get('tipo')
+        if tipo and tipo not in TipoRefeicao.codigos_habilitados():
+            raise forms.ValidationError('Este tipo de refeição não está habilitado no sistema.')
+        return tipo
+
+    def clean_limite_vagas(self):
+        limite_vagas = self.cleaned_data.get('limite_vagas')
+        if limite_vagas in (None, ''):
+            return None
+        if limite_vagas < 0:
+            raise forms.ValidationError('O limite de vagas deve ser igual ou superior a zero.')
+        if self.instance.pk:
+            reservas_ativas = self.instance.reservas_ativas_count
+            if limite_vagas < reservas_ativas:
+                raise forms.ValidationError(
+                    f'O limite de vagas não pode ser menor que {reservas_ativas} '
+                    f'(número de reservas confirmadas).'
+                )
+        return limite_vagas
 
     def clean_pratos(self):
         pratos = self.cleaned_data.get('pratos')

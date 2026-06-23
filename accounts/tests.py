@@ -46,86 +46,40 @@ class UsuarioTurmaTests(TestCase):
 
     def test_cadastro_aluno_com_turma(self):
         response = self.client.post(reverse('accounts:cadastro'), {
-            'username': 'novo_aluno',
+            'nome_completo': 'João Silva',
             'email': 'novo@test.com',
             'turma': str(self.turma.id),
             'senha': 'senha12345',
             'confirmar_senha': 'senha12345',
         })
-        self.assertRedirects(response, reverse('accounts:email_verification_sent'))
-        aluno = Usuario.objects.get(username='novo_aluno')
+        self.assertEqual(response.status_code, 302)
+        aluno = Usuario.objects.get(email='novo@test.com')
+        self.assertEqual(aluno.first_name, 'João')
+        self.assertEqual(aluno.last_name, 'Silva')
+        self.assertEqual(aluno.username, 'novo')
         self.assertEqual(aluno.perfil, 'aluno')
         self.assertEqual(aluno.turma, self.turma)
-        self.assertFalse(aluno.is_active)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('novo@test.com', mail.outbox[0].to)
-        self.assertIn('/accounts/cadastro/ativar/', mail.outbox[0].body)
 
-    def test_link_de_verificacao_ativa_conta(self):
-        aluno = Usuario.objects.create_user(
-            username='aluno_pendente',
-            email='pendente@test.com',
+    def test_login_apenas_por_email(self):
+        Usuario.objects.create_user(
+            username='aluno_login',
+            email='login@test.com',
             password='senha12345',
+            first_name='Maria',
+            last_name='Santos',
             perfil='aluno',
             turma=self.turma,
-            is_active=False,
         )
-        uid = urlsafe_base64_encode(force_bytes(aluno.pk))
-        token = email_verification_token.make_token(aluno)
-
-        response = self.client.get(
-            reverse('accounts:email_verification_confirm', args=[uid, token])
-        )
-
+        response = self.client.post(reverse('accounts:login'), {
+            'username': 'login@test.com',
+            'password': 'senha12345',
+        })
         self.assertRedirects(response, reverse('refeicoes:homepage'))
-        aluno.refresh_from_db()
-        self.assertTrue(aluno.is_active)
 
-    def test_link_de_verificacao_nao_pode_ser_reutilizado(self):
-        aluno = Usuario.objects.create_user(
-            username='aluno_token_usado',
-            email='token_usado@test.com',
-            password='senha12345',
-            perfil='aluno',
-            turma=self.turma,
-            is_active=False,
-        )
-        uid = urlsafe_base64_encode(force_bytes(aluno.pk))
-        token = email_verification_token.make_token(aluno)
-
-        self.client.get(
-            reverse('accounts:email_verification_confirm', args=[uid, token])
-        )
-        response = self.client.get(
-            reverse('accounts:email_verification_confirm', args=[uid, token])
-        )
-
-        self.assertEqual(response.status_code, 400)
-        self.assertContains(response, 'Link inválido', status_code=400)
-
-    def test_usuario_inativo_nao_consegue_login_antes_da_verificacao(self):
+    def test_login_por_username_nao_funciona(self):
         Usuario.objects.create_user(
-            username='sem_verificar',
-            email='sem_verificar@test.com',
-            password='senha12345',
-            perfil='aluno',
-            turma=self.turma,
-            is_active=False,
-        )
-
-        login_ok = self.client.login(username='sem_verificar', password='senha12345')
-
-        self.assertFalse(login_ok)
-
-    def test_login_exibe_link_esqueci_senha(self):
-        response = self.client.get(reverse('accounts:login'))
-        self.assertContains(response, reverse('accounts:password_reset'))
-        self.assertContains(response, 'Esqueci minha senha')
-
-    def test_password_reset_envia_email_para_usuario_cadastrado(self):
-        Usuario.objects.create_user(
-            username='aluno_reset',
-            email='reset@test.com',
+            username='aluno_login',
+            email='outro@test.com',
             password='senha12345',
             perfil='aluno',
             turma=self.turma,
@@ -140,3 +94,9 @@ class UsuarioTurmaTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('reset@test.com', mail.outbox[0].to)
         self.assertIn('/accounts/senha/redefinir/', mail.outbox[0].body)
+        response = self.client.post(reverse('accounts:login'), {
+            'username': 'aluno_login',
+            'password': 'senha12345',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse('_auth_user_id' in self.client.session)

@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
-from administrativo.models import ConfigReserva
+from administrativo.models import ConfigReserva, TipoRefeicao
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
 from .models import Prato, Refeicao
@@ -203,6 +203,7 @@ def nutricionista_nova(request):
         'config_reserva': ConfigReserva.get_config_ativa(),
         'pratos_por_categoria': pratos_agrupados_por_categoria(),
         'pratos_selecionados': pratos_selecionados,
+        'nenhum_tipo_habilitado': not TipoRefeicao.codigos_habilitados(),
     })
 
 
@@ -281,3 +282,43 @@ def prato_excluir(request, pk):
         messages.success(request, 'Prato removido do catálogo.')
         return redirect('refeicoes:pratos_lista')
     return redirect('refeicoes:pratos_lista')
+
+@perfil_required('nutricionista')
+def refeicao_editar(request, pk):
+    refeicao = get_object_or_404(Refeicao, pk=pk)
+
+    # Bloqueio 1: Verificação Inicial
+    if refeicao.refeicao_iniciada:
+        messages.error(request, 'Erro! Não é possível editar porque a refeição já foi iniciada.')
+        return redirect('refeicoes:cardapio_semana')
+
+    if request.method == 'POST':
+        # Bloqueio 2: Nova verificação no POST (race condition)
+        refeicao.refresh_from_db()
+        if refeicao.refeicao_iniciada:
+            messages.error(request, 'A refeição foi iniciada enquanto você editava. Alterações não salvas.')
+            return redirect('refeicoes:cardapio_semana')
+
+        form = RefeicaoForm(request.POST, instance=refeicao)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Refeição atualizada com sucesso.')
+            return redirect('refeicoes:cardapio_semana')
+        else:
+            messages.error(request, 'Corrija os erros abaixo para salvar.')
+            pratos_selecionados = set(request.POST.getlist('pratos'))
+    else:
+        form = RefeicaoForm(instance=refeicao)
+        pratos_selecionados = set(str(pk) for pk in refeicao.pratos.values_list('pk', flat=True))
+
+    
+    return render(request, 'refeicoes/nova-refeicao.html', {
+        'form': form,
+        'refeicao': refeicao,
+        'titulo': 'Editar refeição',
+        'subtitulo': 'Altere os dados da refeição e salve suas alterações.',
+        'config_reserva': ConfigReserva.get_config_ativa(),
+        'pratos_por_categoria': pratos_agrupados_por_categoria(),
+        'pratos_selecionados': pratos_selecionados,
+    })
+       

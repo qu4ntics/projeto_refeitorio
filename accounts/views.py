@@ -34,6 +34,7 @@ def enviar_email_verificacao(request, usuario):
     )
     send_mail(assunto, mensagem, settings.DEFAULT_FROM_EMAIL, [usuario.email])
 
+from .forms import CadastroForm, EmailAuthenticationForm
 
 def cadastro_view(request):
     if request.method == 'POST':
@@ -42,6 +43,16 @@ def cadastro_view(request):
             usuario = form.save()
             enviar_email_verificacao(request, usuario)
             return redirect('accounts:email_verification_sent')
+            usuario = authenticate(
+                request,
+                username=usuario.email,
+                password=form.cleaned_data['senha']
+            )
+            if usuario is not None:
+                login(request, usuario)
+                return redirect('refeicoes:homepage')
+            else:
+                form = CadastroForm()
     else:
         form = CadastroForm()
 
@@ -80,6 +91,7 @@ REDIRECT_POR_PERFIL = {
 
 class LoginPerfilView(LoginView):
     template_name = 'accounts/login.html'
+    authentication_form = EmailAuthenticationForm
 
     def form_invalid(self, form):
         print("POST:", self.request.POST)

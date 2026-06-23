@@ -25,7 +25,7 @@
             </div>
             {% endif %}
 
-            <input type="text" name="username" placeholder="Nome de usuário" required>
+            <input type="text" name="nome_completo" placeholder="Nome completo" required>
             <select name="turma" required>
                 <option value="" disabled selected hidden>Turma</option>
                 {% for value, label in form.fields.turma.choices %}
