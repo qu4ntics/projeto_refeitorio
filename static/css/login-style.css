@@ -49,6 +49,22 @@ p {
     gap: 22px;
 }
 
+.form-login .helptext {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.form-login ul {
+    margin: -8px 0 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 /* Campo outlined — label sobre a borda */
 .campo-outline {
     position: relative;
@@ -147,6 +163,39 @@ p {
     margin: -10px 0 0;
     text-align: center;
     color: #c62828;
+    font-size: 14px;
+}
+
+.erro-form {
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #fdecea;
+    border: 1px solid #f5b7b1;
+    color: #c62828;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.erro-form ul {
+    margin: 0;
+    padding-left: 18px;
+    color: inherit;
+    font-size: inherit;
+}
+
+.texto-apoio {
+    margin: -12px 0 0;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: 0;
+}
+
+.link-esqueci-senha {
+    justify-self: end;
+    margin-top: -12px;
+    padding: 0;
     font-size: 14px;
 }
 

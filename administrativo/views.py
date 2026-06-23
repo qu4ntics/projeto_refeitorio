@@ -476,14 +476,18 @@ def atualizar_status_reserva(request, reserva_id):
 
     try:
         checked = data.get('checked')
+        if not isinstance(checked, bool):
+            return JsonResponse({'erro': 'Valor de presença inválido.'}, status=400)
+
         with transaction.atomic():
             reserva = get_object_or_404(Reserva.objects.select_related('refeicao').select_for_update(), pk=reserva_id)
+            refeicao = Refeicao.objects.select_for_update().get(pk=reserva.refeicao_id)
             
             # Segurança: Bloqueia alteração se a reserva estiver cancelada
             if reserva.status == 'cancelada':
                 return JsonResponse({'erro': 'Não é possível marcar presença em uma reserva cancelada.'}, status=403)
 
-            if reserva.refeicao.chamada_finalizada:
+            if refeicao.chamada_finalizada:
                 return JsonResponse({'erro': 'Esta chamada já foi finalizada e não pode mais ser alterada.'}, status=403)
 
             reserva.status = 'concluida' if checked else 'ativa'

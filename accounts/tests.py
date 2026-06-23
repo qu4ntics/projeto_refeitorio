@@ -1,9 +1,13 @@
 from django.core.exceptions import ValidationError
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from administrativo.models import Turma
 from .models import Usuario
+from .tokens import email_verification_token
 
 
 class UsuarioTurmaTests(TestCase):
@@ -80,6 +84,16 @@ class UsuarioTurmaTests(TestCase):
             perfil='aluno',
             turma=self.turma,
         )
+
+        response = self.client.post(
+            reverse('accounts:password_reset'),
+            {'email': 'reset@test.com'},
+        )
+
+        self.assertRedirects(response, reverse('accounts:password_reset_done'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('reset@test.com', mail.outbox[0].to)
+        self.assertIn('/accounts/senha/redefinir/', mail.outbox[0].body)
         response = self.client.post(reverse('accounts:login'), {
             'username': 'aluno_login',
             'password': 'senha12345',
