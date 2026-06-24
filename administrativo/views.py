@@ -1,8 +1,10 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError, Q, Count
@@ -18,7 +20,7 @@ from refeicoes.views import _preparar_contexto_semana
 from refeicoes.models import Refeicao
 from reservas.models import Reserva
 from .forms import TurmaForm, label_tipo_refeicao
-from .models import Turma, JanelaReserva, TipoRefeicao, Presenca, Strike
+from .models import Turma, JanelaReserva, TipoRefeicao, Presenca, Strike, ConfigReserva
 from .services.chamada import (
     ChamadaError,
     abrir_chamada,
@@ -234,91 +236,191 @@ def _dados_janelas_configuracao():
     return dados_janelas
 
 
-@login_required
-@perfil_required('nutricionista')
-def configuracoes(request):
-    if request.method == 'POST' and request.POST.get('acao') == 'salvar_refeicoes':
-        tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
-        erros_detectados = False
+ABAS_CONFIGURACOES = frozenset({'refeicoes', 'reservas', 'strikes', 'conta'})
+MINUTOS_CANCELAMENTO_MIN = 15
+MINUTOS_CANCELAMENTO_MAX = 240
 
-        for codigo, _ in Refeicao.TIPOS:
-            tipo = tipos_por_nome.get(codigo)
-            if not tipo:
-                continue
 
-            ativo = request.POST.get(f'ativo_{tipo.id}') == 'on'
-            tipo.ativo = ativo
+def _redirect_configuracoes(aba='refeicoes'):
+    if aba not in ABAS_CONFIGURACOES:
+        aba = 'refeicoes'
+    return redirect(f'{reverse("administrativo:configuracoes")}?aba={aba}')
 
-            horario_consumo_str = request.POST.get(f'horario_consumo_{tipo.id}')
-            if horario_consumo_str:
-                try:
-                    tipo.horario_inicio_consumo = datetime.strptime(
-                        horario_consumo_str, '%H:%M'
-                    ).time()
-                except ValueError:
-                    erros_detectados = True
-                    messages.error(
-                        request,
-                        f'Horário de consumo inválido para {label_tipo_refeicao(tipo.nome)}.',
-                    )
 
-            tipo.save(update_fields=['ativo', 'horario_inicio_consumo'])
+def _aba_configuracoes(request):
+    aba = request.GET.get('aba', 'refeicoes')
+    return aba if aba in ABAS_CONFIGURACOES else 'refeicoes'
 
-            if not ativo:
-                continue
 
-            abertura_str = request.POST.get(f'abertura_{tipo.id}')
-            encerramento_str = request.POST.get(f'encerramento_{tipo.id}')
+def _formulario_senha_nutri(usuario):
+    form = PasswordChangeForm(user=usuario)
+    form.fields['old_password'].label = 'Senha atual'
+    form.fields['new_password1'].label = 'Nova senha'
+    form.fields['new_password2'].label = 'Confirmar nova senha'
+    for field in form.fields.values():
+        field.widget.attrs.setdefault('class', 'config-input')
+    return form
 
-            if abertura_str and encerramento_str:
-                try:
-                    abertura_time = datetime.strptime(abertura_str, '%H:%M').time()
-                    encerramento_time = datetime.strptime(encerramento_str, '%H:%M').time()
 
-                    if abertura_time == encerramento_time:
-                        raise ValidationError(
-                            'O horário de fechamento não pode ser idêntico ao de abertura.'
-                        )
+def _minutos_cancelamento_atual():
+    config = ConfigReserva.get_config_ativa()
+    return config.minutos_cancelamento if config else 60
 
-                    janela, created = JanelaReserva.objects.get_or_create(
-                        tipo_refeicao=tipo,
-                        defaults={
-                            'horario_abertura': abertura_time,
-                            'horario_fechamento': encerramento_time,
-                        },
-                    )
 
-                    if not created:
-                        janela.horario_abertura = abertura_time
-                        janela.horario_fechamento = encerramento_time
-                        janela.save()
+def _salvar_minutos_cancelamento(usuario, minutos):
+    config = ConfigReserva.get_config_ativa()
+    if config:
+        ConfigReserva.objects.create(
+            abertura=config.abertura,
+            encerramento=config.encerramento,
+            minutos_cancelamento=minutos,
+            criado_por=usuario,
+        )
+    else:
+        ConfigReserva.objects.create(
+            abertura=time(15, 0),
+            encerramento=time(7, 0),
+            minutos_cancelamento=minutos,
+            criado_por=usuario,
+        )
 
-                except ValidationError as e:
-                    erros_detectados = True
-                    messages.error(
-                        request,
-                        f'Erro em {label_tipo_refeicao(tipo.nome)}: {e}',
-                    )
-                except Exception as e:
-                    erros_detectados = True
-                    messages.error(
-                        request,
-                        f'Erro ao salvar {label_tipo_refeicao(tipo.nome)}: {e}',
-                    )
-            else:
+
+def _contexto_configuracoes(request, form_senha=None):
+    return {
+        'janelas': _dados_janelas_configuracao(),
+        'minutos_cancelamento': _minutos_cancelamento_atual(),
+        'form_senha': form_senha or _formulario_senha_nutri(request.user),
+        'regras_strikes': {'limite': 2, 'dias_expiracao': 30},
+        'aba_ativa': _aba_configuracoes(request),
+    }
+
+
+def _salvar_config_refeicoes(request):
+    tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
+    erros_detectados = False
+
+    for codigo, _ in Refeicao.TIPOS:
+        tipo = tipos_por_nome.get(codigo)
+        if not tipo:
+            continue
+
+        ativo = request.POST.get(f'ativo_{tipo.id}') == 'on'
+        tipo.ativo = ativo
+
+        horario_consumo_str = request.POST.get(f'horario_consumo_{tipo.id}')
+        if horario_consumo_str:
+            try:
+                tipo.horario_inicio_consumo = datetime.strptime(
+                    horario_consumo_str, '%H:%M'
+                ).time()
+            except ValueError:
                 erros_detectados = True
                 messages.error(
                     request,
-                    f'Os horários para {label_tipo_refeicao(tipo.nome)} são obrigatórios.',
+                    f'Horário de consumo inválido para {label_tipo_refeicao(tipo.nome)}.',
                 )
 
-        if not erros_detectados:
-            messages.success(request, 'Configurações de refeições salvas com sucesso!')
-            return redirect('administrativo:configuracoes')
+        tipo.save(update_fields=['ativo', 'horario_inicio_consumo'])
 
-    return render(request, 'administrativo/configuracoes.html', {
-        'janelas': _dados_janelas_configuracao(),
-    })
+        if not ativo:
+            continue
+
+        abertura_str = request.POST.get(f'abertura_{tipo.id}')
+        encerramento_str = request.POST.get(f'encerramento_{tipo.id}')
+
+        if abertura_str and encerramento_str:
+            try:
+                abertura_time = datetime.strptime(abertura_str, '%H:%M').time()
+                encerramento_time = datetime.strptime(encerramento_str, '%H:%M').time()
+
+                if abertura_time == encerramento_time:
+                    raise ValidationError(
+                        'O horário de fechamento não pode ser idêntico ao de abertura.'
+                    )
+
+                janela, created = JanelaReserva.objects.get_or_create(
+                    tipo_refeicao=tipo,
+                    defaults={
+                        'horario_abertura': abertura_time,
+                        'horario_fechamento': encerramento_time,
+                    },
+                )
+
+                if not created:
+                    janela.horario_abertura = abertura_time
+                    janela.horario_fechamento = encerramento_time
+                    janela.save()
+
+            except ValidationError as e:
+                erros_detectados = True
+                messages.error(
+                    request,
+                    f'Erro em {label_tipo_refeicao(tipo.nome)}: {e}',
+                )
+            except Exception as e:
+                erros_detectados = True
+                messages.error(
+                    request,
+                    f'Erro ao salvar {label_tipo_refeicao(tipo.nome)}: {e}',
+                )
+        else:
+            erros_detectados = True
+            messages.error(
+                request,
+                f'Os horários para {label_tipo_refeicao(tipo.nome)} são obrigatórios.',
+            )
+
+    if not erros_detectados:
+        messages.success(request, 'Configurações de refeições salvas com sucesso!')
+        return _redirect_configuracoes('refeicoes')
+    return None
+
+
+@login_required
+@perfil_required('nutricionista')
+def configuracoes(request):
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
+
+        if acao == 'salvar_refeicoes':
+            redirect_response = _salvar_config_refeicoes(request)
+            if redirect_response:
+                return redirect_response
+
+        elif acao == 'salvar_reservas':
+            try:
+                minutos = int(request.POST.get('minutos_cancelamento', ''))
+            except (TypeError, ValueError):
+                minutos = None
+
+            if minutos is None or not (MINUTOS_CANCELAMENTO_MIN <= minutos <= MINUTOS_CANCELAMENTO_MAX):
+                messages.error(
+                    request,
+                    f'Informe um prazo entre {MINUTOS_CANCELAMENTO_MIN} e '
+                    f'{MINUTOS_CANCELAMENTO_MAX} minutos.',
+                )
+            else:
+                _salvar_minutos_cancelamento(request.user, minutos)
+                messages.success(request, 'Prazo de cancelamento salvo com sucesso!')
+                return _redirect_configuracoes('reservas')
+
+        elif acao == 'senha':
+            form = PasswordChangeForm(user=request.user, data=request.POST)
+            form.fields['old_password'].label = 'Senha atual'
+            form.fields['new_password1'].label = 'Nova senha'
+            form.fields['new_password2'].label = 'Confirmar nova senha'
+            for field in form.fields.values():
+                field.widget.attrs.setdefault('class', 'config-input')
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Senha alterada com sucesso.')
+                return _redirect_configuracoes('conta')
+            return render(request, 'administrativo/configuracoes.html', {
+                **_contexto_configuracoes(request, form_senha=form),
+            })
+
+    return render(request, 'administrativo/configuracoes.html', _contexto_configuracoes(request))
 
 
 @login_required

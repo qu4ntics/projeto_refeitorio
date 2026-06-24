@@ -8,7 +8,7 @@ from django.utils import timezone
 from accounts.models import Usuario
 from refeicoes.models import Refeicao
 from reservas.models import Reserva
-from .models import Turma, TipoRefeicao, JanelaReserva, Presenca, Strike
+from .models import Turma, TipoRefeicao, JanelaReserva, Presenca, Strike, ConfigReserva
 
 
 class AlunosBloqueadosTests(TestCase):
@@ -239,7 +239,10 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
             f'encerramento_{tipo.id}': '07:00',
             f'horario_consumo_{tipo.id}': '12:30',
         })
-        self.assertRedirects(response, reverse('administrativo:configuracoes'))
+        self.assertRedirects(
+            response,
+            reverse('administrativo:configuracoes') + '?aba=refeicoes',
+        )
         tipo.refresh_from_db()
         self.assertEqual(tipo.horario_inicio_consumo.strftime('%H:%M'), '12:30')
 
@@ -251,7 +254,10 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
             f'abertura_{tipo.id}': '15:00',
             f'encerramento_{tipo.id}': '07:00',
         })
-        self.assertRedirects(response, reverse('administrativo:configuracoes'))
+        self.assertRedirects(
+            response,
+            reverse('administrativo:configuracoes') + '?aba=refeicoes',
+        )
         tipo.refresh_from_db()
         self.assertTrue(tipo.ativo)
         self.assertEqual(tipo.janela.horario_abertura.strftime('%H:%M'), '15:00')
@@ -268,9 +274,100 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
         response = self.client.post(reverse('administrativo:configuracoes'), {
             'acao': 'salvar_refeicoes',
         })
-        self.assertRedirects(response, reverse('administrativo:configuracoes'))
+        self.assertRedirects(
+            response,
+            reverse('administrativo:configuracoes') + '?aba=refeicoes',
+        )
         tipo.refresh_from_db()
         self.assertFalse(tipo.ativo)
+
+
+class ConfiguracoesNutriFase1Tests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_fase1',
+            email='nutri_fase1@test.com',
+            password='senha123',
+            perfil='nutricionista',
+        )
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_fase1',
+            email='aluno_fase1@test.com',
+            password='123',
+            perfil='aluno',
+        )
+        self.refeitorio = Usuario.objects.create_user(
+            username='ref_fase1',
+            email='ref_fase1@test.com',
+            password='123',
+            perfil='refeitorio',
+        )
+        self.url = reverse('administrativo:configuracoes')
+        self.client.login(username='nutri_fase1@test.com', password='senha123')
+
+    def test_get_exibe_quatro_abas(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Refeições')
+        self.assertContains(response, 'Reservas')
+        self.assertContains(response, 'Strikes')
+        self.assertContains(response, 'Minha conta')
+        self.assertContains(response, 'value="60"', html=False)
+
+    def test_salvar_minutos_cancelamento_cria_config(self):
+        response = self.client.post(self.url, {
+            'acao': 'salvar_reservas',
+            'minutos_cancelamento': '90',
+        })
+        self.assertRedirects(response, self.url + '?aba=reservas')
+        config = ConfigReserva.get_config_ativa()
+        self.assertEqual(config.minutos_cancelamento, 90)
+        self.assertEqual(config.criado_por, self.nutri)
+
+    def test_salvar_minutos_cancelamento_atualiza_via_novo_registro(self):
+        ConfigReserva.objects.create(
+            abertura=time(15, 0),
+            encerramento=time(7, 0),
+            minutos_cancelamento=60,
+            criado_por=self.nutri,
+        )
+        response = self.client.post(self.url, {
+            'acao': 'salvar_reservas',
+            'minutos_cancelamento': '120',
+        })
+        self.assertRedirects(response, self.url + '?aba=reservas')
+        config = ConfigReserva.get_config_ativa()
+        self.assertEqual(config.minutos_cancelamento, 120)
+        self.assertEqual(ConfigReserva.objects.count(), 2)
+
+    def test_salvar_minutos_invalidos_nao_cria_config(self):
+        response = self.client.post(self.url, {
+            'acao': 'salvar_reservas',
+            'minutos_cancelamento': '5',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ConfigReserva.objects.count(), 0)
+
+    def test_alterar_senha_nutricionista(self):
+        response = self.client.post(self.url, {
+            'acao': 'senha',
+            'old_password': 'senha123',
+            'new_password1': 'novaSenha999',
+            'new_password2': 'novaSenha999',
+        })
+        self.assertRedirects(response, self.url + '?aba=conta')
+        self.nutri.refresh_from_db()
+        self.assertTrue(self.nutri.check_password('novaSenha999'))
+
+    def test_aluno_nao_acessa_configuracoes(self):
+        self.client.login(username='aluno_fase1@test.com', password='123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_refeitorio_nao_acessa_configuracoes(self):
+        self.client.login(username='ref_fase1@test.com', password='123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
 
 
 class JanelaReservaAPITests(TestCase):

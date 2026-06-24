@@ -89,3 +89,48 @@ body.dark-mode .refeicao-config-box .campo::-webkit-calendar-picker-indicator,
 [data-theme="dark"] .refeicao-config-box .campo::-webkit-calendar-picker-indicator {
   filter: invert(1) !important;
 }
+
+.config-nutri-page .config-section--nutri {
+  margin-bottom: 1.5rem;
+}
+
+.config-nutri-page .config-section--nutri:last-child {
+  margin-bottom: 0;
+}
+
+.config-reservas-card {
+  margin-bottom: 1.25rem;
+}
+
+.config-reservas-card .config-section-title {
+  margin-bottom: 0.5rem;
+}
+
+.config-input--numero {
+  max-width: 140px;
+}
+
+.config-ajuda-cancelamento {
+  margin-top: 1rem;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.config-strikes-card .config-link--acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.config-tabs .week-tab {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .config-tabs.week-tabs {
+    flex-wrap: wrap;
+  }
+}

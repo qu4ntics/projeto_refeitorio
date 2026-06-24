@@ -7,7 +7,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=2">
-<link rel="stylesheet" href="{% static 'css/alunos_bloqueados.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/alunos_bloqueados.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -19,6 +19,16 @@
       <p class="page-subtitle" id="subtitulo-bloqueados">
         Alunos que atingiram 2 strikes e foram bloqueados de novas reservas.
       </p>
+    </div>
+  </div>
+
+  <div class="info-bloqueio">
+    <div class="info-bloqueio-icone">
+      <i class="fa-solid fa-circle-info"></i>
+    </div>
+    <div>
+      <h3>Sobre alunos bloqueados</h3>
+      <p>Alunos bloqueados não podem fazer novas reservas de refeição. Ao desbloquear, o aluno voltará a ter acesso normalmente.</p>
     </div>
   </div>
 
@@ -56,16 +66,6 @@
       <span>AÇÕES</span>
     </div>
     <div id="tabela-body"></div>
-  </div>
-
-  <div class="info-bloqueio">
-    <div class="info-bloqueio-icone">
-      <i class="fa-solid fa-circle-info"></i>
-    </div>
-    <div>
-      <h3>Sobre alunos bloqueados</h3>
-      <p>Alunos bloqueados não podem fazer novas reservas de refeição. Ao desbloquear, o aluno voltará a ter acesso normalmente.</p>
-    </div>
   </div>
 
 </div>
