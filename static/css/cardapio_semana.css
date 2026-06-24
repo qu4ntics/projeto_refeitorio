@@ -24,6 +24,32 @@
   margin-bottom: 0;
 }
 
+.cardapio-header--pagina {
+  margin-bottom: 0;
+}
+
+.cardapio-header--pagina h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.cardapio-semana-header {
+  margin-bottom: 0.75rem;
+}
+
+.cardapio-semana-header__titulo {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+}
+
+.cardapio-semana-header .page-date {
+  margin-top: 0;
+  font-size: 12px;
+}
+
 .cardapio-divider {
   height: 1px;
   background: var(--border);
@@ -84,6 +110,52 @@
   font-size: 11px;
   padding: 8px 12px;
   letter-spacing: 0.3px;
+}
+
+/* DESTAQUE — ALMOÇO DE HOJE */
+.almoco-atual {
+  margin-bottom: 0.5rem;
+}
+
+.almoco-atual__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.almoco-atual__titulo {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.almoco-atual__data {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: capitalize;
+}
+
+.almoco-atual__aviso {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: color-mix(in srgb, var(--text-light) 8%, var(--bg-card));
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+
+.almoco-atual .meal-card {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-card));
+  margin-bottom: 0;
 }
 
 /* PAINEL DE DIA */
@@ -171,8 +243,19 @@
     padding: 8px 8px;
   }
 
-  .cardapio-header h1 {
-    font-size: 18px;
+  .almoco-atual__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .cardapio-semana-header__titulo {
+    font-size: 13px;
+  }
+
+  .cardapio-header h1,
+  .cardapio-header--pagina h1 {
+    font-size: 16px;
   }
 
   .cardapio-header .header-top {
@@ -356,6 +439,22 @@
     line-height: 1.45;
     color: var(--text-primary);
     margin: 0 0 0.75rem;
+}
+
+.meal-card--visualizacao .pre-reserva-banner__text {
+    margin-bottom: 0;
+}
+
+.meal-status {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.meal-status--reservado {
+    color: var(--primary, #2e7d32);
 }
 
 .pre-reserva-banner__actions {

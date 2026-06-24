@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -67,6 +67,62 @@ def _montar_dias_semana(refeicoes, segunda):
         for nome, id_dia, data_dia in dias
     ]
 
+
+def _anexar_status_reserva_aluno(refeicao, reservas_ativas, pre_reservas):
+    refeicao.reserva_id = reservas_ativas.get(refeicao.id)
+    refeicao.pre_reserva = pre_reservas.get(refeicao.id)
+
+
+def _horario_inicio_almoco():
+    tipo = TipoRefeicao.objects.filter(nome='almoco').first()
+    if tipo and tipo.horario_inicio_consumo:
+        return tipo.horario_inicio_consumo
+    return time(12, 0)
+
+
+def _almoco_passou(hoje):
+    agora = timezone.localtime()
+    if agora.date() != hoje:
+        return agora.date() > hoje
+    return agora.time() >= _horario_inicio_almoco()
+
+
+def _obter_almoco_em(data):
+    return (
+        Refeicao.objects.filter(data=data, tipo='almoco')
+        .prefetch_related('itens_prato__prato')
+        .annotate(reservas_ativas=Count('reservas', filter=Q(reservas__status='ativa')))
+        .first()
+    )
+
+
+def _resolver_almoco_destaque(hoje):
+    if _almoco_passou(hoje):
+        data_alvo = hoje + timedelta(days=1)
+        titulo = 'Almoço de amanhã'
+    else:
+        data_alvo = hoje
+        titulo = 'Almoço de hoje'
+
+    refeicao = _obter_almoco_em(data_alvo)
+    if not refeicao and data_alvo == hoje:
+        amanha = hoje + timedelta(days=1)
+        refeicao_amanha = _obter_almoco_em(amanha)
+        if refeicao_amanha:
+            data_alvo = amanha
+            titulo = 'Almoço de amanhã'
+            refeicao = refeicao_amanha
+
+    if not refeicao:
+        return None
+
+    return {
+        'refeicao': refeicao,
+        'titulo': titulo,
+        'data': data_alvo,
+    }
+
+
 def _preparar_contexto_semana(request, data_ref_str):
     """Centraliza a lógica de geração de dados da semana para evitar inconsistências entre views."""
     hoje, segunda, semana_fim = _obter_semana(data_ref_str)
@@ -94,11 +150,23 @@ def homepage(request):
         return redirect(REDIRECT_POR_PERFIL.get(perfil, 'refeicoes:homepage'))
 
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
-    
+
     from reservas.models import Reserva, PreReserva
+
+    hoje = ctx['hoje']
+    almoco_destaque = _resolver_almoco_destaque(hoje)
+
+    refeicao_ids = list(ctx['refeicoes_raw'].values_list('id', flat=True))
+    if almoco_destaque and almoco_destaque['refeicao'].id not in refeicao_ids:
+        refeicao_ids.append(almoco_destaque['refeicao'].id)
+
     reservas_ativas = {
         res.refeicao_id: res.id
-        for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=ctx['refeicoes_raw'])
+        for res in Reserva.objects.filter(
+            aluno=request.user,
+            status='ativa',
+            refeicao_id__in=refeicao_ids,
+        )
     }
 
     pre_reservas = {
@@ -110,16 +178,21 @@ def homepage(request):
         ).select_related('refeicao')
     }
 
+    if almoco_destaque:
+        _anexar_status_reserva_aluno(
+            almoco_destaque['refeicao'], reservas_ativas, pre_reservas,
+        )
+
     dias_semana = ctx['dias_semana']
     tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'])
 
     for dia in dias_semana:
         for refeicao in dia['refeicoes']:
-            refeicao.reserva_id = reservas_ativas.get(refeicao.id)
-            refeicao.pre_reserva = pre_reservas.get(refeicao.id)
+            _anexar_status_reserva_aluno(refeicao, reservas_ativas, pre_reservas)
 
     ctx.update({
         'tab_inicial': tab_inicial,
+        'almoco_destaque': almoco_destaque,
     })
     return render(request, 'refeicoes/homepage.html', ctx)
 

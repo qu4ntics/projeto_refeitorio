@@ -1,4 +1,6 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -78,6 +80,75 @@ class ReservaViewTests(TestCase):
         
         messages = list(get_messages(response.wsgi_request))
         self.assertTrue(any("sucesso" in str(m).lower() for m in messages))
+
+    def test_homepage_exibe_almoco_hoje_em_destaque(self):
+        hoje = timezone.localdate()
+        refeicao_hoje = Refeicao.objects.create(
+            data=hoje,
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+        agora = timezone.make_aware(
+            datetime.combine(hoje, time(10, 0)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.get(reverse('refeicoes:homepage'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Almoço de hoje')
+        url_reserva = reverse('reservas:criar_reserva', args=[refeicao_hoje.id])
+        self.assertEqual(response.content.decode('utf-8').count(url_reserva), 1)
+
+        outra_semana = (hoje + timedelta(days=14)).strftime('%Y-%m-%d')
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response_outra = self.client.get(reverse('refeicoes:homepage'), {'data': outra_semana})
+        self.assertContains(response_outra, 'Almoço de hoje')
+
+    def test_homepage_apos_almoco_mostra_amanha_desabilitado(self):
+        hoje = timezone.localdate()
+        Refeicao.objects.create(
+            data=hoje,
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+        refeicao_amanha = self.refeicao
+        self.janela.horario_abertura = time(15, 0)
+        self.janela.horario_fechamento = time(11, 0)
+        self.janela.save()
+
+        agora = timezone.make_aware(
+            datetime.combine(hoje, time(13, 0)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.get(reverse('refeicoes:homepage'))
+
+        self.assertContains(response, 'Almoço de amanhã')
+        self.assertContains(response, 'Reservas abrem em')
+        self.assertContains(response, 'disabled')
+        url_reserva = reverse('reservas:criar_reserva', args=[refeicao_amanha.id])
+        self.assertEqual(response.content.decode('utf-8').count(url_reserva), 0)
+
+    def test_homepage_amanha_habilita_reserva_na_janela(self):
+        hoje = timezone.localdate()
+        refeicao_amanha = self.refeicao
+        self.janela.horario_abertura = time(15, 0)
+        self.janela.horario_fechamento = time(11, 0)
+        self.janela.save()
+
+        agora = timezone.make_aware(
+            datetime.combine(hoje, time(16, 0)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.get(reverse('refeicoes:homepage'))
+
+        self.assertContains(response, 'Almoço de amanhã')
+        self.assertNotContains(response, 'Reservas abrem em')
+        url_reserva = reverse('reservas:criar_reserva', args=[refeicao_amanha.id])
+        self.assertEqual(response.content.decode('utf-8').count(url_reserva), 1)
 
     def test_validacao_aluno_bloqueado(self):
         """Validação 1: Aluno bloqueado não pode reservar."""
