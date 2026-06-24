@@ -1,0 +1,95 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Alunos Bloqueados — ReservaIF{% endblock %}
+
+{% block menu_bloqueados %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/alunos_bloqueados.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="alunos-page alunos-bloqueados-page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Alunos Bloqueados</h1>
+      <p class="page-subtitle" id="subtitulo-bloqueados">
+        Alunos que atingiram 2 strikes e foram bloqueados de novas reservas.
+      </p>
+    </div>
+  </div>
+
+  <div class="filtros-bar">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="input-busca" placeholder="Pesquisar por nome ou e-mail...">
+    </div>
+  </div>
+
+  <div id="estado-loading" class="estado-vazio" hidden>
+    <i class="fa-solid fa-circle-notch fa-spin"></i>
+    <p>Carregando alunos bloqueados...</p>
+  </div>
+
+  <div id="estado-vazio" class="estado-vazio" hidden>
+    <i class="fa-solid fa-lock-open"></i>
+    <p>Nenhum aluno bloqueado no momento.</p>
+  </div>
+
+  <div id="estado-erro" class="estado-vazio estado-erro" hidden>
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <p>Erro ao carregar alunos. Tente novamente.</p>
+    <button class="btn btn-outline" onclick="carregarAlunos()">
+      <i class="fa-solid fa-rotate-right"></i> Tentar novamente
+    </button>
+  </div>
+
+  <div id="tabela-wrapper" class="tabela-wrapper tabela-bloqueados" hidden>
+    <div class="tabela-header">
+      <span>ALUNO</span>
+      <span>E-MAIL</span>
+      <span>TURMA</span>
+      <span>DATA DO BLOQUEIO</span>
+      <span>AÇÕES</span>
+    </div>
+    <div id="tabela-body"></div>
+  </div>
+
+  <div class="info-bloqueio">
+    <div class="info-bloqueio-icone">
+      <i class="fa-solid fa-circle-info"></i>
+    </div>
+    <div>
+      <h3>Sobre alunos bloqueados</h3>
+      <p>Alunos bloqueados não podem fazer novas reservas de refeição. Ao desbloquear, o aluno voltará a ter acesso normalmente.</p>
+    </div>
+  </div>
+
+</div>
+
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-icon">
+      <i class="fa-solid fa-lock-open"></i>
+    </div>
+    <h2>Desbloquear aluno?</h2>
+    <p id="modal-desc">O aluno voltará a ter acesso normalmente à plataforma.</p>
+    <div class="modal-acoes">
+      <button class="btn btn-outline" id="btn-cancelar-modal">Cancelar</button>
+      <button class="btn btn-accent" id="btn-confirmar-desbloqueio">
+        <i class="fa-solid fa-lock-open"></i> Desbloquear
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/alunos_bloqueados.js' %}?v=1"></script>
+{% endblock %}

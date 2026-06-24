@@ -1,0 +1,63 @@
+.alunos-bloqueados-page .tabela-bloqueados .tabela-header,
+.alunos-bloqueados-page .tabela-bloqueados .tabela-linha {
+  grid-template-columns: 2fr 2fr 1.2fr 1.4fr 1.2fr;
+}
+
+.alunos-bloqueados-page .turma-col,
+.alunos-bloqueados-page .data-bloqueio {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.alunos-bloqueados-page .data-bloqueio {
+  white-space: nowrap;
+}
+
+.info-bloqueio {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.info-bloqueio-icone {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 176, 91, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.info-bloqueio h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.info-bloqueio p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .alunos-bloqueados-page .tabela-bloqueados .tabela-header {
+    display: none;
+  }
+
+  .alunos-bloqueados-page .tabela-bloqueados .tabela-linha {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

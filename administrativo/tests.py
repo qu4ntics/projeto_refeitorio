@@ -8,7 +8,96 @@ from django.utils import timezone
 from accounts.models import Usuario
 from refeicoes.models import Refeicao
 from reservas.models import Reserva
-from .models import Turma, TipoRefeicao, JanelaReserva
+from .models import Turma, TipoRefeicao, JanelaReserva, Presenca, Strike
+
+
+class AlunosBloqueadosTests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_bloq',
+            email='nutri_bloq@test.com',
+            password='senha123',
+            perfil='nutricionista',
+        )
+        self.refeitorio = Usuario.objects.create_user(
+            username='ref_bloq',
+            email='ref_bloq@test.com',
+            password='123',
+            perfil='refeitorio',
+        )
+        self.turma = Turma.objects.create(nome='2º Informática', turno='matutino')
+        self.aluno_livre = Usuario.objects.create_user(
+            username='aluno_livre',
+            email='livre@test.com',
+            password='123',
+            perfil='aluno',
+            first_name='Ana',
+            last_name='Livre',
+            turma=self.turma,
+        )
+        self.aluno_bloqueado = Usuario.objects.create_user(
+            username='aluno_bloq',
+            email='bloq@test.com',
+            password='123',
+            perfil='aluno',
+            first_name='João',
+            last_name='Bloqueado',
+            turma=self.turma,
+            bloqueado=True,
+        )
+        self._criar_strike(self.aluno_bloqueado, timezone.now() - timedelta(days=1))
+        self._criar_strike(self.aluno_bloqueado)
+        self.url_pagina = reverse('administrativo:alunos_bloqueados')
+        self.url_api = reverse('administrativo:lista_alunos')
+
+    def _criar_strike(self, aluno, aplicado_em=None):
+        refeicao = Refeicao.objects.create(
+            data=timezone.localdate(),
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+        reserva = Reserva.objects.create(aluno=aluno, refeicao=refeicao, status='ativa')
+        presenca = Presenca.objects.create(
+            reserva=reserva,
+            confirmado_por=self.refeitorio,
+            compareceu=False,
+        )
+        strike = Strike(aluno=aluno, presenca=presenca)
+        if aplicado_em:
+            strike.aplicado_em = aplicado_em
+            strike.expira_em = aplicado_em + timedelta(days=30)
+        strike.save()
+        return strike
+
+    def test_nutricionista_acessa_pagina_bloqueados(self):
+        self.client.login(username='nutri_bloq@test.com', password='senha123')
+        response = self.client.get(self.url_pagina)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Alunos Bloqueados')
+        self.assertContains(response, 'BLOQUEADOS')
+
+    def test_aluno_nao_acessa_pagina_bloqueados(self):
+        self.client.login(username='livre@test.com', password='123')
+        response = self.client.get(self.url_pagina)
+        self.assertEqual(response.status_code, 403)
+
+    def test_refeitorio_nao_acessa_pagina_bloqueados(self):
+        self.client.login(username='ref_bloq@test.com', password='123')
+        response = self.client.get(self.url_pagina)
+        self.assertEqual(response.status_code, 403)
+
+    def test_api_lista_somente_bloqueados_com_data(self):
+        self.client.login(username='nutri_bloq@test.com', password='senha123')
+        response = self.client.get(self.url_api, {'bloqueados': 'true'})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        emails = [a['email'] for a in data['alunos']]
+        self.assertIn('bloq@test.com', emails)
+        self.assertNotIn('livre@test.com', emails)
+        bloqueado = next(a for a in data['alunos'] if a['email'] == 'bloq@test.com')
+        self.assertTrue(bloqueado['bloqueado'])
+        self.assertIsNotNone(bloqueado['bloqueado_em'])
 
 
 class TurmaCRUDTests(TestCase):

@@ -319,6 +319,14 @@ def configuracoes(request):
     return render(request, 'administrativo/configuracoes.html', {
         'janelas': _dados_janelas_configuracao(),
     })
+
+
+@login_required
+@perfil_required('nutricionista')
+def alunos_bloqueados(request):
+    return render(request, 'administrativo/alunos_bloqueados.html')
+
+
 @login_required
 @perfil_required('nutricionista')
 def lista_alunos(request):
@@ -346,6 +354,7 @@ def lista_alunos(request):
     for aluno in alunos:
         strikes_ativos = aluno.strikes.filter(expira_em__gt=agora)
         proximo_expira = strikes_ativos.order_by('expira_em').first()
+        ultimo_strike = strikes_ativos.order_by('-aplicado_em').first() if aluno.bloqueado else None
         lista.append({
             'id': str(aluno.id),
             'nome_completo': aluno.get_full_name() or aluno.username,
@@ -356,6 +365,9 @@ def lista_alunos(request):
             'strikes_ativos': strikes_ativos.count(),
             'proximo_strike_expira_em': (
                 proximo_expira.expira_em.isoformat() if proximo_expira else None
+            ),
+            'bloqueado_em': (
+                ultimo_strike.aplicado_em.isoformat() if ultimo_strike else None
             ),
         })
 

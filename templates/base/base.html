@@ -125,7 +125,7 @@
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
           </a>
-          <a href="#" class="menu-item {% block menu_bloqueados %}{% endblock %}">
+          <a href="{% url 'administrativo:alunos_bloqueados' %}" class="menu-item {% block menu_bloqueados %}{% endblock %}">
             <i class="fa-solid fa-lock"></i>
             <span>BLOQUEADOS</span>
           </a>

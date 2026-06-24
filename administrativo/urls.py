@@ -6,6 +6,7 @@ app_name = 'administrativo'
 urlpatterns = [
     path('painel_nutricionista/', views.painel_nutricionista, name='painel_nutricionista'),
     path('painel_refeitorio/', views.painel_refeitorio, name='painel_refeitorio'),
+    path('alunos/bloqueados/', views.alunos_bloqueados, name='alunos_bloqueados'),
     path('alunos/', views.alunos_turmas, name='alunos_turmas'),
     path('alunos/arquivadas/', views.alunos_turmas_arquivadas, name='alunos_turmas_arquivadas'),
     path('alunos/turmas/json/', views.lista_turmas_json, name='lista_turmas_json'),
