@@ -193,13 +193,22 @@ p {
 }
 
 .link-esqueci-senha {
-    justify-self: end;
-    margin-top: -12px;
+    display: block;
+    margin: -10px 2px 0;
     padding: 0;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    color: var(--text-secondary);
+    text-decoration: none;
 }
 
-a {
+.link-esqueci-senha:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.caixa-login > a {
     text-align: center;
     text-decoration: none;
     color: #43b6ff;
@@ -207,7 +216,7 @@ a {
     padding-top: 5px;
 }
 
-a:hover {
+.caixa-login > a:hover {
     color: #2587c4;
     text-decoration: underline;
     transition: color 0.2s ease, text-decoration 0.2s ease;
