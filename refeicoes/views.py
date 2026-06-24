@@ -95,10 +95,19 @@ def homepage(request):
 
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
     
-    from reservas.models import Reserva
+    from reservas.models import Reserva, PreReserva
     reservas_ativas = {
         res.refeicao_id: res.id
         for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=ctx['refeicoes_raw'])
+    }
+
+    pre_reservas = {
+        pr.refeicao_id: pr
+        for pr in PreReserva.objects.filter(
+            aluno=request.user,
+            status='pendente',
+            expira_em__gt=timezone.now(),
+        ).select_related('refeicao')
     }
 
     dias_semana = ctx['dias_semana']
@@ -107,6 +116,7 @@ def homepage(request):
     for dia in dias_semana:
         for refeicao in dia['refeicoes']:
             refeicao.reserva_id = reservas_ativas.get(refeicao.id)
+            refeicao.pre_reserva = pre_reservas.get(refeicao.id)
 
     ctx.update({
         'tab_inicial': tab_inicial,

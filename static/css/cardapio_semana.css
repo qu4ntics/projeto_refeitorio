@@ -342,3 +342,35 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
+
+.pre-reserva-banner {
+    margin: 0.75rem 0;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 193, 7, 0.12);
+    border: 1px solid rgba(255, 193, 7, 0.45);
+    border-radius: 8px;
+}
+
+.pre-reserva-banner__text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem;
+}
+
+.pre-reserva-banner__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.pre-reserva-btn--confirm {
+    background: var(--accent);
+    color: var(--primary);
+}
+
+.pre-reserva-btn--reject {
+    background: transparent;
+    color: var(--text-light);
+    border: 1px solid var(--border);
+}
