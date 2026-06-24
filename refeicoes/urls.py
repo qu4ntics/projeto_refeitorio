@@ -6,6 +6,7 @@ app_name = 'refeicoes'
 
 urlpatterns = [
     path('', views.homepage, name='homepage'),
+    path('strikes/', views.strikes_aluno, name='strikes_aluno'),
     path('lista-presenca/', views.lista_presenca, name='lista-presenca'),
     path('chamada/<uuid:refeicao_id>/', views.chamada, name='chamada'),
     path('chamada/<uuid:refeicao_id>/resumo/', views.chamada_resumo, name='chamada_resumo'),

@@ -75,7 +75,7 @@
               <span>{{ strikes_ativos|default:0 }}/2</span>
             </div>
             <div class="bar">
-              <div class="fill" style="width: {% if strikes_ativos %}{{ strikes_ativos|divisibleby:2|yesno:'100,50' }}%{% else %}0%{% endif %}"></div>
+              <div class="fill{% if strikes_ativos == 1 %} fill--warning{% elif strikes_ativos >= 2 %} fill--danger{% endif %}" style="width: {% if strikes_ativos %}{{ strikes_ativos|divisibleby:2|yesno:'100,50' }}%{% else %}0%{% endif %}"></div>
             </div>
             {% if proximo_strike_expira %}
               <span class="expire">Expira em: {{ proximo_strike_expira|date:"d/m/Y" }}</span>
@@ -99,11 +99,7 @@
             <i class="fa-solid fa-utensils"></i>
             <span>CARDÁPIO</span>
           </a>
-          <a href="#" class="menu-item {% block menu_reservas %}{% endblock %}">
-            <i class="fa-solid fa-calendar-check"></i>
-            <span>MINHAS RESERVAS</span>
-          </a>
-          <a href="#" class="menu-item {% block menu_strikes %}{% endblock %}">
+          <a href="{% url 'refeicoes:strikes_aluno' %}" class="menu-item {% block menu_strikes %}{% endblock %}">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span>STRIKES</span>
           </a>

@@ -449,4 +449,18 @@ def refeicao_editar(request, pk):
         'pratos_por_categoria': pratos_agrupados_por_categoria(),
         'pratos_selecionados': pratos_selecionados,
     })
-       
+
+
+@perfil_required('aluno')
+def strikes_aluno(request):
+    agora = timezone.now()
+    strikes = (
+        Strike.objects.filter(aluno=request.user)
+        .select_related('presenca__reserva__refeicao')
+        .order_by('-aplicado_em')
+    )
+    return render(request, 'refeicoes/strikes_aluno.html', {
+        'strikes': strikes,
+        'agora': agora,
+    })
+
