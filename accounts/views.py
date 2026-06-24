@@ -1,8 +1,9 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
+from django.contrib import messages
+from django.contrib.auth import login, authenticate, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.views import LoginView
+from django.shortcuts import render, redirect
 from django.urls import reverse
-
 
 from .forms import CadastroForm, EmailAuthenticationForm
 

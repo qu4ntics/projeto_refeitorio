@@ -35,7 +35,7 @@
         {% if user.perfil == 'aluno' and user.turma %} - {{ user.turma.nome }}{% endif %}
       </span>
 
-      <a href="#" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
+      <a href="{% if user.perfil == 'aluno' %}{% url 'refeicoes:configuracoes_aluno' %}#notificacoes{% else %}#{% endif %}" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
         <i class="fa-regular fa-bell"></i>
         {% if notificacoes_nao_lidas %}
           <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
@@ -103,9 +103,9 @@
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span>STRIKES</span>
           </a>
-          <a href="#" class="menu-item {% block menu_perfil %}{% endblock %}">
+          <a href="{% url 'refeicoes:configuracoes_aluno' %}" class="menu-item {% block menu_configuracoes %}{% endblock %}">
             <i class="fa-solid fa-gear"></i>
-            <span>MEU PERFIL</span>
+            <span>CONFIGURAÇÕES</span>
           </a>
 
         {% elif user.perfil == 'nutricionista' %}

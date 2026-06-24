@@ -10,5 +10,5 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(
         next_page='accounts:login'
     ), name='logout'),
-    path('cadastro/', cadastro_view, name='cadastro')
+    path('cadastro/', cadastro_view, name='cadastro'),
 ]

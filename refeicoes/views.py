@@ -1,7 +1,9 @@
 from datetime import datetime, time, timedelta
 
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,7 +11,7 @@ from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
-from administrativo.models import ConfigReserva, TipoRefeicao, Presenca, Strike
+from administrativo.models import ConfigReserva, Notificacao, TipoRefeicao, Presenca, Strike
 from administrativo.services.chamada import estado_aluno_chamada, status_chamada_refeicao
 from reservas.models import Reserva
 
@@ -462,5 +464,47 @@ def strikes_aluno(request):
     return render(request, 'refeicoes/strikes_aluno.html', {
         'strikes': strikes,
         'agora': agora,
+    })
+
+
+def _formulario_senha(usuario):
+    form = PasswordChangeForm(user=usuario)
+    form.fields['old_password'].label = 'Senha atual'
+    form.fields['new_password1'].label = 'Nova senha'
+    form.fields['new_password2'].label = 'Confirmar nova senha'
+    for field in form.fields.values():
+        field.widget.attrs.setdefault('class', 'config-input')
+    return form
+
+
+@perfil_required('aluno')
+def configuracoes_aluno(request):
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
+        if acao == 'marcar_lidas':
+            Notificacao.objects.filter(usuario=request.user, lida=False).update(lida=True)
+            messages.success(request, 'Todas as notificações foram marcadas como lidas.')
+            return redirect('refeicoes:configuracoes_aluno')
+        if acao == 'senha':
+            form = PasswordChangeForm(user=request.user, data=request.POST)
+            form.fields['old_password'].label = 'Senha atual'
+            form.fields['new_password1'].label = 'Nova senha'
+            form.fields['new_password2'].label = 'Confirmar nova senha'
+            for field in form.fields.values():
+                field.widget.attrs.setdefault('class', 'config-input')
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Senha alterada com sucesso.')
+                return redirect('refeicoes:configuracoes_aluno')
+        else:
+            form = _formulario_senha(request.user)
+    else:
+        form = _formulario_senha(request.user)
+
+    notificacoes = Notificacao.objects.filter(usuario=request.user)[:30]
+    return render(request, 'accounts/configuracoes_aluno.html', {
+        'form_senha': form,
+        'notificacoes': notificacoes,
     })
 
