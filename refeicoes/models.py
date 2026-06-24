@@ -65,6 +65,7 @@ class Refeicao(UUIDModel):
     limite_vagas = models.PositiveIntegerField()
     exige_reserva = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    chamada_aberta = models.BooleanField(default=False, verbose_name='Chamada Aberta')
     chamada_finalizada = models.BooleanField(default=False, verbose_name="Chamada Finalizada")
     pratos = models.ManyToManyField(Prato, through='RefeicaoPrato', related_name='refeicoes')
 

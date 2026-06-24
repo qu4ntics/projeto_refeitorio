@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Resumo da Chamada — {{ refeicao.get_tipo_display }}{% endblock %}
+
+{% block menu_presenca %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/lista-presenca-style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-refeitorio resumo-chamada">
+    <header class="lista-presenca-header">
+        <a href="{% url 'administrativo:painel_refeitorio' %}" class="voltar-painel"><i class="fa-solid fa-arrow-left"></i> Voltar ao painel</a>
+        <h2>Resumo — {{ refeicao.get_tipo_display }} ({{ refeicao.data|date:"d/m/Y" }})</h2>
+    </header>
+
+    <div class="resumo-cards">
+        <div class="resumo-card presente">
+            <span class="resumo-numero">{{ total_presentes }}</span>
+            <span class="resumo-label">Presentes</span>
+        </div>
+        <div class="resumo-card ausente">
+            <span class="resumo-numero">{{ total_ausentes }}</span>
+            <span class="resumo-label">Ausentes</span>
+        </div>
+        <div class="resumo-card strike">
+            <span class="resumo-numero">{{ total_strikes }}</span>
+            <span class="resumo-label">Strikes aplicados</span>
+        </div>
+    </div>
+
+    {% if bloqueios %}
+    <div class="alerta-bloqueio">
+        <h3><i class="fa-solid fa-ban"></i> Alunos bloqueados nesta operação</h3>
+        <ul>
+            {% for nome in bloqueios %}
+            <li>{{ nome }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="resumo-secoes">
+        <section>
+            <h3>Presentes ({{ total_presentes }})</h3>
+            {% if presentes_lista %}
+            <ul class="lista-resumo">
+                {% for presenca in presentes_lista %}
+                <li>{{ presenca.reserva.aluno.get_full_name|default:presenca.reserva.aluno.username }} — {{ presenca.reserva.aluno.turma.nome|default:"—" }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="vazio-resumo">Nenhum aluno presente.</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h3>Ausentes e strikes ({{ total_ausentes }})</h3>
+            {% if ausentes_lista %}
+            <ul class="lista-resumo ausentes">
+                {% for presenca in ausentes_lista %}
+                <li>
+                    {{ presenca.reserva.aluno.get_full_name|default:presenca.reserva.aluno.username }}
+                    — {{ presenca.reserva.aluno.turma.nome|default:"—" }}
+                    <span class="tag-strike">1 strike</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="vazio-resumo">Nenhuma falta registrada.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

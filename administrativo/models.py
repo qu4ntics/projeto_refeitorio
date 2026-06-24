@@ -132,6 +132,11 @@ class Notificacao(UUIDModel):
 class TipoRefeicao(UUIDModel):
     nome = models.CharField('Nome', max_length=50, unique=True)
     ativo = models.BooleanField('Habilitada', default=False)
+    horario_inicio_consumo = models.TimeField(
+        'Horário de Início da Refeição',
+        null=True,
+        blank=True,
+    )
 
     @classmethod
     def codigos_habilitados(cls):

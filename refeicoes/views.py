@@ -9,7 +9,9 @@ from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
-from administrativo.models import ConfigReserva, TipoRefeicao
+from administrativo.models import ConfigReserva, TipoRefeicao, Presenca, Strike
+from administrativo.services.chamada import estado_aluno_chamada, status_chamada_refeicao
+from reservas.models import Reserva
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
 from .models import Prato, Refeicao
@@ -129,30 +131,24 @@ def cardapio_semana(request):
 @login_required
 @perfil_required('refeitorio')
 def lista_presenca(request):
-    # Filtro de data: padrão é hoje se não for especificado
-    data_param = request.GET.get('data')
-    if data_param:
-        try:
-            data_filtro = datetime.strptime(data_param, '%Y-%m-%d').date()
-        except ValueError:
-            data_filtro = timezone.localdate()
-    else:
-        data_filtro = timezone.localdate()
+    """Redireciona para o painel do refeitório (chamada agora é por refeição)."""
+    return redirect('administrativo:painel_refeitorio')
 
-    from reservas.models import Reserva
 
-    # Busca todas as reservas da data (inclusive canceladas) ordenadas por nome
-    reservas = (
-        Reserva.objects.filter(refeicao__data=data_filtro)
-        .select_related('aluno', 'aluno__turma', 'refeicao')
+@login_required
+@perfil_required('refeitorio')
+def chamada(request, refeicao_id):
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+
+    reservas_qs = (
+        Reserva.objects.filter(refeicao=refeicao)
+        .select_related('aluno', 'aluno__turma')
         .order_by('aluno__first_name', 'aluno__last_name')
     )
 
     pesquisa = request.GET.get('search', '').strip()
     if pesquisa:
-        tipos_correspondentes = [k for k, v in Refeicao.TIPOS if pesquisa.lower() in v.lower()]
-
-        reservas = reservas.annotate(
+        reservas_qs = reservas_qs.annotate(
             full_name=Concat('aluno__first_name', Value(' '), 'aluno__last_name')
         ).filter(
             Q(aluno__first_name__icontains=pesquisa)
@@ -160,18 +156,67 @@ def lista_presenca(request):
             | Q(full_name__icontains=pesquisa)
             | Q(aluno__username__icontains=pesquisa)
             | Q(aluno__turma__nome__icontains=pesquisa)
-            | Q(refeicao__tipo__in=tipos_correspondentes)
         )
 
-    # Performance: Verifica se o dia está finalizado em uma única query
-    refeicoes_info = Refeicao.objects.filter(data=data_filtro).values_list('chamada_finalizada', flat=True)
-    dia_finalizado = len(refeicoes_info) > 0 and all(refeicoes_info)
+    reservas = []
+    presentes = 0
+    total_elegiveis = 0
+    pendentes_encerrar = 0
+
+    for reserva in reservas_qs:
+        estado = estado_aluno_chamada(reserva, refeicao)
+        reservas.append({'reserva': reserva, 'estado': estado})
+        if reserva.status != 'cancelada':
+            total_elegiveis += 1
+            if estado == 'presente':
+                presentes += 1
+            elif estado == 'pendente':
+                pendentes_encerrar += 1
+
+    tipo_cfg = TipoRefeicao.objects.filter(nome=refeicao.tipo).first()
+    horario = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+    tem_strikes = Strike.objects.filter(presenca__reserva__refeicao=refeicao).exists()
 
     return render(request, 'refeicoes/lista-presenca.html', {
-        'reservas': reservas, 
+        'refeicao': refeicao,
+        'reservas': reservas,
         'pesquisa': pesquisa,
-        'data_filtro': data_filtro,
-        'dia_finalizado': dia_finalizado
+        'presentes': presentes,
+        'total_elegiveis': total_elegiveis,
+        'pendentes_encerrar': pendentes_encerrar,
+        'status_chamada': status_chamada_refeicao(refeicao),
+        'horario': horario,
+        'tem_strikes': tem_strikes,
+    })
+
+
+@login_required
+@perfil_required('refeitorio')
+def chamada_resumo(request, refeicao_id):
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+    if not refeicao.chamada_finalizada:
+        return redirect('refeicoes:chamada', refeicao_id=refeicao.id)
+
+    presencas = Presenca.objects.filter(reserva__refeicao=refeicao).select_related(
+        'reserva__aluno', 'reserva__aluno__turma',
+    )
+    presentes_lista = [p for p in presencas if p.compareceu]
+    ausentes_lista = [p for p in presencas if not p.compareceu]
+    strikes = Strike.objects.filter(presenca__reserva__refeicao=refeicao).select_related(
+        'aluno', 'presenca__reserva__aluno',
+    )
+
+    resumo_sessao = request.session.pop(f'chamada_resumo_{refeicao_id}', None)
+
+    return render(request, 'refeicoes/chamada_resumo.html', {
+        'refeicao': refeicao,
+        'presentes_lista': presentes_lista,
+        'ausentes_lista': ausentes_lista,
+        'strikes': strikes,
+        'bloqueios': resumo_sessao.get('bloqueios', []) if resumo_sessao else [],
+        'total_presentes': len(presentes_lista),
+        'total_ausentes': len(ausentes_lista),
+        'total_strikes': strikes.count(),
     })
 
 

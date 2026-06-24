@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
-from django.db.models import ProtectedError, Q
+from django.db.models import ProtectedError, Q, Count
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
@@ -18,7 +18,15 @@ from refeicoes.views import _preparar_contexto_semana
 from refeicoes.models import Refeicao
 from reservas.models import Reserva
 from .forms import TurmaForm, label_tipo_refeicao
-from .models import Turma, JanelaReserva, TipoRefeicao
+from .models import Turma, JanelaReserva, TipoRefeicao, Presenca, Strike
+from .services.chamada import (
+    ChamadaError,
+    abrir_chamada,
+    encerrar_chamada,
+    marcar_presenca,
+    reabrir_chamada,
+    status_chamada_refeicao,
+)
 
 
 @login_required
@@ -34,18 +42,47 @@ def painel_nutricionista(request):
 @login_required
 @perfil_required('refeitorio')
 def painel_refeitorio(request):
-    """Painel operacional do refeitório com métricas em tempo real."""
+    """Painel operacional do refeitório com refeições do dia e status da chamada."""
     hoje = timezone.localdate()
-    
-    reservas_hoje = Reserva.objects.filter(refeicao__data=hoje)
-    presencas_confirmadas = reservas_hoje.filter(status='concluida').count()
-    total_reservas_ativas = reservas_hoje.filter(status__in=['ativa', 'concluida']).count()
-    aguardando = total_reservas_ativas - presencas_confirmadas
+    tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
+
+    refeicoes_hoje = (
+        Refeicao.objects.filter(data=hoje, exige_reserva=True)
+        .annotate(
+            total_reservas=Count(
+                'reservas',
+                filter=Q(reservas__status__in=['ativa', 'concluida']),
+            ),
+            presentes=Count('reservas', filter=Q(reservas__status='concluida')),
+        )
+        .order_by('tipo')
+    )
+
+    refeicoes_painel = []
+    presencas_confirmadas = 0
+    total_reservas_ativas = 0
+
+    for refeicao in refeicoes_hoje:
+        tipo_cfg = tipos_por_nome.get(refeicao.tipo)
+        horario = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+        refeicoes_painel.append({
+            'refeicao': refeicao,
+            'horario': horario,
+            'status': status_chamada_refeicao(refeicao),
+            'total_reservas': refeicao.total_reservas,
+            'presentes': refeicao.presentes,
+            'tem_strikes': Strike.objects.filter(
+                presenca__reserva__refeicao=refeicao,
+            ).exists(),
+        })
+        presencas_confirmadas += refeicao.presentes
+        total_reservas_ativas += refeicao.total_reservas
 
     return render(request, 'administrativo/painel_refeitorio.html', {
+        'refeicoes_painel': refeicoes_painel,
         'presencas_confirmadas': presencas_confirmadas,
         'total_reservas_ativas': total_reservas_ativas,
-        'aguardando_confirmacao': aguardando,
+        'aguardando_confirmacao': total_reservas_ativas - presencas_confirmadas,
         'hoje': hoje,
     })
 
@@ -189,6 +226,10 @@ def _dados_janelas_configuracao():
             'ativo': tipo.ativo,
             'abertura': janela.horario_abertura.strftime('%H:%M') if janela else '15:00',
             'encerramento': janela.horario_fechamento.strftime('%H:%M') if janela else '07:00',
+            'horario_consumo': (
+                tipo.horario_inicio_consumo.strftime('%H:%M')
+                if tipo.horario_inicio_consumo else '12:00'
+            ),
         })
     return dados_janelas
 
@@ -207,7 +248,21 @@ def configuracoes(request):
 
             ativo = request.POST.get(f'ativo_{tipo.id}') == 'on'
             tipo.ativo = ativo
-            tipo.save(update_fields=['ativo'])
+
+            horario_consumo_str = request.POST.get(f'horario_consumo_{tipo.id}')
+            if horario_consumo_str:
+                try:
+                    tipo.horario_inicio_consumo = datetime.strptime(
+                        horario_consumo_str, '%H:%M'
+                    ).time()
+                except ValueError:
+                    erros_detectados = True
+                    messages.error(
+                        request,
+                        f'Horário de consumo inválido para {label_tipo_refeicao(tipo.nome)}.',
+                    )
+
+            tipo.save(update_fields=['ativo', 'horario_inicio_consumo'])
 
             if not ativo:
                 continue
@@ -464,6 +519,20 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
 @login_required
 @perfil_required('refeitorio')
 @require_POST
+def abrir_chamada_view(request, refeicao_id):
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+    try:
+        abrir_chamada(refeicao)
+        messages.success(request, f'Chamada aberta para {refeicao.get_tipo_display()}.')
+    except ChamadaError as e:
+        messages.error(request, str(e))
+        return redirect('administrativo:painel_refeitorio')
+    return redirect('refeicoes:chamada', refeicao_id=refeicao.id)
+
+
+@login_required
+@perfil_required('refeitorio')
+@require_POST
 def atualizar_status_reserva(request, reserva_id):
     """
     Endpoint AJAX para o refeitório confirmar presença (marcar como concluída)
@@ -476,56 +545,52 @@ def atualizar_status_reserva(request, reserva_id):
 
     try:
         checked = data.get('checked')
+        if not isinstance(checked, bool):
+            return JsonResponse({'erro': 'Valor de presença inválido.'}, status=400)
+
         with transaction.atomic():
-            reserva = get_object_or_404(Reserva.objects.select_related('refeicao').select_for_update(), pk=reserva_id)
-            
-            # Segurança: Bloqueia alteração se a reserva estiver cancelada
-            if reserva.status == 'cancelada':
-                return JsonResponse({'erro': 'Não é possível marcar presença em uma reserva cancelada.'}, status=403)
-
-            if reserva.refeicao.chamada_finalizada:
-                return JsonResponse({'erro': 'Esta chamada já foi finalizada e não pode mais ser alterada.'}, status=403)
-
-            reserva.status = 'concluida' if checked else 'ativa'
-            reserva.save()
-        return JsonResponse({'sucesso': True, 'novo_status': reserva.status})
+            reserva = get_object_or_404(
+                Reserva.objects.select_related('refeicao').select_for_update(),
+                pk=reserva_id,
+            )
+            novo_status = marcar_presenca(reserva, request.user, checked)
+        return JsonResponse({'sucesso': True, 'novo_status': novo_status})
+    except ChamadaError as e:
+        return JsonResponse({'erro': str(e)}, status=403)
     except Exception as e:
         return JsonResponse({'erro': str(e)}, status=400)
 
-@login_required
-@perfil_required('refeitorio')
-@require_POST
-def finalizar_chamada(request):
-    """Tranca o registro de presenças para a data informada."""
-    data_param = request.POST.get('data')
-    if not data_param:
-        messages.error(request, "Data não informada para finalização.")
-        return redirect('administrativo:painel_refeitorio')
-
-    try:
-        Refeicao.objects.filter(data=data_param, chamada_finalizada=False).update(chamada_finalizada=True)
-        messages.success(request, "O registro de presenças foi finalizado.")
-    except ValueError:
-        messages.error(request, "Formato de data inválido.")
-
-    return redirect('administrativo:painel_refeitorio')
 
 @login_required
 @perfil_required('refeitorio')
 @require_POST
-def reabrir_chamada(request):
-    """Permite reabrir a chamada para correções ou testes."""
-    data_param = request.POST.get('data')
-    if not data_param:
-        messages.error(request, "Data não informada para reabertura.")
-        return redirect('administrativo:painel_refeitorio')
-
+def encerrar_chamada_view(request, refeicao_id):
+    """Encerra a chamada de uma refeição e aplica strikes nos ausentes."""
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
     try:
-        data_dt = datetime.strptime(data_param, '%Y-%m-%d').date()
-        Refeicao.objects.filter(data=data_dt).update(chamada_finalizada=False)
-        messages.info(request, f"Chamada do dia {data_dt.strftime('%d/%m/%Y')} reaberta para edições.")
-        return redirect(f"{reverse('refeicoes:lista-presenca')}?data={data_param}")
-    except ValueError:
-        messages.error(request, "Formato de data inválido.")
+        resumo = encerrar_chamada(refeicao, request.user)
+        request.session[f'chamada_resumo_{refeicao_id}'] = resumo
+        messages.success(request, 'Chamada encerrada com sucesso.')
+        return redirect('refeicoes:chamada_resumo', refeicao_id=refeicao.id)
+    except ChamadaError as e:
+        messages.error(request, str(e))
+        return redirect('refeicoes:chamada', refeicao_id=refeicao.id)
 
-    return redirect('administrativo:painel_refeitorio')
+
+@login_required
+@perfil_required('refeitorio')
+@require_POST
+def reabrir_chamada_view(request, refeicao_id):
+    """Permite reabrir a chamada para correções (não reverte strikes)."""
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+    try:
+        reabrir_chamada(refeicao)
+        messages.info(
+            request,
+            f'Chamada de {refeicao.get_tipo_display()} reaberta. '
+            'Strikes já aplicados não serão removidos.',
+        )
+        return redirect('refeicoes:chamada', refeicao_id=refeicao.id)
+    except ChamadaError as e:
+        messages.error(request, str(e))
+        return redirect('administrativo:painel_refeitorio')
