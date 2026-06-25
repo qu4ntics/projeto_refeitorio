@@ -1,43 +1,201 @@
 .painel-nutri .cards-topo {
-  display: flex;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
   margin-bottom: 30px;
 }
 
-.painel-nutri .card-pequeno {
-  flex: 1;
-  height: 180px;
+.painel-nutri .card-metrica {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 120px;
+  padding: 18px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.painel-nutri .card-metrica__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.painel-nutri .card-metrica__icon--ausencia {
+  color: #d9534f;
+  background: color-mix(in srgb, #d9534f 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--pico {
+  color: #2f6fed;
+  background: color-mix(in srgb, #2f6fed 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--pratos {
+  color: #8a6c00;
+  background: color-mix(in srgb, #f5e5a1 60%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--comparecimento {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.painel-nutri .card-metrica__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.painel-nutri .card-metrica__label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .card-metrica__valor {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.painel-nutri .card-metrica__valor--texto {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.painel-nutri .card-metrica__valor--vazio {
+  color: var(--text-secondary);
+}
+
+.painel-nutri .card-metrica__sub {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
 }
 
 .painel-nutri .secao-refeicoes {
   display: flex;
   gap: 24px;
+  align-items: flex-start;
 }
 
 .painel-nutri .lado-esquerdo {
   flex: 1;
+  min-width: 0;
 }
 
-.painel-nutri .lado-esquerdo h2 {
-  color: var(--text-secondary);
-  margin-bottom: 16px;
-  font-size: 18px;
-  letter-spacing: 1px;
+.painel-nutri .painel-semana {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px 24px;
+  box-shadow: var(--shadow);
 }
 
-.painel-nutri .header-refeicoes {
+.painel-nutri .painel-semana__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.painel-nutri .header-refeicoes h2 {
+.painel-nutri .painel-semana__titulo h2 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.painel-nutri .painel-semana__titulo .page-date {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .painel-semana__nav {
+  flex-shrink: 0;
+}
+
+.painel-nutri .painel-semana__nav .btn-navegacao {
+  padding: 8px 12px;
+}
+
+.painel-nutri .painel-semana__nav .btn-hoje {
+  padding: 8px 14px;
+}
+
+.painel-nutri .painel-semana__tabs {
+  margin-bottom: 1.25rem;
+}
+
+.painel-nutri .painel-semana__panel .day-label {
+  margin-bottom: 0.85rem;
+}
+
+.painel-nutri .painel-semana__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.painel-nutri .meal-card--painel {
   margin-bottom: 0;
+  padding: 14px 16px;
+}
+
+.painel-nutri .meal-card--painel .meal-title {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin-top: 0.35rem;
+}
+
+.painel-nutri .meal-card-painel__editar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.painel-nutri .meal-card-painel__editar:hover {
+  background: color-mix(in srgb, #2f6fed 12%, transparent);
+  border-color: #2f6fed;
+  color: #2f6fed;
+}
+
+.painel-nutri .day-empty--compact {
+  padding: 2rem 1rem;
 }
 
 .painel-nutri .btn-adicionar {
@@ -49,84 +207,143 @@
   text-decoration: none;
   font-size: 14px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.painel-nutri .card-refeicao-topo {
+.painel-nutri .painel-direito {
+  width: 300px;
+  min-height: 420px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.painel-nutri .painel-direito__titulo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+}
+
+.painel-nutri .painel-direito__data {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.painel-nutri .painel-direito__vazio {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.painel-nutri .lista-refeicoes-hoje {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.painel-nutri .item-refeicao-hoje {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.painel-nutri .item-refeicao-hoje:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.painel-nutri .item-refeicao-hoje__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.painel-nutri .btn-excluir {
-  border: 1px solid #d9534f;
-  background: #fff;
-  color: #d9534f;
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 13px;
+.painel-nutri .item-refeicao-hoje__horario {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
-.painel-nutri .card-refeicao {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 14px;
+.painel-nutri .item-refeicao-hoje__desc {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.painel-nutri .item-refeicao-hoje__meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+}
+
+.painel-nutri .item-refeicao-hoje__link {
+  font-size: 0.8rem;
+  color: #2f6fed;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.painel-nutri .item-refeicao-hoje__link:hover {
+  text-decoration: underline;
 }
 
 .painel-nutri .tag-refeicao {
   background: #f5e5a1;
   color: #8a6c00;
   border: 1px solid #c7a83c;
-  padding: 4px 14px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 13px;
-}
-
-.painel-nutri .card-refeicao h3 {
-  margin-top: 16px;
-  margin-bottom: 12px;
-  font-size: 22px;
-}
-
-.painel-nutri .card-refeicao p,
-.painel-nutri .card-refeicao-meta {
-  color: var(--text-secondary);
-  font-size: 15px;
-}
-
-.painel-nutri .card-refeicao-meta .meta-sep {
-  margin: 0 6px;
+  font-size: 12px;
 }
 
 .meal-info .meta-sep {
   margin: 0 6px;
 }
 
-.painel-nutri .painel-direito {
-  width: 280px;
-  min-height: 420px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+@media (max-width: 1200px) {
+  .painel-nutri .cards-topo {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 960px) {
   .painel-nutri .cards-topo {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 16px;
   }
 
-  .painel-nutri .card-pequeno {
-    width: 100%;
-    height: 140px;
+  .painel-nutri .card-metrica {
+    min-height: unset;
   }
 
   .painel-nutri .secao-refeicoes {
     flex-direction: column;
     gap: 20px;
+  }
+
+  .painel-nutri .painel-semana__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .painel-nutri .painel-semana__nav {
+    align-self: center;
+  }
+
+  .painel-nutri .btn-adicionar {
+    text-align: center;
   }
 
   .painel-nutri .painel-direito {

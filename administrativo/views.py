@@ -29,6 +29,7 @@ from .services.chamada import (
     reabrir_chamada,
     status_chamada_refeicao,
 )
+from .services.dashboard_nutri import metricas_painel, preparar_dias_semana_painel
 
 
 @login_required
@@ -36,9 +37,13 @@ from .services.chamada import (
 def painel_nutricionista(request):
     """Painel principal da nutricionista com navegação de semanas unificada."""
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
-    
-    # Filtramos apenas as 5 primeiras para o resumo do painel, se desejado
-    ctx['refeicoes'] = ctx['refeicoes_raw'][:5]
+    dias_semana = preparar_dias_semana_painel(ctx['dias_semana'])
+    tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'])
+    ctx.update({
+        'dias_semana': dias_semana,
+        'tab_inicial': tab_inicial,
+        'metricas': metricas_painel(),
+    })
     return render(request, 'administrativo/painel_nutricionista.html', ctx)
 
 @login_required

@@ -6,9 +6,18 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Usuario
-from refeicoes.models import Refeicao
+from refeicoes.models import Refeicao, Prato, RefeicaoPrato
 from reservas.models import Reserva
 from .models import Turma, TipoRefeicao, JanelaReserva, Presenca, Strike, ConfigReserva
+from .services.dashboard_nutri import (
+    calcular_ausencias,
+    calcular_dia_pico_almoco,
+    calcular_pratos_menos_populares,
+    calcular_taxa_comparecimento,
+    listar_refeicoes_hoje,
+    metricas_painel,
+    preparar_dias_semana_painel,
+)
 
 
 class AlunosBloqueadosTests(TestCase):
@@ -674,3 +683,232 @@ class ListaPresencaTests(TestCase):
         self._login_refeitorio()
         response = self.client.get(reverse('refeicoes:lista-presenca'))
         self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
+
+
+class PainelNutricionistaDashboardTests(TestCase):
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='3º Informática', turno='matutino')
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_dash',
+            email='nutri_dash@test.com',
+            password='senha123',
+            perfil='nutricionista',
+        )
+        self.refeitorio = Usuario.objects.create_user(
+            username='ref_dash',
+            email='ref_dash@test.com',
+            password='123',
+            perfil='refeitorio',
+        )
+        self.url = reverse('administrativo:painel_nutricionista')
+        self._contador_aluno = 0
+
+    def _criar_aluno(self):
+        self._contador_aluno += 1
+        n = self._contador_aluno
+        return Usuario.objects.create_user(
+            username=f'aluno_dash_{n}',
+            email=f'dash{n}@test.com',
+            password='123',
+            perfil='aluno',
+            turma=self.turma,
+        )
+
+    def _terca_recente(self, semanas_atras=0):
+        hoje = timezone.localdate()
+        dias = (hoje.weekday() - 1) % 7 + (7 * semanas_atras)
+        return hoje - timedelta(days=dias)
+
+    def _criar_refeicao_encerrada(self, data, presentes=0, ausentes=0):
+        refeicao = Refeicao.objects.create(
+            data=data,
+            tipo='almoco',
+            limite_vagas=50,
+            exige_reserva=True,
+            chamada_finalizada=True,
+        )
+        for _ in range(presentes):
+            aluno = self._criar_aluno()
+            Reserva.objects.create(
+                aluno=aluno, refeicao=refeicao, status='concluida',
+            )
+        for _ in range(ausentes):
+            aluno = self._criar_aluno()
+            reserva = Reserva.objects.create(
+                aluno=aluno, refeicao=refeicao, status='ativa',
+            )
+            Presenca.objects.create(
+                reserva=reserva,
+                confirmado_por=self.refeitorio,
+                compareceu=False,
+            )
+        return refeicao
+
+    def _criar_almoco_com_reservas(self, data, quantidade):
+        refeicao = Refeicao.objects.create(
+            data=data,
+            tipo='almoco',
+            limite_vagas=50,
+            exige_reserva=True,
+        )
+        for _ in range(quantidade):
+            Reserva.objects.create(
+                aluno=self._criar_aluno(),
+                refeicao=refeicao,
+                status='ativa',
+            )
+        return refeicao
+
+    def test_nutricionista_acessa_painel(self):
+        self.client.login(username='nutri_dash@test.com', password='senha123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Refeições da semana')
+        self.assertContains(response, 'Refeições de hoje')
+
+    def test_aluno_nao_acessa_painel(self):
+        aluno = self._criar_aluno()
+        self.client.login(username=aluno.email, password='123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_calcular_ausencias(self):
+        self._criar_refeicao_encerrada(timezone.localdate(), presentes=1, ausentes=1)
+        resultado = calcular_ausencias(periodo_dias=30)
+        self.assertTrue(resultado['disponivel'])
+        self.assertEqual(resultado['total'], 1)
+        self.assertEqual(resultado['taxa'], 50.0)
+
+    def test_calcular_dia_pico_almoco(self):
+        terca = self._terca_recente()
+        terca_anterior = self._terca_recente(semanas_atras=1)
+        self._criar_almoco_com_reservas(terca, 10)
+        self._criar_almoco_com_reservas(terca_anterior, 20)
+        resultado = calcular_dia_pico_almoco(periodo_dias=30)
+        self.assertTrue(resultado['disponivel'])
+        self.assertEqual(resultado['dia'], 'Terça-feira')
+        self.assertEqual(resultado['media'], 15.0)
+
+    def test_calcular_pratos_menos_populares(self):
+        prato_a = Prato.objects.create(nome='Lentilha', categoria='principal')
+        prato_b = Prato.objects.create(nome='Frango', categoria='principal')
+        data1 = timezone.localdate() - timedelta(days=5)
+        data2 = timezone.localdate() - timedelta(days=3)
+
+        ref1 = self._criar_refeicao_encerrada(data1, presentes=3, ausentes=0)
+        ref2 = self._criar_refeicao_encerrada(data2, presentes=5, ausentes=0)
+        RefeicaoPrato.objects.create(refeicao=ref1, prato=prato_a)
+        RefeicaoPrato.objects.create(refeicao=ref2, prato=prato_a)
+
+        ref3 = self._criar_refeicao_encerrada(data1, presentes=10, ausentes=0)
+        ref4 = self._criar_refeicao_encerrada(data2, presentes=12, ausentes=0)
+        RefeicaoPrato.objects.create(refeicao=ref3, prato=prato_b)
+        RefeicaoPrato.objects.create(refeicao=ref4, prato=prato_b)
+
+        resultado = calcular_pratos_menos_populares(periodo_dias=30)
+        self.assertTrue(resultado['disponivel'])
+        self.assertEqual(resultado['nomes'][0], 'Lentilha')
+        self.assertIn('Frango', resultado['nomes'])
+
+    def test_calcular_taxa_comparecimento(self):
+        refeicao = Refeicao.objects.create(
+            data=timezone.localdate() - timedelta(days=2),
+            tipo='almoco',
+            limite_vagas=50,
+            exige_reserva=True,
+            chamada_finalizada=True,
+        )
+        for _ in range(2):
+            Reserva.objects.create(
+                aluno=self._criar_aluno(), refeicao=refeicao, status='concluida',
+            )
+        Reserva.objects.create(
+            aluno=self._criar_aluno(), refeicao=refeicao, status='ativa',
+        )
+        Presenca.objects.create(
+            reserva=refeicao.reservas.filter(status='ativa').first(),
+            confirmado_por=self.refeitorio,
+            compareceu=False,
+        )
+        resultado = calcular_taxa_comparecimento(periodo_dias=30)
+        self.assertTrue(resultado['disponivel'])
+        self.assertEqual(resultado['taxa'], 67)
+
+    def test_listar_refeicoes_hoje(self):
+        refeicao = Refeicao.objects.create(
+            data=timezone.localdate(),
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self._criar_aluno(), refeicao=refeicao, status='ativa',
+        )
+        itens = listar_refeicoes_hoje()
+        self.assertEqual(len(itens), 1)
+        self.assertEqual(itens[0]['refeicao'].id, refeicao.id)
+        self.assertEqual(itens[0]['total_reservas'], 1)
+
+    def test_listar_refeicoes_hoje_dedupe_por_tipo(self):
+        hoje = timezone.localdate()
+        Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        ref_com_reserva = Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self._criar_aluno(), refeicao=ref_com_reserva, status='ativa',
+        )
+        itens = listar_refeicoes_hoje()
+        self.assertEqual(len(itens), 1)
+        self.assertEqual(itens[0]['refeicao'].id, ref_com_reserva.id)
+
+    def test_preparar_dias_semana_dedupe_por_tipo(self):
+        from refeicoes.views import _preparar_contexto_semana
+
+        hoje = timezone.localdate()
+        ref_vazia = Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        ref_com_reserva = Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self._criar_aluno(), refeicao=ref_com_reserva, status='ativa',
+        )
+
+        class Req:
+            GET = {}
+
+        ctx = _preparar_contexto_semana(Req(), None)
+        dias = preparar_dias_semana_painel(ctx['dias_semana'])
+        dia_hoje = next(d for d in dias if d['hoje'])
+        self.assertEqual(len(dia_hoje['refeicoes']), 1)
+        self.assertEqual(dia_hoje['refeicoes'][0].id, ref_com_reserva.id)
+
+    def test_painel_exibe_metricas(self):
+        self._criar_refeicao_encerrada(timezone.localdate() - timedelta(days=1), presentes=1, ausentes=1)
+        refeicao_hoje = Refeicao.objects.create(
+            data=timezone.localdate(),
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+        self.client.login(username='nutri_dash@test.com', password='senha123')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'Ausências')
+        self.assertContains(response, 'Comparecimento')
+        self.assertContains(response, 'Refeições de hoje')
+        self.assertContains(response, 'Refeições da semana')
+        self.assertContains(response, 'Editar refeição')
+
+    def test_metricas_painel_estrutura(self):
+        metricas = metricas_painel()
+        self.assertIn('ausencias', metricas)
+        self.assertIn('dia_pico', metricas)
+        self.assertIn('pratos_menos_populares', metricas)
+        self.assertIn('comparecimento', metricas)
+        self.assertIn('refeicoes_hoje', metricas)
+        self.assertEqual(metricas['periodo_dias'], 30)
+
