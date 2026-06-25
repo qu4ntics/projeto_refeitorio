@@ -80,7 +80,7 @@ def ativar_conta_view(request, uidb64, token):
     if usuario is not None and email_verification_token.check_token(usuario, token):
         usuario.is_active = True
         usuario.save(update_fields=['is_active'])
-        login(request, usuario, backend='accounts.backends.EmailOrUsernameBackend')
+        login(request, usuario, backend='accounts.backends.EmailBackend')
         messages.success(request, 'Email verificado com sucesso.')
         return redirect('refeicoes:homepage')
 

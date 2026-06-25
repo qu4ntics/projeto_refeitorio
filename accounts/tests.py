@@ -84,22 +84,29 @@ class UsuarioTurmaTests(TestCase):
             perfil='aluno',
             turma=self.turma,
         )
-
-        response = self.client.post(
-            reverse('accounts:password_reset'),
-            {'email': 'reset@test.com'},
-        )
-
-        self.assertRedirects(response, reverse('accounts:password_reset_done'))
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('reset@test.com', mail.outbox[0].to)
-        self.assertIn('/accounts/senha/redefinir/', mail.outbox[0].body)
         response = self.client.post(reverse('accounts:login'), {
             'username': 'aluno_login',
             'password': 'senha12345',
         })
         self.assertEqual(response.status_code, 200)
         self.assertFalse('_auth_user_id' in self.client.session)
+
+    def test_password_reset_envia_email(self):
+        Usuario.objects.create_user(
+            username='reset_user',
+            email='reset@test.com',
+            password='senha12345',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        response = self.client.post(
+            reverse('accounts:password_reset'),
+            {'email': 'reset@test.com'},
+        )
+        self.assertRedirects(response, reverse('accounts:password_reset_done'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('reset@test.com', mail.outbox[0].to)
+        self.assertIn('/accounts/senha/redefinir/', mail.outbox[0].body)
 
 
 class ConfiguracoesAlunoTests(TestCase):
