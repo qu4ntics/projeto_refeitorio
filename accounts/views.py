@@ -1,4 +1,8 @@
 from django.contrib import messages
+from django.contrib.auth import login, authenticate, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.views import LoginView
+from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.views import LoginView
@@ -76,7 +80,7 @@ def ativar_conta_view(request, uidb64, token):
     if usuario is not None and email_verification_token.check_token(usuario, token):
         usuario.is_active = True
         usuario.save(update_fields=['is_active'])
-        login(request, usuario, backend='accounts.backends.EmailOrUsernameBackend')
+        login(request, usuario, backend='accounts.backends.EmailBackend')
         messages.success(request, 'Email verificado com sucesso.')
         return redirect('refeicoes:homepage')
 

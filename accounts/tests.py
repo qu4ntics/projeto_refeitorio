@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from administrativo.models import Turma
+from administrativo.models import Notificacao, Turma
 from .models import Usuario
 from .tokens import email_verification_token
 
@@ -84,19 +84,83 @@ class UsuarioTurmaTests(TestCase):
             perfil='aluno',
             turma=self.turma,
         )
-
-        response = self.client.post(
-            reverse('accounts:password_reset'),
-            {'email': 'reset@test.com'},
-        )
-
-        self.assertRedirects(response, reverse('accounts:password_reset_done'))
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('reset@test.com', mail.outbox[0].to)
-        self.assertIn('/accounts/senha/redefinir/', mail.outbox[0].body)
         response = self.client.post(reverse('accounts:login'), {
             'username': 'aluno_login',
             'password': 'senha12345',
         })
         self.assertEqual(response.status_code, 200)
         self.assertFalse('_auth_user_id' in self.client.session)
+
+    def test_password_reset_envia_email(self):
+        Usuario.objects.create_user(
+            username='reset_user',
+            email='reset@test.com',
+            password='senha12345',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        response = self.client.post(
+            reverse('accounts:password_reset'),
+            {'email': 'reset@test.com'},
+        )
+        self.assertRedirects(response, reverse('accounts:password_reset_done'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('reset@test.com', mail.outbox[0].to)
+        self.assertIn('/accounts/senha/redefinir/', mail.outbox[0].body)
+
+
+class ConfiguracoesAlunoTests(TestCase):
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º ano Mineração', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_cfg',
+            email='cfg@test.com',
+            password='senha12345',
+            first_name='Ala',
+            last_name='Bama',
+            perfil='aluno',
+            turma=self.turma,
+        )
+        self.url = reverse('refeicoes:configuracoes_aluno')
+
+    def test_aluno_acessa_configuracoes(self):
+        self.client.login(username='cfg@test.com', password='senha12345')
+        Notificacao.objects.create(
+            usuario=self.aluno,
+            titulo='Novo Strike Recebido',
+            mensagem='Você recebeu um strike.',
+        )
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'CONFIGURAÇÕES')
+        self.assertContains(response, 'Ala Bama')
+        self.assertContains(response, 'Novo Strike Recebido')
+
+    def test_nutricionista_nao_acessa(self):
+        Usuario.objects.create_user(
+            username='nutri', email='nutri@test.com', password='123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri@test.com', password='123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_marcar_notificacoes_como_lidas(self):
+        self.client.login(username='cfg@test.com', password='senha12345')
+        Notificacao.objects.create(
+            usuario=self.aluno, titulo='Teste', mensagem='Msg',
+        )
+        response = self.client.post(self.url, {'acao': 'marcar_lidas'})
+        self.assertRedirects(response, self.url)
+        self.assertFalse(Notificacao.objects.filter(usuario=self.aluno, lida=False).exists())
+
+    def test_alterar_senha(self):
+        self.client.login(username='cfg@test.com', password='senha12345')
+        response = self.client.post(self.url, {
+            'acao': 'senha',
+            'old_password': 'senha12345',
+            'new_password1': 'novaSenha999',
+            'new_password2': 'novaSenha999',
+        })
+        self.assertRedirects(response, self.url)
+        self.aluno.refresh_from_db()
+        self.assertTrue(self.aluno.check_password('novaSenha999'))

@@ -10,6 +10,12 @@ from accounts.models import Usuario
 from administrativo.models import Notificacao
 from refeicoes.models import Refeicao
 from .models import Reserva
+from .services.pre_reserva import (
+    PreReservaError,
+    confirmar_pre_reserva,
+    expirar_pendentes,
+    rejeitar_pre_reserva,
+)
 
 @login_required
 @perfil_required('aluno')
@@ -22,6 +28,8 @@ def criar_reserva(request, refeicao_id):
     # select_for_update bloqueia a linha da refeição para evitar race conditions
     refeicao = get_object_or_404(Refeicao.objects.select_for_update(), pk=refeicao_id)
     usuario = request.user
+
+    expirar_pendentes(refeicao)
 
     # 1. Validação: Aluno bloqueado
     if usuario.bloqueado:
@@ -118,6 +126,31 @@ def cancelar_reserva(request, reserva_id):
     
     messages.success(request, f"Reserva para {refeicao.get_tipo_display()} cancelada com sucesso.")
     return redirect('refeicoes:homepage')
+
+
+@login_required
+@perfil_required('aluno')
+@require_POST
+def confirmar_pre_reserva_view(request, pre_reserva_id):
+    try:
+        confirmar_pre_reserva(pre_reserva_id, request.user)
+        messages.success(request, 'Pré-reserva confirmada com sucesso!')
+    except PreReservaError as e:
+        messages.error(request, str(e))
+    return redirect('refeicoes:homepage')
+
+
+@login_required
+@perfil_required('aluno')
+@require_POST
+def rejeitar_pre_reserva_view(request, pre_reserva_id):
+    try:
+        rejeitar_pre_reserva(pre_reserva_id, request.user)
+        messages.info(request, 'Pré-reserva rejeitada.')
+    except PreReservaError as e:
+        messages.error(request, str(e))
+    return redirect('refeicoes:homepage')
+
 
 @login_required
 @perfil_required('refeitorio')

@@ -104,3 +104,104 @@
 .btn-lista-presenca:hover {
     background-color: var(--primary-light);
 }
+
+.painel-refeicoes {
+    margin-top: 20px;
+}
+
+.secao-titulo {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.tabela-refeicoes table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.tabela-refeicoes th,
+.tabela-refeicoes td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.tabela-refeicoes th {
+    background: #f9fbf9;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: var(--accent);
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-status.encerrada {
+    background: #eee;
+    color: #666;
+}
+
+.badge-status.andamento {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-status.fechada {
+    background: #fff8e1;
+    color: #f57f17;
+}
+
+.acoes-refeicao {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.form-inline {
+    display: inline;
+}
+
+.btn-acao {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-acao.primario {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-acao.secundario {
+    background: var(--accent);
+    color: var(--primary);
+}
+
+.btn-acao.outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.sem-refeicoes {
+    color: var(--text-secondary);
+    font-style: italic;
+}

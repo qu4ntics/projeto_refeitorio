@@ -35,7 +35,7 @@
         {% if user.perfil == 'aluno' and user.turma %} - {{ user.turma.nome }}{% endif %}
       </span>
 
-      <a href="#" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
+      <a href="{% if user.perfil == 'aluno' %}{% url 'refeicoes:configuracoes_aluno' %}#notificacoes{% else %}#{% endif %}" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
         <i class="fa-regular fa-bell"></i>
         {% if notificacoes_nao_lidas %}
           <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
@@ -75,7 +75,7 @@
               <span>{{ strikes_ativos|default:0 }}/2</span>
             </div>
             <div class="bar">
-              <div class="fill" style="width: {% if strikes_ativos %}{{ strikes_ativos|divisibleby:2|yesno:'100,50' }}%{% else %}0%{% endif %}"></div>
+              <div class="fill{% if strikes_ativos == 1 %} fill--warning{% elif strikes_ativos >= 2 %} fill--danger{% endif %}" style="width: {% if strikes_ativos %}{{ strikes_ativos|divisibleby:2|yesno:'100,50' }}%{% else %}0%{% endif %}"></div>
             </div>
             {% if proximo_strike_expira %}
               <span class="expire">Expira em: {{ proximo_strike_expira|date:"d/m/Y" }}</span>
@@ -99,17 +99,13 @@
             <i class="fa-solid fa-utensils"></i>
             <span>CARDÁPIO</span>
           </a>
-          <a href="#" class="menu-item {% block menu_reservas %}{% endblock %}">
-            <i class="fa-solid fa-calendar-check"></i>
-            <span>MINHAS RESERVAS</span>
-          </a>
-          <a href="#" class="menu-item {% block menu_strikes %}{% endblock %}">
+          <a href="{% url 'refeicoes:strikes_aluno' %}" class="menu-item {% block menu_strikes %}{% endblock %}">
             <i class="fa-solid fa-triangle-exclamation"></i>
             <span>STRIKES</span>
           </a>
-          <a href="#" class="menu-item {% block menu_perfil %}{% endblock %}">
+          <a href="{% url 'refeicoes:configuracoes_aluno' %}" class="menu-item {% block menu_configuracoes %}{% endblock %}">
             <i class="fa-solid fa-gear"></i>
-            <span>MEU PERFIL</span>
+            <span>CONFIGURAÇÕES</span>
           </a>
 
         {% elif user.perfil == 'nutricionista' %}
@@ -129,7 +125,7 @@
             <i class="fa-solid fa-users"></i>
             <span>ALUNOS</span>
           </a>
-          <a href="#" class="menu-item {% block menu_bloqueados %}{% endblock %}">
+          <a href="{% url 'administrativo:alunos_bloqueados' %}" class="menu-item {% block menu_bloqueados %}{% endblock %}">
             <i class="fa-solid fa-lock"></i>
             <span>BLOQUEADOS</span>
           </a>

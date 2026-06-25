@@ -1,4 +1,4 @@
-<div class="meal-card">
+<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}">
   <div class="badges">
     <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
     {% if refeicao.exige_reserva %}
@@ -9,9 +9,42 @@
   </div>
 
   <div class="meal-title">{% firstof refeicao.descricao_exibicao "(sem descrição)" %}</div>
+
+  {% if refeicao.pre_reserva %}
+    <div class="pre-reserva-banner">
+      <p class="pre-reserva-banner__text">
+        Você tem uma <strong>pré-reserva de contra-turno</strong> para esta refeição.
+        {% if somente_visualizacao %}
+          Confirme ou rejeite no card de destaque acima até <strong>{{ refeicao.pre_reserva.expira_em|date:"d/m/Y H:i" }}</strong>.
+        {% else %}
+          Confirme ou rejeite até <strong>{{ refeicao.pre_reserva.expira_em|date:"d/m/Y H:i" }}</strong>.
+        {% endif %}
+      </p>
+      {% if not somente_visualizacao %}
+      <div class="pre-reserva-banner__actions">
+        <form action="{% url 'reservas:confirmar_pre_reserva' refeicao.pre_reserva.id %}" method="post">
+          {% csrf_token %}
+          <button class="reserve-btn pre-reserva-btn--confirm" type="submit">CONFIRMAR</button>
+        </form>
+        <form action="{% url 'reservas:rejeitar_pre_reserva' refeicao.pre_reserva.id %}" method="post">
+          {% csrf_token %}
+          <button class="reserve-btn pre-reserva-btn--reject" type="submit">REJEITAR</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <div class="meal-footer">
     <div class="meal-info">{% include "refeicoes/_refeicao_meta.html" with refeicao=refeicao %}</div>
-    {% if refeicao.exige_reserva %}
+    {% if refeicao.exige_reserva and not refeicao.pre_reserva %}
+      {% if somente_visualizacao %}
+        {% if refeicao.reserva_id %}
+          <span class="meal-status meal-status--reservado">
+            <i class="fa-solid fa-check"></i> Reservado
+          </span>
+        {% endif %}
+      {% else %}
       {% if refeicao.reserva_id %}
         {% if refeicao.pode_cancelar %}
           <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post">
@@ -24,10 +57,17 @@
           </button>
         {% endif %}
       {% else %}
-        <form action="{% url 'reservas:criar_reserva' refeicao.id %}" method="post">
-          {% csrf_token %}
-          <button class="reserve-btn" type="submit">RESERVAR</button>
-        </form>
+        {% if refeicao.reserva_aberta %}
+          <form action="{% url 'reservas:criar_reserva' refeicao.id %}" method="post">
+            {% csrf_token %}
+            <button class="reserve-btn" type="submit">RESERVAR</button>
+          </form>
+        {% else %}
+          <button class="reserve-btn" disabled title="{{ refeicao.get_status_reserva }}">
+            RESERVAR
+          </button>
+        {% endif %}
+      {% endif %}
       {% endif %}
     {% endif %}
   </div>

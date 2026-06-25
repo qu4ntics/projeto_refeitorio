@@ -6,7 +6,11 @@ app_name = 'refeicoes'
 
 urlpatterns = [
     path('', views.homepage, name='homepage'),
+    path('strikes/', views.strikes_aluno, name='strikes_aluno'),
+    path('configuracoes/', views.configuracoes_aluno, name='configuracoes_aluno'),
     path('lista-presenca/', views.lista_presenca, name='lista-presenca'),
+    path('chamada/<uuid:refeicao_id>/', views.chamada, name='chamada'),
+    path('chamada/<uuid:refeicao_id>/resumo/', views.chamada_resumo, name='chamada_resumo'),
     path('cardapio/', views.cardapio_semana, name='cardapio_semana'),
     path('criar/', views.criar_refeicao, name='criar'),
     path('nutricionista/', views.nutricionista_lista, name='nutricionista_lista'),

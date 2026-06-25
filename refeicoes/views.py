@@ -1,7 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,7 +11,9 @@ from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
-from administrativo.models import ConfigReserva, TipoRefeicao
+from administrativo.models import ConfigReserva, Notificacao, TipoRefeicao, Presenca, Strike
+from administrativo.services.chamada import estado_aluno_chamada, status_chamada_refeicao
+from reservas.models import Reserva
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
 from .models import Prato, Refeicao
@@ -65,6 +69,62 @@ def _montar_dias_semana(refeicoes, segunda):
         for nome, id_dia, data_dia in dias
     ]
 
+
+def _anexar_status_reserva_aluno(refeicao, reservas_ativas, pre_reservas):
+    refeicao.reserva_id = reservas_ativas.get(refeicao.id)
+    refeicao.pre_reserva = pre_reservas.get(refeicao.id)
+
+
+def _horario_inicio_almoco():
+    tipo = TipoRefeicao.objects.filter(nome='almoco').first()
+    if tipo and tipo.horario_inicio_consumo:
+        return tipo.horario_inicio_consumo
+    return time(12, 0)
+
+
+def _almoco_passou(hoje):
+    agora = timezone.localtime()
+    if agora.date() != hoje:
+        return agora.date() > hoje
+    return agora.time() >= _horario_inicio_almoco()
+
+
+def _obter_almoco_em(data):
+    return (
+        Refeicao.objects.filter(data=data, tipo='almoco')
+        .prefetch_related('itens_prato__prato')
+        .annotate(reservas_ativas=Count('reservas', filter=Q(reservas__status='ativa')))
+        .first()
+    )
+
+
+def _resolver_almoco_destaque(hoje):
+    if _almoco_passou(hoje):
+        data_alvo = hoje + timedelta(days=1)
+        titulo = 'Almoço de amanhã'
+    else:
+        data_alvo = hoje
+        titulo = 'Almoço de hoje'
+
+    refeicao = _obter_almoco_em(data_alvo)
+    if not refeicao and data_alvo == hoje:
+        amanha = hoje + timedelta(days=1)
+        refeicao_amanha = _obter_almoco_em(amanha)
+        if refeicao_amanha:
+            data_alvo = amanha
+            titulo = 'Almoço de amanhã'
+            refeicao = refeicao_amanha
+
+    if not refeicao:
+        return None
+
+    return {
+        'refeicao': refeicao,
+        'titulo': titulo,
+        'data': data_alvo,
+    }
+
+
 def _preparar_contexto_semana(request, data_ref_str):
     """Centraliza a lógica de geração de dados da semana para evitar inconsistências entre views."""
     hoje, segunda, semana_fim = _obter_semana(data_ref_str)
@@ -92,22 +152,49 @@ def homepage(request):
         return redirect(REDIRECT_POR_PERFIL.get(perfil, 'refeicoes:homepage'))
 
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
-    
-    from reservas.models import Reserva
+
+    from reservas.models import Reserva, PreReserva
+
+    hoje = ctx['hoje']
+    almoco_destaque = _resolver_almoco_destaque(hoje)
+
+    refeicao_ids = list(ctx['refeicoes_raw'].values_list('id', flat=True))
+    if almoco_destaque and almoco_destaque['refeicao'].id not in refeicao_ids:
+        refeicao_ids.append(almoco_destaque['refeicao'].id)
+
     reservas_ativas = {
         res.refeicao_id: res.id
-        for res in Reserva.objects.filter(aluno=request.user, status='ativa', refeicao__in=ctx['refeicoes_raw'])
+        for res in Reserva.objects.filter(
+            aluno=request.user,
+            status='ativa',
+            refeicao_id__in=refeicao_ids,
+        )
     }
+
+    pre_reservas = {
+        pr.refeicao_id: pr
+        for pr in PreReserva.objects.filter(
+            aluno=request.user,
+            status='pendente',
+            expira_em__gt=timezone.now(),
+        ).select_related('refeicao')
+    }
+
+    if almoco_destaque:
+        _anexar_status_reserva_aluno(
+            almoco_destaque['refeicao'], reservas_ativas, pre_reservas,
+        )
 
     dias_semana = ctx['dias_semana']
     tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'])
 
     for dia in dias_semana:
         for refeicao in dia['refeicoes']:
-            refeicao.reserva_id = reservas_ativas.get(refeicao.id)
+            _anexar_status_reserva_aluno(refeicao, reservas_ativas, pre_reservas)
 
     ctx.update({
         'tab_inicial': tab_inicial,
+        'almoco_destaque': almoco_destaque,
     })
     return render(request, 'refeicoes/homepage.html', ctx)
 
@@ -129,30 +216,24 @@ def cardapio_semana(request):
 @login_required
 @perfil_required('refeitorio')
 def lista_presenca(request):
-    # Filtro de data: padrão é hoje se não for especificado
-    data_param = request.GET.get('data')
-    if data_param:
-        try:
-            data_filtro = datetime.strptime(data_param, '%Y-%m-%d').date()
-        except ValueError:
-            data_filtro = timezone.localdate()
-    else:
-        data_filtro = timezone.localdate()
+    """Redireciona para o painel do refeitório (chamada agora é por refeição)."""
+    return redirect('administrativo:painel_refeitorio')
 
-    from reservas.models import Reserva
 
-    # Busca todas as reservas da data (inclusive canceladas) ordenadas por nome
-    reservas = (
-        Reserva.objects.filter(refeicao__data=data_filtro)
-        .select_related('aluno', 'aluno__turma', 'refeicao')
+@login_required
+@perfil_required('refeitorio')
+def chamada(request, refeicao_id):
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+
+    reservas_qs = (
+        Reserva.objects.filter(refeicao=refeicao)
+        .select_related('aluno', 'aluno__turma')
         .order_by('aluno__first_name', 'aluno__last_name')
     )
 
     pesquisa = request.GET.get('search', '').strip()
     if pesquisa:
-        tipos_correspondentes = [k for k, v in Refeicao.TIPOS if pesquisa.lower() in v.lower()]
-
-        reservas = reservas.annotate(
+        reservas_qs = reservas_qs.annotate(
             full_name=Concat('aluno__first_name', Value(' '), 'aluno__last_name')
         ).filter(
             Q(aluno__first_name__icontains=pesquisa)
@@ -160,18 +241,67 @@ def lista_presenca(request):
             | Q(full_name__icontains=pesquisa)
             | Q(aluno__username__icontains=pesquisa)
             | Q(aluno__turma__nome__icontains=pesquisa)
-            | Q(refeicao__tipo__in=tipos_correspondentes)
         )
 
-    # Performance: Verifica se o dia está finalizado em uma única query
-    refeicoes_info = Refeicao.objects.filter(data=data_filtro).values_list('chamada_finalizada', flat=True)
-    dia_finalizado = len(refeicoes_info) > 0 and all(refeicoes_info)
+    reservas = []
+    presentes = 0
+    total_elegiveis = 0
+    pendentes_encerrar = 0
+
+    for reserva in reservas_qs:
+        estado = estado_aluno_chamada(reserva, refeicao)
+        reservas.append({'reserva': reserva, 'estado': estado})
+        if reserva.status != 'cancelada':
+            total_elegiveis += 1
+            if estado == 'presente':
+                presentes += 1
+            elif estado == 'pendente':
+                pendentes_encerrar += 1
+
+    tipo_cfg = TipoRefeicao.objects.filter(nome=refeicao.tipo).first()
+    horario = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+    tem_strikes = Strike.objects.filter(presenca__reserva__refeicao=refeicao).exists()
 
     return render(request, 'refeicoes/lista-presenca.html', {
-        'reservas': reservas, 
+        'refeicao': refeicao,
+        'reservas': reservas,
         'pesquisa': pesquisa,
-        'data_filtro': data_filtro,
-        'dia_finalizado': dia_finalizado
+        'presentes': presentes,
+        'total_elegiveis': total_elegiveis,
+        'pendentes_encerrar': pendentes_encerrar,
+        'status_chamada': status_chamada_refeicao(refeicao),
+        'horario': horario,
+        'tem_strikes': tem_strikes,
+    })
+
+
+@login_required
+@perfil_required('refeitorio')
+def chamada_resumo(request, refeicao_id):
+    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+    if not refeicao.chamada_finalizada:
+        return redirect('refeicoes:chamada', refeicao_id=refeicao.id)
+
+    presencas = Presenca.objects.filter(reserva__refeicao=refeicao).select_related(
+        'reserva__aluno', 'reserva__aluno__turma',
+    )
+    presentes_lista = [p for p in presencas if p.compareceu]
+    ausentes_lista = [p for p in presencas if not p.compareceu]
+    strikes = Strike.objects.filter(presenca__reserva__refeicao=refeicao).select_related(
+        'aluno', 'presenca__reserva__aluno',
+    )
+
+    resumo_sessao = request.session.pop(f'chamada_resumo_{refeicao_id}', None)
+
+    return render(request, 'refeicoes/chamada_resumo.html', {
+        'refeicao': refeicao,
+        'presentes_lista': presentes_lista,
+        'ausentes_lista': ausentes_lista,
+        'strikes': strikes,
+        'bloqueios': resumo_sessao.get('bloqueios', []) if resumo_sessao else [],
+        'total_presentes': len(presentes_lista),
+        'total_ausentes': len(ausentes_lista),
+        'total_strikes': strikes.count(),
     })
 
 
@@ -321,4 +451,60 @@ def refeicao_editar(request, pk):
         'pratos_por_categoria': pratos_agrupados_por_categoria(),
         'pratos_selecionados': pratos_selecionados,
     })
-       
+
+
+@perfil_required('aluno')
+def strikes_aluno(request):
+    agora = timezone.now()
+    strikes = (
+        Strike.objects.filter(aluno=request.user)
+        .select_related('presenca__reserva__refeicao')
+        .order_by('-aplicado_em')
+    )
+    return render(request, 'refeicoes/strikes_aluno.html', {
+        'strikes': strikes,
+        'agora': agora,
+    })
+
+
+def _formulario_senha(usuario):
+    form = PasswordChangeForm(user=usuario)
+    form.fields['old_password'].label = 'Senha atual'
+    form.fields['new_password1'].label = 'Nova senha'
+    form.fields['new_password2'].label = 'Confirmar nova senha'
+    for field in form.fields.values():
+        field.widget.attrs.setdefault('class', 'config-input')
+    return form
+
+
+@perfil_required('aluno')
+def configuracoes_aluno(request):
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
+        if acao == 'marcar_lidas':
+            Notificacao.objects.filter(usuario=request.user, lida=False).update(lida=True)
+            messages.success(request, 'Todas as notificações foram marcadas como lidas.')
+            return redirect('refeicoes:configuracoes_aluno')
+        if acao == 'senha':
+            form = PasswordChangeForm(user=request.user, data=request.POST)
+            form.fields['old_password'].label = 'Senha atual'
+            form.fields['new_password1'].label = 'Nova senha'
+            form.fields['new_password2'].label = 'Confirmar nova senha'
+            for field in form.fields.values():
+                field.widget.attrs.setdefault('class', 'config-input')
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Senha alterada com sucesso.')
+                return redirect('refeicoes:configuracoes_aluno')
+        else:
+            form = _formulario_senha(request.user)
+    else:
+        form = _formulario_senha(request.user)
+
+    notificacoes = Notificacao.objects.filter(usuario=request.user)[:30]
+    return render(request, 'accounts/configuracoes_aluno.html', {
+        'form_senha': form,
+        'notificacoes': notificacoes,
+    })
+
