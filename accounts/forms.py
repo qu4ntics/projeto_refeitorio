@@ -84,6 +84,7 @@ class CadastroForm(forms.ModelForm):
         usuario.last_name = partes[1] if len(partes) > 1 else ''
         usuario.username = gerar_username_unico(usuario.email)
         usuario.perfil = 'aluno'
+        usuario.is_active = False
         usuario.set_password(self.cleaned_data['senha'])
 
         if commit:
