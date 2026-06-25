@@ -283,3 +283,257 @@
         transform: translateX(0);
     }
 }
+
+/* Chamada por refeição */
+.header-chamada {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.voltar-painel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+    text-decoration: none;
+}
+
+.voltar-painel:hover {
+    color: var(--primary);
+}
+
+.horario-refeicao {
+    font-size: 0.85em;
+    color: var(--text-light);
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.contador-presenca {
+    background: color-mix(in srgb, var(--accent) 12%, white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    text-align: center;
+}
+
+.contador-valor {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.contador-sep, .contador-total {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.contador-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-top: 4px;
+}
+
+.badge-finalizado, .badge-andamento {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.badge-finalizado {
+    background: #eee;
+    color: #666;
+}
+
+.badge-andamento {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.aviso-strikes {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--warning);
+}
+
+.badge-status.presente {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-status.pendente {
+    background-color: #fff8e1;
+    color: #f57f17;
+}
+
+.badge-status.ausente {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.tabela tr.status-presente,
+.tabela tr.status-concluida,
+.tabela tr:has(.check-presenca:checked) {
+    background-color: #eafaf1 !important;
+}
+
+.tabela tr.status-pendente {
+    background-color: #fffef5;
+}
+
+.tabela tr.status-ausente {
+    background-color: #fff5f5 !important;
+}
+
+.lista-presenca-acoes {
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-reabrir {
+    background: transparent;
+    border: 2px solid var(--warning);
+    color: var(--warning);
+    padding: 14px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.modal-chamada {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-conteudo {
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-conteudo h3 {
+    margin: 0 0 12px;
+}
+
+.modal-acoes {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.btn-modal-cancelar, .btn-modal-confirmar {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-modal-cancelar {
+    background: #eee;
+}
+
+.btn-modal-confirmar {
+    background: var(--danger);
+    color: white;
+}
+
+/* Resumo */
+.resumo-chamada .resumo-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.resumo-card {
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+.resumo-card.presente { background: #e8f5e9; }
+.resumo-card.ausente { background: #ffebee; }
+.resumo-card.strike { background: #fff3e0; }
+
+.resumo-numero {
+    display: block;
+    font-size: 2.2rem;
+    font-weight: 800;
+}
+
+.resumo-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.resumo-secoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.lista-resumo {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.lista-resumo li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.tag-strike {
+    background: #ffcdd2;
+    color: #b71c1c;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+.alerta-bloqueio {
+    background: #ffebee;
+    border: 1px solid #ef9a9a;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.vazio-resumo {
+    color: #999;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .resumo-secoes {
+        grid-template-columns: 1fr;
+    }
+}

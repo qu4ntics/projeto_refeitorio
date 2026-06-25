@@ -49,12 +49,63 @@
         </div>
     </div>
 
-    <div class="painel-secoes">
-        <!-- Aqui você pode adicionar outras seções, como um link para a lista de presença -->
-        <a href="{% url 'refeicoes:lista-presenca' %}" class="btn-lista-presenca">
-            <i class="fa-solid fa-clipboard-list"></i> Ver Lista de Presença Completa
-        </a>
-    </div>
+    <section class="painel-refeicoes">
+        <h2 class="secao-titulo">Refeições de Hoje</h2>
+
+        {% if refeicoes_painel %}
+        <div class="tabela-refeicoes">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Refeição</th>
+                        <th>Horário</th>
+                        <th>Reservas</th>
+                        <th>Presentes</th>
+                        <th>Status</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in refeicoes_painel %}
+                    <tr>
+                        <td>{{ item.refeicao.get_tipo_display }}</td>
+                        <td>{% if item.horario %}{{ item.horario|time:"H:i" }}{% else %}—{% endif %}</td>
+                        <td>{{ item.total_reservas }}</td>
+                        <td>{{ item.presentes }}</td>
+                        <td>
+                            {% if item.status == 'encerrada' %}
+                                <span class="badge-status encerrada">Encerrada</span>
+                            {% elif item.status == 'em_andamento' %}
+                                <span class="badge-status andamento">Em andamento</span>
+                            {% else %}
+                                <span class="badge-status fechada">Fechada</span>
+                            {% endif %}
+                        </td>
+                        <td class="acoes-refeicao">
+                            {% if item.status == 'encerrada' %}
+                                <a href="{% url 'refeicoes:chamada_resumo' item.refeicao.id %}" class="btn-acao secundario">Ver resumo</a>
+                                <form method="POST" action="{% url 'administrativo:reabrir_chamada' item.refeicao.id %}" class="form-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-acao outline" title="Strikes não serão removidos">Reabrir</button>
+                                </form>
+                            {% elif item.status == 'em_andamento' %}
+                                <a href="{% url 'refeicoes:chamada' item.refeicao.id %}" class="btn-acao primario">Continuar chamada</a>
+                            {% else %}
+                                <form method="POST" action="{% url 'administrativo:abrir_chamada' item.refeicao.id %}" class="form-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-acao primario" {% if item.total_reservas == 0 %}disabled title="Sem reservas"{% endif %}>Abrir chamada</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="sem-refeicoes">Nenhuma refeição com reserva cadastrada para hoje.</p>
+        {% endif %}
+    </section>
 </div>
 
 {% endblock %}

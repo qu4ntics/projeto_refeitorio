@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Strikes{% endblock %}
+
+{% block menu_strikes %}active{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+  <link rel="stylesheet" href="{% static 'css/strikes_aluno.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cardapio-header cardapio-header--pagina">
+  <h1>STRIKES</h1>
+</div>
+
+<div class="cardapio-divider"></div>
+
+<div class="strikes-resumo">
+  <div class="strikes-resumo-card">
+    <span class="strikes-resumo-label">Strikes ativos</span>
+    <span class="strikes-resumo-valor">{{ strikes_ativos|default:0 }}/2</span>
+  </div>
+  {% if proximo_strike_expira %}
+  <p class="strikes-resumo-expira">
+    <i class="fa-solid fa-clock"></i>
+    Próximo strike expira em {{ proximo_strike_expira|date:"d/m/Y" }}
+  </p>
+  {% endif %}
+  {% if user.bloqueado %}
+  <div class="strikes-alerta-bloqueio">
+    <i class="fa-solid fa-ban"></i>
+    Sua conta está bloqueada por acúmulo de strikes. Procure a nutricionista.
+  </div>
+  {% endif %}
+</div>
+
+{% if strikes %}
+<div class="strikes-tabela-wrapper">
+  <table class="strikes-tabela">
+    <thead>
+      <tr>
+        <th>Data da refeição</th>
+        <th>Refeição</th>
+        <th>Aplicado em</th>
+        <th>Expira em</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for strike in strikes %}
+      <tr>
+        <td data-label="Data da refeição">{{ strike.presenca.reserva.refeicao.data|date:"d/m/Y" }}</td>
+        <td data-label="Refeição">{{ strike.presenca.reserva.refeicao.get_tipo_display }}</td>
+        <td data-label="Aplicado em">{{ strike.aplicado_em|date:"d/m/Y H:i" }}</td>
+        <td data-label="Expira em">{{ strike.expira_em|date:"d/m/Y" }}</td>
+        <td data-label="Status">
+          {% if strike.expira_em > agora %}
+          <span class="strike-badge strike-badge--ativo">Ativo</span>
+          {% else %}
+          <span class="strike-badge strike-badge--expirado">Expirado</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="strikes-vazio">
+  <i class="fa-solid fa-circle-check"></i>
+  <p>Você não possui strikes registrados.</p>
+  <span>Continue comparecendo às refeições reservadas para manter seu histórico limpo.</span>
+</div>
+{% endif %}
+{% endblock %}
