@@ -474,10 +474,46 @@ class ListaPresencaTests(TestCase):
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
         self._abrir_chamada()
 
+    def test_atualizar_presenca_rejeita_payload_nao_booleano(self):
+        user_refeitorio = Usuario.objects.create_user(
+            username='func_payload', email='payload@test.com', password='123', perfil='refeitorio'
+        )
+        self.client.login(username='func_payload', password='123')
+        reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
+
+        response = self.client.post(
+            reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
+            data=json.dumps({'checked': 'false'}),
+            content_type='application/json',
+        )
+
+        reserva.refresh_from_db()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(reserva.status, 'ativa')
+
+    def test_atualizar_presenca_bloqueia_chamada_finalizada(self):
+        user_refeitorio = Usuario.objects.create_user(
+            username='func_finalizada', email='finalizada@test.com', password='123', perfil='refeitorio'
+        )
+        self.client.login(username='func_finalizada', password='123')
+        self.refeicao.chamada_finalizada = True
+        self.refeicao.save(update_fields=['chamada_finalizada'])
+        reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
+
         response = self.client.post(
             reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
             data=json.dumps({'checked': True}),
             content_type='application/json',
+        )
+
+        reserva.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(reserva.status, 'ativa')
+
+    def test_lista_presenca_filtro_data(self):
+        """Verifica se a lista filtra corretamente por data via GET."""
+        user_refeitorio = Usuario.objects.create_user(
+            username='funcionario_data', email='data@test.com', password='123', perfil='refeitorio'
         )
         self.assertEqual(response.status_code, 200)
         reserva.refresh_from_db()

@@ -67,6 +67,9 @@ document.querySelectorAll('.check-presenca').forEach(checkbox => {
                 }
 
                 atualizarContador(checked ? 1 : -1);
+                row.classList.remove('status-ativa', 'status-concluida');
+                row.classList.add(checked ? 'status-concluida' : 'status-ativa');
+
                 return data;
             });
         })
@@ -79,6 +82,7 @@ document.querySelectorAll('.check-presenca').forEach(checkbox => {
             if (container && container.dataset.chamadaAberta === '1') {
                 this.disabled = false;
             }
+            this.disabled = false;
             row.classList.remove('processando-presenca');
         });
     });

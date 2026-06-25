@@ -676,6 +676,19 @@ def atualizar_status_reserva(request, reserva_id):
         return JsonResponse({'sucesso': True, 'novo_status': novo_status})
     except ChamadaError as e:
         return JsonResponse({'erro': str(e)}, status=403)
+            reserva = get_object_or_404(Reserva.objects.select_related('refeicao').select_for_update(), pk=reserva_id)
+            refeicao = Refeicao.objects.select_for_update().get(pk=reserva.refeicao_id)
+            
+            # Segurança: Bloqueia alteração se a reserva estiver cancelada
+            if reserva.status == 'cancelada':
+                return JsonResponse({'erro': 'Não é possível marcar presença em uma reserva cancelada.'}, status=403)
+
+            if refeicao.chamada_finalizada:
+                return JsonResponse({'erro': 'Esta chamada já foi finalizada e não pode mais ser alterada.'}, status=403)
+
+            reserva.status = 'concluida' if checked else 'ativa'
+            reserva.save()
+        return JsonResponse({'sucesso': True, 'novo_status': reserva.status})
     except Exception as e:
         return JsonResponse({'erro': str(e)}, status=400)
 
