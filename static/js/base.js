@@ -78,9 +78,10 @@ const icon = document.getElementById('theme-icon');
 function applyTheme(theme) {
   const isDark = theme === 'dark-mode';
   root.classList.toggle('dark-mode', isDark);
-  if (icon) {
-    icon.classList.toggle('fa-moon', !isDark);
-    icon.classList.toggle('fa-sun', isDark);
+  const iconLight = root.dataset.themeIconLight;
+  const iconDark = root.dataset.themeIconDark;
+  if (icon && iconLight && iconDark) {
+    icon.src = isDark ? iconLight : iconDark;
   }
 }
 

@@ -59,9 +59,16 @@
   cursor: pointer;
   padding: 0;
   font-size: 16px;
+  line-height: 0;
 }
 .theme-toggle:hover {
-  color: var(--accent);
+  opacity: 0.85;
+}
+.theme-toggle__icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  object-fit: contain;
 }
 
 html, body {
@@ -128,15 +135,10 @@ a {
 }
 
 .logo {
-  width: 36px;
   height: 36px;
-  background: var(--accent);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary);
-  font-size: 16px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .logo-area h1 {
@@ -873,9 +875,8 @@ tbody td {
   }
 
   .logo {
-    width: 32px;
     height: 32px;
-    font-size: 14px;
+    width: auto;
   }
 
   .user-top {

@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme-icon-light="{% static 'images/toggle-theme-light.png' %}" data-theme-icon-dark="{% static 'images/toggle-theme-dark.png' %}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -23,9 +23,7 @@
         <i class="fa-solid fa-bars"></i>
       </button>
       <div class="logo-area">
-        <div class="logo">
-          <i class="fa-solid fa-utensils"></i>
-        </div>
+        <img class="logo" src="{% static 'images/logo.png' %}" alt="ReservaIF">
         <h1>ReservaIF</h1>
       </div>
     </div>
@@ -43,7 +41,7 @@
       </a>
 
       <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro" title="Alternar tema">
-        <i class="fa-solid fa-moon" id="theme-icon"></i>
+        <img id="theme-icon" class="theme-toggle__icon" src="{% static 'images/toggle-theme-dark.png' %}" alt="" aria-hidden="true">
       </button>
 
       <form method="POST" action="{% url 'accounts:logout' %}" style="display:inline; margin:0;">

@@ -14,9 +14,12 @@ document.addEventListener('DOMContentLoaded', function () {
       icon.classList.toggle('fa-moon', !isDark);
       icon.classList.toggle('fa-sun', isDark);
     }
-    if (topIcon) {
-      topIcon.classList.toggle('fa-moon', !isDark);
-      topIcon.classList.toggle('fa-sun', isDark);
+    if (topIcon && topIcon.tagName === 'IMG') {
+      const iconLight = root.dataset.themeIconLight;
+      const iconDark = root.dataset.themeIconDark;
+      if (iconLight && iconDark) {
+        topIcon.src = isDark ? iconLight : iconDark;
+      }
     }
   }
 
