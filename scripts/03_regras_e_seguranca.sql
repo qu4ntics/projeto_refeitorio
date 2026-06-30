@@ -1,99 +1,68 @@
 -- =============================================
--- REGRAS ATIVAS (TRIGGERS) E SEGURANÇA (GRANTS)
+-- 03_regras_e_seguranca.sql
+-- Implementação de regras de segurança e lógicas ativas (Triggers)
 -- =============================================
 
--- Trigger: Bloquear aluno ao inserir strike (2 strikes ativos)
-CREATE OR REPLACE FUNCTION fn_bloquear_aluno_apos_strike()
+-- Parte 1: Segurança e Controle de Acesso (GRANT/REVOKE)
+
+-- Cria uma role (grupo) para a aplicação web com permissão de login.
+-- A aplicação se conectará ao banco usando um usuário que pertence a esta role.
+CREATE ROLE role_aplicacao WITH LOGIN;
+
+-- Cria uma role apenas para leitura, sem permissão de login.
+-- Útil para auditoria ou relatórios, garantindo que não possam alterar dados.
+CREATE ROLE role_leitura;
+
+-- Concede permissões específicas para a role da aplicação.
+-- A aplicação pode selecionar, inserir, atualizar e deletar dados nas tabelas principais.
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO role_aplicacao;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO role_aplicacao;
+
+-- Concede permissões para a role de leitura.
+-- Pode apenas executar SELECT nas tabelas.
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO role_leitura;
+
+-- Revoga todas as permissões do public (padrão do PostgreSQL).
+-- Garante que apenas roles com permissões explícitas possam acessar os objetos.
+REVOKE ALL ON DATABASE postgres FROM PUBLIC;
+
+
+-- Parte 2: Regras Ativas (Trigger para Strikes)
+-- Move a lógica de aplicação de strike (RF16) para o SGBD.
+
+-- Função de Trigger: será executada sempre que a trigger for disparada.
+CREATE OR REPLACE FUNCTION fn_aplicar_strike_por_falta()
 RETURNS TRIGGER AS $$
 DECLARE
-    strikes_ativos INTEGER;
+    v_aluno_id UUID;
 BEGIN
-    SELECT COUNT(*) INTO strikes_ativos
-    FROM administrativo_strike
-    WHERE aluno_id = NEW.aluno_id AND expira_em > NOW();
+    -- Verifica se o campo 'compareceu' foi alterado para FALSE.
+    -- A trigger só age na transição para "não compareceu".
+    IF NEW.compareceu = FALSE AND OLD.compareceu = TRUE THEN
+        
+        -- 1. Busca o ID do aluno a partir da reserva associada.
+        SELECT r.aluno_id INTO v_aluno_id
+        FROM reservas_reserva r
+        WHERE r.id = NEW.reserva_id;
 
-    IF strikes_ativos >= 2 THEN
-        UPDATE accounts_usuario
-        SET bloqueado = TRUE
-        WHERE id = NEW.aluno_id;
-    END IF;
-
-    -- Criar notificação para o aluno
-    INSERT INTO administrativo_notificacao (id, usuario_id, titulo, mensagem)
-    VALUES (
-        uuid_generate_v4(),
-        NEW.aluno_id,
-        'Novo Strike Recebido',
-        'Você recebeu um strike por falta. Lembre-se que 2 strikes ativos resultam em bloqueio.'
-    );
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_bloquear_aluno_apos_strike
-AFTER INSERT ON administrativo_strike
-FOR EACH ROW
-EXECUTE FUNCTION fn_bloquear_aluno_apos_strike();
-
--- Trigger: Validar reserva (aluno bloqueado e vagas)
-CREATE OR REPLACE FUNCTION fn_validar_reserva()
-RETURNS TRIGGER AS $$
-DECLARE
-    vagas_ocupadas INTEGER;
-    limite INTEGER;
-    aluno_bloqueado BOOLEAN;
-BEGIN
-    SELECT bloqueado INTO aluno_bloqueado
-    FROM accounts_usuario WHERE id = NEW.aluno_id;
-    IF aluno_bloqueado THEN
-        RAISE EXCEPTION 'Aluno bloqueado não pode fazer reservas.';
-    END IF;
-
-    SELECT COUNT(*) INTO vagas_ocupadas
-    FROM reservas_reserva
-    WHERE refeicao_id = NEW.refeicao_id AND status = 'ativa';
-
-    SELECT limite_vagas INTO limite
-    FROM refeicoes_refeicao WHERE id = NEW.refeicao_id;
-
-    IF vagas_ocupadas >= limite THEN
-        RAISE EXCEPTION 'Refeição lotada. Não é possível reservar.';
+        -- 2. Insere um novo registro na tabela de strikes.
+        INSERT INTO administrativo_strike (id, aluno_id, presenca_id, aplicado_em, expira_em)
+        VALUES (
+            uuid_generate_v4(),
+            v_aluno_id,
+            NEW.id,
+            NOW(),
+            NOW() + INTERVAL '30 days' -- Strike expira em 30 dias.
+        );
     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_validar_reserva
-BEFORE INSERT ON reservas_reserva
+-- Trigger: vincula a função de trigger à tabela 'administrativo_presenca'.
+-- A função será executada DEPOIS de cada UPDATE na tabela.
+CREATE TRIGGER trg_aplicar_strike_apos_update_presenca
+AFTER UPDATE ON administrativo_presenca
 FOR EACH ROW
-EXECUTE FUNCTION fn_validar_reserva();
-
--- =============================================
--- SEGURANÇA – GRANTS E ROLES
--- =============================================
-
--- Criar roles (papéis)
-CREATE ROLE aluno_role;
-CREATE ROLE nutricionista_role;
-CREATE ROLE refeitorio_role;
-
--- Aluno: leitura de cardápio, gestão de suas reservas
-GRANT SELECT ON refeicoes_refeicao, refeicoes_prato, refeicoes_refeicao_prato TO aluno_role;
-GRANT SELECT, INSERT, UPDATE (status) ON reservas_reserva TO aluno_role;
-
--- Nutricionista: controle total sobre dados operacionais
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO nutricionista_role;
-
--- Refeitório: visualizar reservas e gerenciar presenças/strikes
-GRANT SELECT ON reservas_reserva, accounts_usuario TO refeitorio_role;
-GRANT INSERT, UPDATE ON administrativo_presenca, administrativo_strike TO refeitorio_role;
-
--- Revogar permissões indesejadas (exemplo)
-REVOKE SELECT ON accounts_usuario FROM aluno_role;
-
--- Associar usuários às roles (substitua pelos nomes reais dos usuários)
--- GRANT aluno_role TO aluno1_user;
--- GRANT nutricionista_role TO nutri_user;
--- GRANT refeitorio_role TO refeitorio_user;
+EXECUTE FUNCTION fn_aplicar_strike_por_falta();
