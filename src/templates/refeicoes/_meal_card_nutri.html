@@ -1,0 +1,31 @@
+<div class="meal-card">
+  <div class="meal-card-topo">
+    <div class="badges">
+      <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
+      {% if refeicao.exige_reserva %}
+        <div class="badge green">{{ refeicao.vagas_display }}</div>
+      {% else %}
+        <div class="badge gray">Informativa</div>
+      {% endif %}
+    </div>
+    <div class="meal-card-excluir">
+      {% if not refeicao.refeicao_iniciada %}
+        <a href="{% url 'refeicoes:nutricionista_editar' refeicao.pk %}" class="btn-editar-refeicao" title="Editar">
+          <i class="fa-solid fa-pen"></i>
+        </a>
+      {% endif %}
+      
+      <form method="post" action="{% url 'refeicoes:nutricionista_deletar' refeicao.pk %}" onsubmit="return confirm('Tem certeza que deseja excluir essa refeição?');">
+        {% csrf_token %}
+        <button type="submit" class="btn-excluir-refeicao" data-loading-text="Excluindo..." title="Excluir">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="meal-title">{% firstof refeicao.descricao_exibicao "(sem descrição)" %}</div>
+  <div class="meal-footer">
+    <div class="meal-info">{% include "refeicoes/_refeicao_meta.html" with refeicao=refeicao %}</div>
+  </div>
+</div>

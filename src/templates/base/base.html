@@ -1,0 +1,448 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="pt-BR" data-theme-icon-light="{% static 'images/toggle-theme-light.png' %}" data-theme-icon-dark="{% static 'images/toggle-theme-dark.png' %}">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <title>{% block title %}ReservaIF{% endblock %}</title>
+
+
+
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+
+
+
+  {% block extra_css %}{% endblock %}
+
+</head>
+
+
+
+<body class="{% if user.is_authenticated %}is-authenticated perfil-{{ user.perfil }}{% endif %}">
+
+
+
+  {% if user.is_authenticated %}
+
+
+
+  <!-- TOPBAR -->
+
+  <header class="topbar">
+
+    <div class="topbar-left">
+
+      <div class="logo-area">
+
+        <img class="logo" src="{% static 'images/logo.png' %}" alt="ReservaIF">
+
+        <h1>ReservaIF</h1>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="user-top">
+
+      <span>Olá, {{ user.first_name|default:user.username }}
+
+        {% if user.perfil == 'aluno' and user.turma %} - {{ user.turma.nome }}{% endif %}
+
+      </span>
+
+
+
+      <a href="{% if user.perfil == 'aluno' %}{% url 'refeicoes:configuracoes_aluno' %}#notificacoes{% else %}#{% endif %}" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
+
+        <i class="fa-regular fa-bell"></i>
+
+        {% if notificacoes_nao_lidas %}
+
+          <span class="badge-notif">{{ notificacoes_nao_lidas }}</span>
+
+        {% endif %}
+
+      </a>
+
+
+
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+
+        <img id="theme-icon" class="theme-toggle__icon" src="{% static 'images/toggle-theme-dark.png' %}" alt="" aria-hidden="true">
+
+      </button>
+
+
+
+      {% include "includes/_logout_form.html" with variant="icon" %}
+
+    </div>
+
+  </header>
+
+
+
+  <div class="container">
+
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar" id="sidebar">
+
+      <div class="profile-card">
+
+        <div class="avatar">
+
+          <h3>{{ user.first_name|default:user.username|slice:":2"|upper }}</h3>
+
+        </div>
+
+        <h2>{{ user.get_full_name|default:user.username }}</h2>
+
+
+
+        {% if user.perfil == 'aluno' %}
+
+          <p>{{ user.turma.nome }}</p>
+
+          {% include "includes/_strike_indicator.html" %}
+
+        {% elif user.perfil == 'nutricionista' %}
+
+          <p>Nutricionista</p>
+
+
+
+        {% elif user.perfil == 'refeitorio' %}
+
+          <p>Refeitório</p>
+
+        {% endif %}
+
+      </div>
+
+
+
+      <!-- MENU -->
+
+      <div class="menu">
+
+        <div class="menu-title">MENU</div>
+
+
+
+        {% if user.perfil == 'aluno' %}
+
+          <a href="{% url 'refeicoes:homepage' %}" class="menu-item{% if nav_section == 'cardapio' %} active{% endif %}">
+
+            <i class="fa-solid fa-utensils"></i>
+
+            <span>CARDÁPIO</span>
+
+          </a>
+
+          <a href="{% url 'refeicoes:strikes_aluno' %}" class="menu-item{% if nav_section == 'strikes' %} active{% endif %}">
+
+            <i class="fa-solid fa-triangle-exclamation"></i>
+
+            <span>STRIKES</span>
+
+          </a>
+
+          <a href="{% url 'refeicoes:configuracoes_aluno' %}" class="menu-item{% if nav_section == 'configuracoes' %} active{% endif %}">
+
+            <i class="fa-solid fa-gear"></i>
+
+            <span>CONFIGURAÇÕES</span>
+
+          </a>
+
+
+
+        {% elif user.perfil == 'nutricionista' %}
+
+          <a href="{% url 'administrativo:painel_nutricionista' %}" class="menu-item{% if nav_section == 'painel' %} active{% endif %}">
+
+            <i class="fa-solid fa-house"></i>
+
+            <span>PAINEL</span>
+
+          </a>
+
+          <a href="{% url 'refeicoes:cardapio_semana' %}" class="menu-item{% if nav_section == 'refeicoes' %} active{% endif %}">
+
+            <i class="fa-solid fa-utensils"></i>
+
+            <span>REFEIÇÕES</span>
+
+          </a>
+
+          <a href="{% url 'refeicoes:pratos_lista' %}" class="menu-item{% if nav_section == 'pratos' %} active{% endif %}">
+
+            <i class="fa-solid fa-bowl-food"></i>
+
+            <span>PRATOS</span>
+
+          </a>
+
+          <a href="{% url 'administrativo:alunos_turmas' %}" class="menu-item{% if nav_section == 'alunos' %} active{% endif %}">
+
+            <i class="fa-solid fa-users"></i>
+
+            <span>ALUNOS</span>
+
+          </a>
+
+          <a href="{% url 'administrativo:alunos_bloqueados' %}" class="menu-item{% if nav_section == 'bloqueados' %} active{% endif %}">
+
+            <i class="fa-solid fa-lock"></i>
+
+            <span>BLOQUEADOS</span>
+
+          </a>
+
+          <a href="{% url 'administrativo:configuracoes' %}" class="menu-item{% if nav_section == 'config' %} active{% endif %}">
+
+            <i class="fa-solid fa-gear"></i>
+
+            <span>CONFIGURAÇÕES</span>
+
+          </a>
+
+
+
+        {% elif user.perfil == 'refeitorio' %}
+
+          <a href="{% url 'administrativo:painel_refeitorio' %}" class="menu-item{% if nav_section == 'painel_ref' %} active{% endif %}">
+
+            <i class="fa-solid fa-house"></i>
+
+            <span>PAINEL</span>
+
+          </a>
+
+
+
+          <a href="{% url 'refeicoes:lista-presenca' %}" class="menu-item{% if nav_section == 'presenca' %} active{% endif %}">
+
+            <i class="fa-solid fa-clipboard-user"></i>
+
+            <span>LISTA DE PRESENÇA</span>
+
+          </a>
+
+
+
+        {% endif %}
+
+
+
+      </div>
+
+    </aside>
+
+
+
+    <main class="content">
+
+
+
+  {% else %}
+
+  <!-- PÁGINAS SEM SIDEBAR (login, cadastro) -->
+
+    <main class="content-auth">
+
+
+
+  {% endif %}
+
+
+
+      {% if messages %}
+
+        <div class="messages">
+
+          {% for message in messages %}
+
+            <div class="alert alert-{{ message.tags }}">
+
+              {{ message }}
+
+              <button class="alert-close" onclick="this.parentElement.remove()">
+
+                <i class="fa-solid fa-xmark"></i>
+
+              </button>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      {% endif %}
+
+
+
+      {% block content %}{% endblock %}
+
+
+
+  {% if user.is_authenticated %}
+
+    </main>
+
+  </div>
+
+
+
+  <nav class="bottom-nav" aria-label="Navegação principal">
+
+    {% if user.perfil == 'aluno' %}
+
+      <a href="{% url 'refeicoes:homepage' %}" class="bottom-nav-item{% if nav_section == 'cardapio' %} active{% endif %}">
+
+        <i class="fa-solid fa-utensils"></i>
+
+        <span>Cardápio</span>
+
+      </a>
+
+      <a href="{% url 'refeicoes:strikes_aluno' %}" class="bottom-nav-item{% if nav_section == 'strikes' %} active{% endif %}">
+
+        <i class="fa-solid fa-triangle-exclamation"></i>
+
+        <span>Strikes</span>
+
+      </a>
+
+      <a href="{% url 'refeicoes:configuracoes_aluno' %}" class="bottom-nav-item{% if nav_section == 'configuracoes' %} active{% endif %}">
+
+        <i class="fa-solid fa-gear"></i>
+
+        <span>Config</span>
+
+      </a>
+
+
+
+    {% elif user.perfil == 'nutricionista' %}
+
+      <a href="{% url 'administrativo:painel_nutricionista' %}" class="bottom-nav-item{% if nav_section == 'painel' %} active{% endif %}">
+
+        <i class="fa-solid fa-house"></i>
+
+        <span>Painel</span>
+
+      </a>
+
+      <a href="{% url 'refeicoes:cardapio_semana' %}" class="bottom-nav-item{% if nav_section == 'refeicoes' %} active{% endif %}">
+
+        <i class="fa-solid fa-utensils"></i>
+
+        <span>Refeições</span>
+
+      </a>
+
+      <a href="{% url 'refeicoes:pratos_lista' %}" class="bottom-nav-item{% if nav_section == 'pratos' %} active{% endif %}">
+
+        <i class="fa-solid fa-bowl-food"></i>
+
+        <span>Pratos</span>
+
+      </a>
+
+      <a href="{% url 'administrativo:alunos_turmas' %}" class="bottom-nav-item{% if nav_section == 'alunos' %} active{% endif %}">
+
+        <i class="fa-solid fa-users"></i>
+
+        <span>Alunos</span>
+
+      </a>
+
+      <a href="{% url 'administrativo:alunos_bloqueados' %}" class="bottom-nav-item{% if nav_section == 'bloqueados' %} active{% endif %}">
+
+        <i class="fa-solid fa-lock"></i>
+
+        <span>Bloqueados</span>
+
+      </a>
+
+      <a href="{% url 'administrativo:configuracoes' %}" class="bottom-nav-item{% if nav_section == 'config' %} active{% endif %}">
+
+        <i class="fa-solid fa-gear"></i>
+
+        <span>Config</span>
+
+      </a>
+
+
+
+    {% elif user.perfil == 'refeitorio' %}
+
+      <a href="{% url 'administrativo:painel_refeitorio' %}" class="bottom-nav-item{% if nav_section == 'painel_ref' %} active{% endif %}">
+
+        <i class="fa-solid fa-house"></i>
+
+        <span>Painel</span>
+
+      </a>
+
+      <a href="{% url 'refeicoes:lista-presenca' %}" class="bottom-nav-item{% if nav_section == 'presenca' %} active{% endif %}">
+
+        <i class="fa-solid fa-clipboard-user"></i>
+
+        <span>Presença</span>
+
+      </a>
+
+    {% endif %}
+
+  </nav>
+
+
+
+  {% else %}
+
+    </main>
+
+  {% endif %}
+
+
+
+  <script src="{% static 'js/base.js' %}"></script>
+  <script src="{% static 'js/form-feedback.js' %}"></script>
+
+  {% if user.is_authenticated %}
+  <div id="confirm-dialog" class="confirm-dialog" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+    <div class="confirm-dialog__panel">
+      <h2 id="confirm-dialog-title" data-confirm-title>Sair da conta?</h2>
+      <p data-confirm-message>Tem certeza que deseja encerrar sua sessão?</p>
+      <div class="confirm-dialog__actions">
+        <button type="button" class="confirm-dialog__btn confirm-dialog__btn--cancel" data-confirm-cancel>Cancelar</button>
+        <button type="button" class="confirm-dialog__btn confirm-dialog__btn--confirm" data-confirm-ok>Sair</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% block extra_js %}{% endblock %}
+
+
+
+</body>
+
+</html>
+

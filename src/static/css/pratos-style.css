@@ -1,0 +1,523 @@
+.pratos-page {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.pratos-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 1.75rem 2rem 2rem;
+}
+
+/* Cabeçalho */
+.pratos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pratos-header-esquerda {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.pratos-header .nova-refeicao-titulo h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  color: var(--text-primary);
+}
+
+.pratos-header .nova-refeicao-titulo p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.btn-novo-prato {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.35rem;
+  background: var(--accent);
+  color: var(--primary);
+  border: none;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.btn-novo-prato:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.btn-novo-prato:active {
+  transform: translateY(0);
+}
+
+.btn-novo-prato i {
+  font-size: 0.75rem;
+}
+
+/* Navegação por categoria — mesmo padrão das abas do cardápio */
+.pratos-navegacao {
+  margin-bottom: 1.75rem;
+}
+
+.pratos-atalhos-tabs {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 0.5rem;
+  padding-bottom: 0.15rem;
+}
+
+.pratos-atalhos-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pratos-card a.pratos-atalho-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem 0.75rem;
+  margin-bottom: -2px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text-light);
+  white-space: nowrap;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.pratos-atalho-tab-label-curto {
+  display: none;
+}
+
+.pratos-card a.pratos-atalho-tab:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.pratos-card a.pratos-atalho-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pratos-card a.pratos-atalho-tab:not(.tem-itens) {
+  opacity: 0.7;
+}
+
+.pratos-atalho-tab-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-card));
+  color: var(--accent);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.pratos-atalho-tab-label {
+  line-height: 1;
+}
+
+.pratos-atalho-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.pratos-card a.pratos-atalho-tab.tem-itens .pratos-atalho-tab-badge {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
+  color: var(--text-primary);
+}
+
+/* Catálogo por seção */
+.pratos-catalogo {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pratos-secao {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg);
+  scroll-margin-top: 1rem;
+}
+
+.pratos-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.1rem;
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-card));
+  border-bottom: 1px solid var(--border);
+}
+
+.pratos-secao-titulo {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.pratos-secao-contagem {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.pratos-secao-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.prato-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.prato-item:last-child {
+  border-bottom: none;
+}
+
+.prato-item:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.prato-item-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.prato-item-nome {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prato-item-desc {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.pratos-secao-vazia {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.pratos-acoes {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pratos-excluir-form {
+  display: inline;
+  margin: 0;
+}
+
+.btn-acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.btn-acao:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+}
+
+.btn-acao-excluir:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-card));
+}
+
+.btn-acao span {
+  display: none;
+}
+
+@media (min-width: 520px) {
+  .btn-acao span {
+    display: inline;
+  }
+}
+
+/* Estado vazio global */
+.pratos-estado-vazio {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  color: var(--text-secondary);
+}
+
+.pratos-estado-vazio i {
+  font-size: 2.5rem;
+  color: var(--text-light);
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.pratos-estado-vazio p {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+}
+
+/* Nova refeição — seleção de pratos */
+.pratos-selecao {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pratos-grupo {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 0;
+}
+
+.pratos-grupo legend {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  padding: 0 0.35rem;
+}
+
+.pratos-lista-check {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prato-check-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.prato-check-label input {
+  accent-color: var(--accent);
+}
+
+.prato-check-nome {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prato-check-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  flex: 1 1 100%;
+  padding-left: 1.5rem;
+}
+
+.pratos-vazio {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.pratos-vazio a {
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .pratos-atalhos-tabs {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+    gap: 0.25rem;
+  }
+
+  .pratos-card a.pratos-atalho-tab {
+    padding: 0.55rem 0.75rem 0.65rem;
+    font-size: 0.6875rem;
+  }
+
+  .pratos-atalho-tab-icone {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 540px) {
+  .pratos-navegacao {
+    margin-bottom: 1.25rem;
+  }
+
+  .pratos-atalhos-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-inline: 0;
+    padding-inline: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .pratos-card a.pratos-atalho-tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 0;
+    padding: 0.6rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: normal;
+    scroll-snap-align: none;
+  }
+
+  .pratos-atalho-tab-label {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.15;
+  }
+
+  .pratos-atalho-tab-label-longo {
+    display: none;
+  }
+
+  .pratos-atalho-tab-label-curto {
+    display: inline;
+    font-size: 0.625rem;
+    letter-spacing: 0.03em;
+  }
+
+  .pratos-atalho-tab-badge {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .pratos-card {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .pratos-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-novo-prato {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .prato-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pratos-acoes {
+    justify-content: flex-end;
+  }
+
+  .btn-acao span {
+    display: inline;
+  }
+}
+
+@media (max-width: 360px) {
+  .pratos-atalhos-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .pratos-card a.pratos-atalho-tab {
+    padding: 0.65rem 0.75rem;
+  }
+}

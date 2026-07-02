@@ -1,0 +1,16 @@
+<article class="meal-card meal-card--painel">
+  <div class="meal-card-topo">
+    <div class="badges">
+      <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
+      {% if refeicao.exige_reserva %}
+        <div class="badge green">{{ refeicao.vagas_display }}</div>
+      {% else %}
+        <div class="badge gray">Informativa</div>
+      {% endif %}
+    </div>
+    <a href="{% url 'refeicoes:nutricionista_editar' refeicao.pk %}" class="meal-card-painel__editar" title="Editar refeição">
+      <i class="fa-solid fa-pen"></i>
+    </a>
+  </div>
+  <div class="meal-title">{% firstof refeicao.descricao_exibicao "(sem descrição)" %}</div>
+</article>

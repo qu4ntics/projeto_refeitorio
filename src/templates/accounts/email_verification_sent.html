@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifique seu email</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/cadastro-style.css' %}">
+</head>
+<body>
+    <div class="caixa-login">
+        <div class="barra-topo">
+            <a href="{% url 'accounts:login' %}">&larr;</a>
+            <p>Verifique seu email</p>
+        </div>
+
+        <div class="mensagem-status">
+            <h1>Quase lá</h1>
+            <p>Enviamos um link de verificação para o email informado no cadastro.</p>
+            <p>A conta só será liberada depois que o link for acessado.</p>
+        </div>
+
+        <a href="{% url 'accounts:login' %}">Voltar para o login</a>
+    </div>
+</body>
+</html>

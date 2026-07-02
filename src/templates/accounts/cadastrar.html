@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/cadastro-style.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+</head>    
+<body>
+    <div class="caixa-login">
+        <div class="barra-topo">
+        <a href="{% url 'accounts:login' %}">&larr;</a>
+        <p>Criar conta</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="erro-form">
+                {{form.errors}}
+            </div>
+            {% endif %}
+
+            <input type="text" name="nome_completo" placeholder="Nome completo" required>
+            <select name="turma" required>
+                <option value="" disabled selected hidden>Turma</option>
+                {% for value, label in form.fields.turma.choices %}
+                    {% if value %}<option value="{{ value }}">{{ label }}</option>{% endif %}
+                {% endfor %}
+            </select>
+            <input type="email" name="email" placeholder="E-mail" required>
+            <div class="grupo-senha">
+                <div class="caixa-senha">
+                    <input type="password" name="senha" placeholder="Senha" id="senha" required>
+                    <i class="bi bi-eye" id="btn-senha" onclick="mostrarSenha()"></i>
+                </div>
+
+                <div class="caixa-senha">
+                    <input type="password" name="confirmar_senha" placeholder="Confirme sua senha" id="confirme-senha" required>
+                    <i class="bi bi-eye" id="btn-conf-senha" onclick="mostrarSenhaConfirma()"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn-submit" data-loading-text="Criando conta...">Criar conta</button>
+        </form>
+        <a href="{% url 'accounts:login' %}">Já tem uma conta? Entrar</a>
+    </div>
+    <script src="{% static 'js/form-feedback.js' %}"></script>
+    <script src="{% static 'js/login-script.js' %}"></script>
+</body>
+</html>
