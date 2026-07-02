@@ -153,21 +153,9 @@ body {
     background: rgba(0, 0, 0, 0.06);
 }
 
-/* Botão de envio */
+.caixa-login form .btn-submit,
 .caixa-login form input[type="submit"] {
-    padding: 12px;
-    border-radius: 10px;
-    background-color: var(--accent);
-    color: #fff;
-    font-size: 20px;
-    border: none;
-    cursor: pointer;
     margin-top: 6px;
-    transition: background-color 0.2s ease;
-}
-
-.caixa-login form input[type="submit"]:hover {
-    background-color: var(--accent-hover);
 }
 
 /* Erros do formulário */

@@ -3,8 +3,6 @@
 
 {% block title %}Pratos{% endblock %}
 
-{% block menu_pratos %}active{% endblock %}
-
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
   <link rel="stylesheet" href="{% static 'css/pratos-style.css' %}?v=4">
@@ -91,7 +89,7 @@
                         <form method="post" action="{% url 'refeicoes:prato_excluir' prato.pk %}" class="pratos-excluir-form"
                               onsubmit="return confirm('Remover este prato do catálogo? Refeições antigas mantêm o histórico.');">
                           {% csrf_token %}
-                          <button type="submit" class="btn-acao btn-acao-excluir" title="Excluir">
+                          <button type="submit" class="btn-acao btn-acao-excluir" data-loading-text="Excluindo..." title="Excluir">
                             <i class="fa-solid fa-trash" aria-hidden="true"></i>
                             <span>Excluir</span>
                           </button>

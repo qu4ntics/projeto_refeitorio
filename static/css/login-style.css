@@ -144,19 +144,9 @@ p {
     font-size: 22px;
 }
 
+.form-login .btn-submit,
 .form-login input[type="submit"] {
-    padding: 12px;
-    border-radius: 10px;
-    background-color: var(--accent);
-    color: #fff;
-    font-size: 20px;
-    border: none;
-    cursor: pointer;
-}
-
-.form-login input[type="submit"]:hover {
-    background-color: var(--accent-hover);
-    transition: background-color 0.2s ease;
+    margin-top: 0;
 }
 
 .erro-login {

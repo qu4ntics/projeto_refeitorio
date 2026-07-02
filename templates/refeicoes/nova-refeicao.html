@@ -3,8 +3,6 @@
 
 {% block title %}{{ titulo|default:"Nova Refeição" }}{% endblock %}
 
-{% block menu_refeicoes %}active{% endblock %}
-
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
   <link rel="stylesheet" href="{% static 'css/pratos-style.css' %}">
@@ -131,7 +129,7 @@
 
         <div class="nova-refeicao-acoes">
           <a href="{% url 'refeicoes:cardapio_semana' %}" class="btn-cancelar">Cancelar</a>
-          <button type="submit" class="btn-salvar">
+          <button type="submit" class="btn-salvar" data-loading-text="Salvando...">
             {% if refeicao %}Salvar alterações{% else %}Salvar refeição{% endif %}
           </button>
         </div>

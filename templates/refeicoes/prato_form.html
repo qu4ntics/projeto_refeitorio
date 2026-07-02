@@ -3,8 +3,6 @@
 
 {% block title %}{{ titulo }}{% endblock %}
 
-{% block menu_pratos %}active{% endblock %}
-
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
 {% endblock %}
@@ -57,7 +55,7 @@
 
         <div class="nova-refeicao-acoes">
           <a href="{% url 'refeicoes:pratos_lista' %}" class="btn-cancelar">Cancelar</a>
-          <button type="submit" class="btn-salvar">Salvar</button>
+          <button type="submit" class="btn-salvar" data-loading-text="Salvando...">Salvar</button>
         </div>
       </form>
     </div>

@@ -134,6 +134,12 @@ class ConfiguracoesAlunoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'CONFIGURAÇÕES')
         self.assertContains(response, 'Ala Bama')
+        self.assertContains(response, 'AL')
+        self.assertContains(response, 'strikes ativos')
+        self.assertContains(response, 'strike-area--light')
+        self.assertContains(response, 'Ver histórico de strikes')
+        self.assertContains(response, 'Sair')
+        self.assertContains(response, reverse('accounts:logout'))
         self.assertContains(response, 'Novo Strike Recebido')
 
     def test_nutricionista_nao_acessa(self):

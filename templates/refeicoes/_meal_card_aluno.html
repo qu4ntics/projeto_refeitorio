@@ -22,13 +22,19 @@
       </p>
       {% if not somente_visualizacao %}
       <div class="pre-reserva-banner__actions">
+        {% if user.bloqueado %}
+        <button class="reserve-btn reserve-btn--blocked" type="button" disabled>
+          <i class="fa-solid fa-ban"></i> BLOQUEADO
+        </button>
+        {% else %}
         <form action="{% url 'reservas:confirmar_pre_reserva' refeicao.pre_reserva.id %}" method="post">
           {% csrf_token %}
-          <button class="reserve-btn pre-reserva-btn--confirm" type="submit">CONFIRMAR</button>
+          <button class="reserve-btn pre-reserva-btn--confirm" type="submit" data-loading-text="Confirmando...">CONFIRMAR</button>
         </form>
+        {% endif %}
         <form action="{% url 'reservas:rejeitar_pre_reserva' refeicao.pre_reserva.id %}" method="post">
           {% csrf_token %}
-          <button class="reserve-btn pre-reserva-btn--reject" type="submit">REJEITAR</button>
+          <button class="reserve-btn pre-reserva-btn--reject" type="submit" data-loading-text="Rejeitando...">REJEITAR</button>
         </form>
       </div>
       {% endif %}
@@ -49,7 +55,7 @@
         {% if refeicao.pode_cancelar %}
           <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post">
             {% csrf_token %}
-            <button class="reserve-btn reserve-btn--cancel" type="submit">CANCELAR</button>
+            <button class="reserve-btn reserve-btn--cancel" type="submit" data-loading-text="Cancelando...">CANCELAR</button>
           </form>
         {% else %}
           <button class="reserve-btn" disabled title="Prazo de cancelamento encerrado">
@@ -57,10 +63,14 @@
           </button>
         {% endif %}
       {% else %}
-        {% if refeicao.reserva_aberta %}
+        {% if user.bloqueado %}
+          <button class="reserve-btn reserve-btn--blocked" type="button" disabled>
+            <i class="fa-solid fa-ban"></i> BLOQUEADO
+          </button>
+        {% elif refeicao.reserva_aberta %}
           <form action="{% url 'reservas:criar_reserva' refeicao.id %}" method="post">
             {% csrf_token %}
-            <button class="reserve-btn" type="submit">RESERVAR</button>
+            <button class="reserve-btn" type="submit" data-loading-text="Reservando...">RESERVAR</button>
           </form>
         {% else %}
           <button class="reserve-btn" disabled title="{{ refeicao.get_status_reserva }}">

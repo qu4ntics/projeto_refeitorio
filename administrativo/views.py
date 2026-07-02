@@ -253,8 +253,8 @@ def _redirect_configuracoes(aba='refeicoes'):
 
 
 def _aba_configuracoes(request):
-    aba = request.GET.get('aba', 'refeicoes')
-    return aba if aba in ABAS_CONFIGURACOES else 'refeicoes'
+    aba = request.GET.get('aba', 'conta')
+    return aba if aba in ABAS_CONFIGURACOES else 'conta'
 
 
 def _formulario_senha_nutri(usuario):

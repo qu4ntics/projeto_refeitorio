@@ -8,10 +8,6 @@
 
 
 
-{% block menu_alunos %}active{% endblock %}
-
-
-
 {% block extra_css %}
 
   <link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=2">
@@ -256,7 +252,7 @@
 
           {% endif %}
 
-          <button type="submit" class="btn-salvar">
+          <button type="submit" class="btn-salvar" data-loading-text="Salvando...">
 
             <i class="fa-solid fa-check"></i> Salvar
 

@@ -129,6 +129,29 @@ body.dark-mode .refeicao-config-box .campo::-webkit-calendar-picker-indicator,
   white-space: nowrap;
 }
 
+.config-nutri-logout {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.config-nutri-logout .config-perfil-logout {
+  width: auto;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.config-nutri-logout .config-btn--logout {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.config-nutri-logout .config-btn--logout:hover {
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-card));
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
 @media (max-width: 640px) {
   .config-tabs.week-tabs {
     flex-wrap: wrap;

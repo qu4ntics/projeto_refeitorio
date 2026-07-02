@@ -323,6 +323,17 @@ class ConfiguracoesNutriFase1Tests(TestCase):
         self.assertContains(response, 'Minha conta')
         self.assertContains(response, 'value="60"', html=False)
 
+    def test_get_abre_aba_conta_por_padrao(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="painel-conta"')
+        self.assertContains(response, 'config-tab-panel active')
+        self.assertContains(response, 'id="tab-conta"')
+        self.assertContains(response, 'week-tab active')
+        self.assertContains(response, 'CONFIG_ABA_ATIVA = "conta"')
+        self.assertContains(response, 'Sair')
+        self.assertContains(response, reverse('accounts:logout'))
+
     def test_salvar_minutos_cancelamento_cria_config(self):
         response = self.client.post(self.url, {
             'acao': 'salvar_reservas',

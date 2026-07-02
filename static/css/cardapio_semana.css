@@ -38,10 +38,11 @@
 }
 
 .cardapio-semana-header__titulo {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  text-transform: uppercase;
   margin: 0 0 2px;
 }
 
@@ -54,6 +55,13 @@
   height: 1px;
   background: var(--border);
   margin: 1rem 0 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .perfil-aluno .cardapio-header--pagina,
+  .perfil-aluno .cardapio-header--pagina + .cardapio-divider {
+    display: none;
+  }
 }
 
 /* TABS DA SEMANA */
@@ -112,9 +120,19 @@
   letter-spacing: 0.3px;
 }
 
-/* DESTAQUE — ALMOÇO DE HOJE */
+/* DESTAQUE — ALMOÇO RESERVÁVEL */
 .almoco-atual {
-  margin-bottom: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-left: 4px solid var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.almoco-atual + .cardapio-divider {
+  margin: 2rem 0;
 }
 
 .almoco-atual__header {
@@ -123,21 +141,21 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .almoco-atual__titulo {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   color: var(--text-primary);
   margin: 0;
 }
 
 .almoco-atual__data {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-light);
+  color: var(--text-secondary);
   text-transform: capitalize;
 }
 
@@ -145,17 +163,109 @@
   font-size: 13px;
   line-height: 1.45;
   color: var(--text-secondary);
-  margin: 0 0 0.75rem;
+  margin: 0 0 1rem;
   padding: 0.5rem 0.75rem;
   background: color-mix(in srgb, var(--text-light) 8%, var(--bg-card));
   border-radius: 6px;
   border-left: 3px solid var(--accent);
 }
 
+.aluno-bloqueio-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
+  border-radius: var(--radius);
+  border-left: 4px solid var(--danger);
+}
+
+.aluno-bloqueio-banner > i {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 18px;
+  color: var(--danger);
+}
+
+.aluno-bloqueio-banner__texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.aluno-bloqueio-banner__texto strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--danger);
+  margin-bottom: 0.2rem;
+}
+
+.aluno-bloqueio-banner__texto p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.aluno-bloqueio-banner__link {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.aluno-bloqueio-banner__link:hover {
+  text-decoration: underline;
+}
+
+.reserve-btn--blocked {
+  background: color-mix(in srgb, var(--text-light) 25%, var(--bg));
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: not-allowed;
+  opacity: 0.95;
+}
+
+.reserve-btn--blocked:hover {
+  background: color-mix(in srgb, var(--text-light) 25%, var(--bg));
+  transform: none;
+}
+
 .almoco-atual .meal-card {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  background: color-mix(in srgb, var(--accent) 5%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: var(--bg-card);
   margin-bottom: 0;
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--shadow-hover);
+}
+
+.almoco-atual .meal-title {
+  font-size: 17px;
+  margin-bottom: 1rem;
+}
+
+.almoco-atual .reserve-btn {
+  padding: 12px 32px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* Cards do cardápio semanal — modo consulta */
+.meal-card--visualizacao {
+  box-shadow: none;
+  border-color: var(--border);
+  opacity: 0.88;
+}
+
+.meal-card--visualizacao:hover {
+  box-shadow: none;
+  transform: none;
 }
 
 /* PAINEL DE DIA */
@@ -243,14 +353,31 @@
     padding: 8px 8px;
   }
 
+  .almoco-atual {
+    padding: 1rem 1.125rem;
+  }
+
   .almoco-atual__header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
 
+  .almoco-atual__titulo {
+    font-size: 16px;
+  }
+
+  .almoco-atual .meal-card {
+    padding: 1.25rem;
+  }
+
+  .almoco-atual .reserve-btn {
+    padding: 10px 24px;
+    font-size: 12px;
+  }
+
   .cardapio-semana-header__titulo {
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .cardapio-header h1,

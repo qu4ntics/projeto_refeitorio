@@ -3,8 +3,6 @@
 
 {% block title %}Configurações{% endblock %}
 
-{% block menu_configuracoes %}active{% endblock %}
-
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
   <link rel="stylesheet" href="{% static 'css/configuracoes_aluno.css' %}">
@@ -16,6 +14,27 @@
 </div>
 
 <div class="cardapio-divider"></div>
+
+<div class="config-perfil-card config-card">
+  <div class="avatar" aria-hidden="true">
+    <h3>{{ user.first_name|default:user.username|slice:":2"|upper }}</h3>
+  </div>
+  <h2>{{ user.get_full_name|default:user.username }}</h2>
+  <p>{{ user.turma.nome|default:"—" }}</p>
+
+  {% include "includes/_strike_indicator.html" with strike_light=True %}
+
+  <a href="{% url 'refeicoes:strikes_aluno' %}" class="config-link config-perfil-strike-link">Ver histórico de strikes</a>
+
+  {% include "includes/_logout_form.html" with variant="button" %}
+
+  {% if user.bloqueado %}
+  <div class="config-perfil-alerta-bloqueio">
+    <i class="fa-solid fa-ban"></i>
+    Sua conta está bloqueada por acúmulo de strikes. Procure a nutricionista.
+  </div>
+  {% endif %}
+</div>
 
 <section class="config-section">
   <h2 class="config-section-title"><i class="fa-solid fa-user"></i> Minha conta</h2>
@@ -43,13 +62,6 @@
           {% endif %}
         </dd>
       </div>
-      <div>
-        <dt>Strikes ativos</dt>
-        <dd>
-          {{ strikes_ativos|default:0 }}/2
-          <a href="{% url 'refeicoes:strikes_aluno' %}" class="config-link">Ver histórico</a>
-        </dd>
-      </div>
     </dl>
   </div>
 </section>
@@ -61,7 +73,7 @@
     <form method="post" class="config-inline-form">
       {% csrf_token %}
       <input type="hidden" name="acao" value="marcar_lidas">
-      <button type="submit" class="config-btn config-btn--ghost">Marcar todas como lidas</button>
+      <button type="submit" class="config-btn config-btn--ghost" data-loading-text="Salvando...">Marcar todas como lidas</button>
     </form>
     {% endif %}
   </div>
@@ -99,7 +111,7 @@
         {% endfor %}
       </div>
       {% endfor %}
-      <button type="submit" class="config-btn">Alterar senha</button>
+      <button type="submit" class="config-btn" data-loading-text="Alterando senha...">Alterar senha</button>
     </form>
   </div>
 </section>

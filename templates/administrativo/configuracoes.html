@@ -3,8 +3,6 @@
 
 {% block title %}Configurações{% endblock %}
 
-{% block menu_config %}active{% endblock %}
-
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
   <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
@@ -23,6 +21,11 @@
     </header>
 
     <div class="config-tabs week-tabs" role="tablist" aria-label="Seções de configuração">
+      <button class="week-tab{% if aba_ativa == 'conta' %} active{% endif %}" type="button" role="tab"
+              aria-selected="{% if aba_ativa == 'conta' %}true{% else %}false{% endif %}"
+              id="tab-conta" data-aba="conta">
+        Minha conta
+      </button>
       <button class="week-tab{% if aba_ativa == 'refeicoes' %} active{% endif %}" type="button" role="tab"
               aria-selected="{% if aba_ativa == 'refeicoes' %}true{% else %}false{% endif %}"
               id="tab-refeicoes" data-aba="refeicoes">
@@ -37,11 +40,6 @@
               aria-selected="{% if aba_ativa == 'strikes' %}true{% else %}false{% endif %}"
               id="tab-strikes" data-aba="strikes">
         Strikes
-      </button>
-      <button class="week-tab{% if aba_ativa == 'conta' %} active{% endif %}" type="button" role="tab"
-              aria-selected="{% if aba_ativa == 'conta' %}true{% else %}false{% endif %}"
-              id="tab-conta" data-aba="conta">
-        Minha conta
       </button>
     </div>
 
@@ -105,7 +103,7 @@
         </div>
 
         <div class="nova-refeicao-acoes">
-          <button type="submit" class="btn-salvar">Salvar Configurações</button>
+          <button type="submit" class="btn-salvar" data-loading-text="Salvando...">Salvar Configurações</button>
         </div>
       </form>
     </div>
@@ -137,7 +135,7 @@
         </div>
 
         <div class="nova-refeicao-acoes">
-          <button type="submit" class="btn-salvar">Salvar prazo de cancelamento</button>
+          <button type="submit" class="btn-salvar" data-loading-text="Salvando...">Salvar prazo de cancelamento</button>
         </div>
       </form>
     </div>
@@ -195,7 +193,7 @@
               {% endfor %}
             </div>
             {% endfor %}
-            <button type="submit" class="config-btn">Alterar senha</button>
+            <button type="submit" class="config-btn" data-loading-text="Alterando senha...">Alterar senha</button>
           </form>
         </div>
       </section>
@@ -211,6 +209,14 @@
             <i class="fa-solid fa-moon" id="config-theme-icon"></i>
             Alternar tema
           </button>
+        </div>
+      </section>
+
+      <section class="config-section config-section--nutri">
+        <h2 class="config-section-title"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sessão</h2>
+        <div class="config-card config-card--row config-nutri-logout">
+          <p class="config-desc">Encerrar sua sessão neste dispositivo.</p>
+          {% include "includes/_logout_form.html" with variant="button" %}
         </div>
       </section>
     </div>

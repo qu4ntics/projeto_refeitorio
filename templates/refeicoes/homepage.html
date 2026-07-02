@@ -8,10 +8,6 @@
 
 
 
-{% block menu_cardapio %}active{% endblock %}
-
-
-
 {% block extra_css %}
 
   <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
@@ -32,7 +28,16 @@
 
 <div class="cardapio-divider"></div>
 
-
+{% if user.bloqueado %}
+<div class="aluno-bloqueio-banner" role="alert">
+  <i class="fa-solid fa-ban"></i>
+  <div class="aluno-bloqueio-banner__texto">
+    <strong>Conta bloqueada</strong>
+    <p>Você não pode fazer novas reservas. Procure a nutricionista para regularizar sua situação.</p>
+  </div>
+  <a href="{% url 'refeicoes:strikes_aluno' %}" class="aluno-bloqueio-banner__link">Ver strikes</a>
+</div>
+{% endif %}
 
 {% if almoco_destaque %}
 

@@ -3,8 +3,6 @@
 
 {% block title %}Painel do Refeitório{% endblock %}
 
-{% block menu_refeitorio %}active{% endblock %}
-
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/painel-refeitorio.css' %}">
 {% endblock %}
@@ -86,14 +84,14 @@
                                 <a href="{% url 'refeicoes:chamada_resumo' item.refeicao.id %}" class="btn-acao secundario">Ver resumo</a>
                                 <form method="POST" action="{% url 'administrativo:reabrir_chamada' item.refeicao.id %}" class="form-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-acao outline" title="Strikes não serão removidos">Reabrir</button>
+                                    <button type="submit" class="btn-acao outline" data-loading-text="Reabrindo..." title="Strikes não serão removidos">Reabrir</button>
                                 </form>
                             {% elif item.status == 'em_andamento' %}
                                 <a href="{% url 'refeicoes:chamada' item.refeicao.id %}" class="btn-acao primario">Continuar chamada</a>
                             {% else %}
                                 <form method="POST" action="{% url 'administrativo:abrir_chamada' item.refeicao.id %}" class="form-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-acao primario" {% if item.total_reservas == 0 %}disabled title="Sem reservas"{% endif %}>Abrir chamada</button>
+                                    <button type="submit" class="btn-acao primario" data-loading-text="Abrindo..." {% if item.total_reservas == 0 %}disabled title="Sem reservas"{% endif %}>Abrir chamada</button>
                                 </form>
                             {% endif %}
                         </td>

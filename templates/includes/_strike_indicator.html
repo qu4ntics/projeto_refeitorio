@@ -1,0 +1,12 @@
+<div class="strike-area{% if strike_light %} strike-area--light{% endif %}">
+  <div class="strike-top">
+    <span>strikes ativos</span>
+    <span>{{ strikes_ativos|default:0 }}/2</span>
+  </div>
+  <div class="bar">
+    <div class="fill{% if strikes_ativos == 1 %} fill--warning{% elif strikes_ativos >= 2 %} fill--danger{% endif %}" style="width: {% if strikes_ativos == 1 %}50{% elif strikes_ativos >= 2 %}100{% else %}0{% endif %}%"></div>
+  </div>
+  {% if proximo_strike_expira %}
+  <span class="expire">Expira em: {{ proximo_strike_expira|date:"d/m/Y" }}</span>
+  {% endif %}
+</div>

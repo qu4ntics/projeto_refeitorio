@@ -161,6 +161,46 @@ class ReservaViewTests(TestCase):
         messages = list(get_messages(response.wsgi_request))
         self.assertTrue(any("bloqueada" in str(m).lower() for m in messages))
 
+    def test_homepage_exibe_banner_quando_bloqueado(self):
+        self.aluno.bloqueado = True
+        self.aluno.save()
+
+        hoje = timezone.localdate()
+        agora = timezone.make_aware(
+            datetime.combine(hoje, time(16, 0)),
+            timezone.get_current_timezone(),
+        )
+        self.janela.horario_abertura = time(15, 0)
+        self.janela.horario_fechamento = time(11, 0)
+        self.janela.save()
+
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.get(reverse('refeicoes:homepage'))
+
+        self.assertContains(response, 'Conta bloqueada')
+        self.assertContains(response, 'reserve-btn--blocked')
+        self.assertContains(response, 'BLOQUEADO')
+        url_reserva = reverse('reservas:criar_reserva', args=[self.refeicao.id])
+        self.assertEqual(response.content.decode('utf-8').count(url_reserva), 0)
+
+    def test_homepage_sem_banner_quando_ativo(self):
+        hoje = timezone.localdate()
+        agora = timezone.make_aware(
+            datetime.combine(hoje, time(16, 0)),
+            timezone.get_current_timezone(),
+        )
+        self.janela.horario_abertura = time(15, 0)
+        self.janela.horario_fechamento = time(11, 0)
+        self.janela.save()
+
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.get(reverse('refeicoes:homepage'))
+
+        self.assertNotContains(response, 'Conta bloqueada')
+        self.assertNotContains(response, 'reserve-btn--blocked')
+        url_reserva = reverse('reservas:criar_reserva', args=[self.refeicao.id])
+        self.assertEqual(response.content.decode('utf-8').count(url_reserva), 1)
+
     def test_validacao_refeicao_sem_reserva(self):
         """Validação 2: Refeição que não exige reserva não gera objeto Reserva."""
         self.refeicao.exige_reserva = False
