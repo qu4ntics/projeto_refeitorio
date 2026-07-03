@@ -12,9 +12,9 @@ INSERT INTO administrativo_tiporefeicao (id, nome, ativo) VALUES
 
 -- Inserir turmas
 INSERT INTO administrativo_turma (id, nome, turno, dias_contraturno) VALUES 
-    (uuid_generate_v4(), '1º Ano A', 'matutino', '[1, 3]'),
-    (uuid_generate_v4(), '2º Ano B', 'vespertino', '[2, 4]'),
-    (uuid_generate_v4(), '3º Ano C', 'noturno', '[]');
+    (uuid_generate_v4(), '1º Ano A', 'matutino', '[1,3]'::jsonb),
+    (uuid_generate_v4(), '2º Ano B', 'vespertino', '[2,4]'::jsonb),
+    (uuid_generate_v4(), '3º Ano C', 'noturno', '[]'::jsonb);
 
 -- Inserir pratos
 INSERT INTO refeicoes_prato (id, nome, descricao, categoria) VALUES 

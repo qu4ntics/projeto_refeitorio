@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS administrativo_turma (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nome VARCHAR(100) NOT NULL UNIQUE,
     turno VARCHAR(10) NOT NULL CHECK (turno IN ('matutino', 'vespertino', 'noturno')),
-    dias_contraturno INTEGER[],
+    dias_contraturno JSONB NOT NULL DEFAULT '[]'::jsonb,
     ativo BOOLEAN NOT NULL DEFAULT TRUE
 );
 
@@ -22,16 +22,16 @@ CREATE TABLE IF NOT EXISTS accounts_usuario (
     last_login TIMESTAMPTZ,
     is_superuser BOOLEAN NOT NULL DEFAULT FALSE,
     username VARCHAR(150) NOT NULL UNIQUE,
-    first_name VARCHAR(150) NOT NULL,
-    last_name VARCHAR(150) NOT NULL,
+    first_name VARCHAR(150) NOT NULL DEFAULT '',
+    last_name VARCHAR(150) NOT NULL DEFAULT '',
     email VARCHAR(254) NOT NULL UNIQUE,
     is_staff BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     date_joined TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    perfil VARCHAR(15) NOT NULL CHECK (perfil IN ('aluno', 'nutricionista', 'refeitorio')),
+    perfil VARCHAR(20) NOT NULL CHECK (perfil IN ('aluno', 'nutricionista', 'refeitorio')),
     bloqueado BOOLEAN NOT NULL DEFAULT FALSE,
     turma_id UUID,
-    FOREIGN KEY (turma_id) REFERENCES administrativo_turma(id) ON DELETE SET NULL
+    FOREIGN KEY (turma_id) REFERENCES administrativo_turma(id) ON DELETE RESTRICT
 );
 
 -- Tabela de Tipos de Refeição
@@ -82,7 +82,28 @@ CREATE TABLE IF NOT EXISTS administrativo_presenca (
     compareceu BOOLEAN NOT NULL,
     confirmado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (reserva_id) REFERENCES reservas_reserva(id) ON DELETE CASCADE,
-    FOREIGN KEY (confirmado_por_id) REFERENCES accounts_usuario(id) ON DELETE SET NULL
+    FOREIGN KEY (confirmado_por_id) REFERENCES accounts_usuario(id) ON DELETE CASCADE
+);
+
+-- Tabela de Configuração de Reserva (refletindo `administrativo.ConfigReserva`)
+CREATE TABLE IF NOT EXISTS administrativo_configreserva (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    abertura TIME NOT NULL,
+    encerramento TIME NOT NULL,
+    minutos_cancelamento INTEGER NOT NULL DEFAULT 60,
+    vigente_desde TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    criado_por UUID,
+    FOREIGN KEY (criado_por) REFERENCES accounts_usuario(id) ON DELETE SET NULL
+);
+
+-- Tabela de Notificações (refletindo `administrativo.Notificacao`)
+CREATE TABLE IF NOT EXISTS administrativo_notificacao (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    mensagem VARCHAR(255) NOT NULL,
+    lida BOOLEAN NOT NULL DEFAULT FALSE,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    refeicao_id UUID NOT NULL,
+    FOREIGN KEY (refeicao_id) REFERENCES refeicoes_refeicao(id) ON DELETE CASCADE
 );
 
 -- Tabela de Strikes
