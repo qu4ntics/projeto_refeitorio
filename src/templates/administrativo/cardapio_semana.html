@@ -21,25 +21,6 @@
       <i class="fa-solid fa-plus"></i> Nova Refeição
     </a>
   </div>
-
-  <!-- Barra de Navegação de Semanas -->
-  <div class="navegacao-semana">
-    <div class="nav-container">
-      <a href="?data={{ semana_anterior }}" class="btn-navegacao" title="Semana Anterior">
-        <i class="fa-solid fa-chevron-left"></i> Anterior
-      </a>
-      
-      {% if data_selecionada %}
-      <a href="." class="btn-hoje" title="Voltar para a semana atual">
-        <i class="fa-solid fa-calendar-day"></i> Hoje
-      </a>
-      {% endif %}
-
-      <a href="?data={{ proxima_semana }}" class="btn-navegacao" title="Próxima Semana">
-        Próxima <i class="fa-solid fa-chevron-right"></i>
-      </a>
-    </div>
-  </div>
 </div>
 
 <div class="cardapio-divider"></div>
@@ -49,16 +30,11 @@
   {% for dia in dias_semana %}
   <button class="week-tab {% if dia.hoje %}today-tab{% endif %} {% if dia.id == tab_inicial %}active{% endif %}" type="button" role="tab"
           aria-selected="{% if dia.id == tab_inicial %}true{% else %}false{% endif %}" aria-controls="painel-{{ dia.id }}" id="tab-{{ dia.id }}"
+          aria-label="{{ dia.nome }}"
           data-panel="painel-{{ dia.id }}">
-    {{ dia.nome|upper }}
+    {{ dia.id|upper }}
   </button>
   {% endfor %}
-
-  <button class="week-tab extra-tab" type="button" role="tab"
-          aria-selected="false" aria-controls="painel-extra" id="tab-extra"
-          data-panel="painel-extra">
-    EXTRA
-  </button>
 
 </div>
 
@@ -82,25 +58,6 @@
 
 </div>
 {% endfor %}
-
-<div class="day-panel extra-panel" id="painel-extra" role="tabpanel" aria-labelledby="tab-extra">
-
-  <div class="day-label">
-    <span class="day-name">{{ dia_extra.nome }}</span>
-    {% if dia_extra.data %}— {{ dia_extra.data|date:"d \d\e F" }}{% endif %}
-    {% if dia_extra.hoje %}<span class="day-today-badge">HOJE</span>{% endif %}
-  </div>
-
-  {% for refeicao in dia_extra.refeicoes %}
-    {% include "refeicoes/_meal_card_nutri.html" with refeicao=refeicao %}
-  {% empty %}
-    <div class="day-empty">
-      <i class="fa-solid fa-bowl-food"></i>
-      <p>Nenhuma refeição cadastrada para este dia extra.</p>
-    </div>
-  {% endfor %}
-
-</div>
 
 {% endblock %}
 

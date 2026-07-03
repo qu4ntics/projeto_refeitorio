@@ -115,12 +115,16 @@
     color: var(--text-primary);
 }
 
+.tabela-refeicoes {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
 .tabela-refeicoes table {
     width: 100%;
     border-collapse: collapse;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
 }
 
 .tabela-refeicoes th,
@@ -131,11 +135,24 @@
 }
 
 .tabela-refeicoes th {
-    background: #f9fbf9;
+    background: color-mix(in srgb, var(--border) 40%, var(--bg-card));
     font-size: 12px;
     text-transform: uppercase;
     font-weight: 800;
     color: var(--accent);
+    letter-spacing: 0.4px;
+}
+
+.tabela-refeicoes td {
+    color: var(--text-primary);
+}
+
+.tabela-refeicoes tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.tabela-refeicoes tbody tr:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
 }
 
 .badge-status {
@@ -148,18 +165,18 @@
 }
 
 .badge-status.encerrada {
-    background: #eee;
-    color: #666;
+    background: color-mix(in srgb, var(--text-light) 20%, var(--bg-card));
+    color: var(--text-secondary);
 }
 
 .badge-status.andamento {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: color-mix(in srgb, var(--success) 20%, var(--bg-card));
+    color: var(--success);
 }
 
 .badge-status.fechada {
-    background: #fff8e1;
-    color: #f57f17;
+    background: color-mix(in srgb, var(--warning) 22%, var(--bg-card));
+    color: var(--warning);
 }
 
 .acoes-refeicao {
@@ -186,19 +203,33 @@
 }
 
 .btn-acao.primario {
-    background: var(--primary);
-    color: white;
+    background: var(--accent);
+    color: var(--bg-card);
+}
+
+.btn-acao.primario:hover {
+    background: var(--accent-hover);
+}
+
+.btn-acao.primario:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .btn-acao.secundario {
     background: var(--accent);
-    color: var(--primary);
+    color: var(--bg-card);
 }
 
 .btn-acao.outline {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-secondary);
+}
+
+.btn-acao.outline:hover {
+    background: color-mix(in srgb, var(--border) 35%, var(--bg-card));
+    color: var(--text-primary);
 }
 
 .sem-refeicoes {

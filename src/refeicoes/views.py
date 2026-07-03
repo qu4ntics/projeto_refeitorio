@@ -13,6 +13,7 @@ from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
 from administrativo.models import ConfigReserva, Notificacao, TipoRefeicao, Presenca, Strike
 from administrativo.services.chamada import estado_aluno_chamada, status_chamada_refeicao
+from administrativo.services.horarios_refeicao import pode_acessar_lista_chamada
 from reservas.models import Reserva
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
@@ -208,7 +209,6 @@ def cardapio_semana(request):
 
     ctx.update({
         'tab_inicial': tab_inicial,
-        'dia_extra': {'nome': 'Dia Extra', 'data': None, 'hoje': False, 'refeicoes': []},
     })
     return render(request, 'administrativo/cardapio_semana.html', ctx)
 
@@ -224,6 +224,13 @@ def lista_presenca(request):
 @perfil_required('refeitorio')
 def chamada(request, refeicao_id):
     refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
+
+    if not pode_acessar_lista_chamada(refeicao):
+        messages.warning(
+            request,
+            'A lista de chamada não está disponível fora do horário da refeição.',
+        )
+        return redirect('administrativo:painel_refeitorio')
 
     reservas_qs = (
         Reserva.objects.filter(refeicao=refeicao)
@@ -259,7 +266,8 @@ def chamada(request, refeicao_id):
                 pendentes_encerrar += 1
 
     tipo_cfg = TipoRefeicao.objects.filter(nome=refeicao.tipo).first()
-    horario = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+    horario_inicio = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+    horario_fim = tipo_cfg.horario_fim_consumo if tipo_cfg else None
     tem_strikes = Strike.objects.filter(presenca__reserva__refeicao=refeicao).exists()
 
     return render(request, 'refeicoes/lista-presenca.html', {
@@ -270,7 +278,8 @@ def chamada(request, refeicao_id):
         'total_elegiveis': total_elegiveis,
         'pendentes_encerrar': pendentes_encerrar,
         'status_chamada': status_chamada_refeicao(refeicao),
-        'horario': horario,
+        'horario_inicio': horario_inicio,
+        'horario_fim': horario_fim,
         'tem_strikes': tem_strikes,
     })
 

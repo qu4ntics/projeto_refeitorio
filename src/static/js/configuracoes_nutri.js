@@ -125,6 +125,8 @@ function initRefeicoesForm() {
 
       const inputAbertura = box.querySelector('input[name^="abertura_"]');
       const inputFechamento = box.querySelector('input[name^="encerramento_"]');
+      const inputInicioConsumo = box.querySelector('input[name^="horario_consumo_"]');
+      const inputFimConsumo = box.querySelector('input[name^="horario_fim_consumo_"]');
       const errorSpan = box.querySelector('.msg-erro-inline');
 
       box.classList.remove('has-error');
@@ -141,6 +143,17 @@ function initRefeicoesForm() {
         temErro = true;
         box.classList.add('has-error');
         if (errorSpan) errorSpan.textContent = 'O horário de fechamento não pode ser idêntico ao de abertura.';
+        return;
+      }
+
+      if (
+        inputInicioConsumo && inputFimConsumo
+        && inputInicioConsumo.value && inputFimConsumo.value
+        && inputFimConsumo.value <= inputInicioConsumo.value
+      ) {
+        temErro = true;
+        box.classList.add('has-error');
+        if (errorSpan) errorSpan.textContent = 'O término da refeição deve ser posterior ao início.';
       }
     });
 

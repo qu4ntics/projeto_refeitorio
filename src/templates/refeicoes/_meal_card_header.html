@@ -1,0 +1,6 @@
+<header class="meal-card__header">
+  <span class="meal-card__tipo">{{ refeicao.get_tipo_display }}</span>
+  {% if not refeicao.exige_reserva %}
+    <span class="meal-card__tag">Informativa</span>
+  {% endif %}
+</header>

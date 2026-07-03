@@ -67,7 +67,15 @@
                     {% for item in refeicoes_painel %}
                     <tr>
                         <td>{{ item.refeicao.get_tipo_display }}</td>
-                        <td>{% if item.horario %}{{ item.horario|time:"H:i" }}{% else %}—{% endif %}</td>
+                        <td>
+                          {% if item.horario_inicio and item.horario_fim %}
+                            {{ item.horario_inicio|time:"H:i" }}–{{ item.horario_fim|time:"H:i" }}
+                          {% elif item.horario_inicio %}
+                            {{ item.horario_inicio|time:"H:i" }}
+                          {% else %}
+                            —
+                          {% endif %}
+                        </td>
                         <td>{{ item.total_reservas }}</td>
                         <td>{{ item.presentes }}</td>
                         <td>
@@ -75,6 +83,10 @@
                                 <span class="badge-status encerrada">Encerrada</span>
                             {% elif item.status == 'em_andamento' %}
                                 <span class="badge-status andamento">Em andamento</span>
+                            {% elif item.fase_periodo == 'antes' %}
+                                <span class="badge-status fechada">Aguardando horário</span>
+                            {% elif item.fase_periodo == 'depois' %}
+                                <span class="badge-status fechada">Horário encerrado</span>
                             {% else %}
                                 <span class="badge-status fechada">Fechada</span>
                             {% endif %}
@@ -84,14 +96,27 @@
                                 <a href="{% url 'refeicoes:chamada_resumo' item.refeicao.id %}" class="btn-acao secundario">Ver resumo</a>
                                 <form method="POST" action="{% url 'administrativo:reabrir_chamada' item.refeicao.id %}" class="form-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-acao outline" data-loading-text="Reabrindo..." title="Strikes não serão removidos">Reabrir</button>
+                                    <button type="submit" class="btn-acao outline" data-loading-text="Reabrindo..."
+                                            {% if not item.pode_reabrir %}disabled title="Só é possível reabrir no dia da refeição"{% else %}title="Strikes não serão removidos"{% endif %}>Reabrir</button>
                                 </form>
                             {% elif item.status == 'em_andamento' %}
                                 <a href="{% url 'refeicoes:chamada' item.refeicao.id %}" class="btn-acao primario">Continuar chamada</a>
                             {% else %}
                                 <form method="POST" action="{% url 'administrativo:abrir_chamada' item.refeicao.id %}" class="form-inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-acao primario" data-loading-text="Abrindo..." {% if item.total_reservas == 0 %}disabled title="Sem reservas"{% endif %}>Abrir chamada</button>
+                                    <button type="submit" class="btn-acao primario" data-loading-text="Abrindo..."
+                                            {% if not item.pode_abrir %}
+                                              disabled
+                                              {% if item.total_reservas == 0 %}
+                                                title="Sem reservas"
+                                              {% elif item.fase_periodo == 'antes' and item.horario_inicio %}
+                                                title="Disponível às {{ item.horario_inicio|time:'H:i' }}"
+                                              {% elif item.fase_periodo == 'depois' %}
+                                                title="Horário da refeição encerrado"
+                                              {% else %}
+                                                title="Horário não configurado"
+                                              {% endif %}
+                                            {% endif %}>Abrir chamada</button>
                                 </form>
                             {% endif %}
                         </td>

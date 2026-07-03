@@ -29,20 +29,23 @@ from .services.chamada import (
     reabrir_chamada,
     status_chamada_refeicao,
 )
-from .services.dashboard_nutri import metricas_painel, preparar_dias_semana_painel
+from .services.horarios_refeicao import (
+    fase_periodo_consumo,
+    pode_abrir_chamada,
+    pode_reabrir_chamada,
+)
 
 
 @login_required
 @perfil_required('nutricionista')
 def painel_nutricionista(request):
-    """Painel principal da nutricionista com navegação de semanas unificada."""
-    ctx = _preparar_contexto_semana(request, request.GET.get('data'))
+    """Painel principal da nutricionista com refeições do dia atual."""
+    ctx = _preparar_contexto_semana(request, None)
     dias_semana = preparar_dias_semana_painel(ctx['dias_semana'])
-    tab_inicial = next((d['id'] for d in dias_semana if d['hoje']), dias_semana[0]['id'])
+    dia_hoje = next((d for d in dias_semana if d['hoje']), None)
     ctx.update({
-        'dias_semana': dias_semana,
-        'tab_inicial': tab_inicial,
-        'metricas': metricas_painel(),
+        'dia_hoje': dia_hoje,
+        'metricas': metricas_painel(usuario=request.user),
     })
     return render(request, 'administrativo/painel_nutricionista.html', ctx)
 
@@ -71,11 +74,19 @@ def painel_refeitorio(request):
 
     for refeicao in refeicoes_hoje:
         tipo_cfg = tipos_por_nome.get(refeicao.tipo)
-        horario = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+        horario_inicio = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
+        horario_fim = tipo_cfg.horario_fim_consumo if tipo_cfg else None
+        status = status_chamada_refeicao(refeicao)
+        fase = fase_periodo_consumo(refeicao)
+        pode_abrir, _ = pode_abrir_chamada(refeicao)
         refeicoes_painel.append({
             'refeicao': refeicao,
-            'horario': horario,
-            'status': status_chamada_refeicao(refeicao),
+            'horario_inicio': horario_inicio,
+            'horario_fim': horario_fim,
+            'status': status,
+            'fase_periodo': fase,
+            'pode_abrir': pode_abrir and refeicao.total_reservas > 0,
+            'pode_reabrir': pode_reabrir_chamada(refeicao),
             'total_reservas': refeicao.total_reservas,
             'presentes': refeicao.presentes,
             'tem_strikes': Strike.objects.filter(
@@ -237,6 +248,10 @@ def _dados_janelas_configuracao():
                 tipo.horario_inicio_consumo.strftime('%H:%M')
                 if tipo.horario_inicio_consumo else '12:00'
             ),
+            'horario_fim_consumo': (
+                tipo.horario_fim_consumo.strftime('%H:%M')
+                if tipo.horario_fim_consumo else '13:30'
+            ),
         })
     return dados_janelas
 
@@ -313,19 +328,55 @@ def _salvar_config_refeicoes(request):
         tipo.ativo = ativo
 
         horario_consumo_str = request.POST.get(f'horario_consumo_{tipo.id}')
+        horario_fim_str = request.POST.get(f'horario_fim_consumo_{tipo.id}')
+        novo_inicio = tipo.horario_inicio_consumo
+        novo_fim = tipo.horario_fim_consumo
+        consumo_valido = True
+
         if horario_consumo_str:
             try:
-                tipo.horario_inicio_consumo = datetime.strptime(
+                novo_inicio = datetime.strptime(
                     horario_consumo_str, '%H:%M'
                 ).time()
             except ValueError:
+                consumo_valido = False
                 erros_detectados = True
                 messages.error(
                     request,
-                    f'Horário de consumo inválido para {label_tipo_refeicao(tipo.nome)}.',
+                    f'Horário de início inválido para {label_tipo_refeicao(tipo.nome)}.',
+                )
+        if horario_fim_str:
+            try:
+                novo_fim = datetime.strptime(
+                    horario_fim_str, '%H:%M'
+                ).time()
+            except ValueError:
+                consumo_valido = False
+                erros_detectados = True
+                messages.error(
+                    request,
+                    f'Horário de término inválido para {label_tipo_refeicao(tipo.nome)}.',
                 )
 
-        tipo.save(update_fields=['ativo', 'horario_inicio_consumo'])
+        if (
+            consumo_valido
+            and novo_inicio
+            and novo_fim
+            and novo_fim <= novo_inicio
+        ):
+            consumo_valido = False
+            erros_detectados = True
+            messages.error(
+                request,
+                f'O término deve ser posterior ao início em {label_tipo_refeicao(tipo.nome)}.',
+            )
+
+        update_fields = ['ativo']
+        if consumo_valido:
+            tipo.horario_inicio_consumo = novo_inicio
+            tipo.horario_fim_consumo = novo_fim
+            update_fields.extend(['horario_inicio_consumo', 'horario_fim_consumo'])
+        tipo.save(update_fields=update_fields)
 
         if not ativo:
             continue

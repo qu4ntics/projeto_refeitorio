@@ -4,7 +4,7 @@
 {% block title %}{{ turma.nome }} — ReservaIF{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=3">
 {% endblock %}
 
 {% block content %}
@@ -59,18 +59,13 @@
       </div>
     </div>
     <div class="turma-contraturno">
-      <div class="contraturno-cabecalho">
-        <span class="contraturno-label">Dias de contraturno</span>
-        <span class="contraturno-salvando" id="contraturno-salvando" hidden>
-          <i class="fa-solid fa-circle-notch fa-spin"></i> Salvando...
-        </span>
-      </div>
-      <div class="dias-contraturno-grid" id="dias-contraturno-grid">
+      <span class="contraturno-label">Dias de contraturno</span>
+      <div class="dias-contraturno-grid dias-contraturno-grid--readonly" aria-label="Dias de contraturno da turma">
         {% for dia in dias_semana %}
-        <label class="dia-checkbox">
-          <input type="checkbox" value="{{ dia.valor }}" {% if dia.valor in dias_contraturno_set %}checked{% endif %}>
-          <span class="dia-checkbox-label" title="{{ dia.label }}">{{ dia.curto }}</span>
-        </label>
+        <span
+          class="dia-badge{% if dia.valor in dias_contraturno_set %} dia-badge--ativo{% endif %}"
+          title="{{ dia.label }}"
+        >{{ dia.curto }}</span>
         {% endfor %}
       </div>
     </div>
@@ -167,5 +162,5 @@
   const TURMA_NOME = "{{ turma.nome|escapejs }}";
   const TURMA_TOTAL_ALUNOS = {{ total_alunos }};
 </script>
-<script src="{% static 'js/alunos.js' %}?v=2"></script>
+<script src="{% static 'js/alunos.js' %}?v=3"></script>
 {% endblock %}

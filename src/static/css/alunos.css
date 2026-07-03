@@ -129,32 +129,41 @@
   color: var(--text-light);
 }
 
-.contraturno-cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
 .contraturno-label {
+  display: block;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
+  margin-bottom: 10px;
 }
 
-.contraturno-salvando {
-  font-size: 12px;
-  color: var(--text-light);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dias-contraturno-grid {
+.dias-contraturno-grid--readonly {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.dia-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: default;
+  user-select: none;
+}
+
+.dia-badge--ativo {
+  background: rgba(0, 176, 91, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .dia-checkbox {

@@ -1,23 +1,23 @@
 /* Estrutura Geral */
 .container-refeitorio {
     padding: 20px;
-    background: #fff;
+    background: var(--bg-card);
     border-radius: 8px;
     margin: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
 }
 
 .lista-presenca-header {
     margin-bottom: 25px;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border);
     padding-bottom: 15px;
 }
 
 .lista-presenca-header h2 {
     margin: 0;
-    color: #333;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--text-primary);
 }
 
 /* Filtros */
@@ -33,15 +33,17 @@
 
 .input-data, .busca-grupo input[type="text"] {
     padding: 10px 15px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 14px;
     outline: none;
+    background: var(--bg);
+    color: var(--text-primary);
 }
 
 .btn-filtrar {
     background-color: var(--accent);
-    color: var(--primary);
+    color: var(--bg-card);
     border: none;
     padding: 10px 20px;
     border-radius: 6px;
@@ -74,12 +76,16 @@
 }
 
 /* Tabela e Status Solicitados */
+.tabela {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
 .tabela table {
     width: 100%;
     border-collapse: collapse;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
 }
 
 .tabela th, .tabela td {
@@ -89,7 +95,7 @@
 }
 
 .tabela th {
-    background-color: #f9fbf9; /* Fundo verde quase imperceptível */
+    background: color-mix(in srgb, var(--border) 40%, var(--bg-card));
     color: var(--accent);
     font-weight: 800;
     text-transform: uppercase;
@@ -98,29 +104,37 @@
     border-top: 2px solid var(--accent);
 }
 
+.tabela td {
+    color: var(--text-primary);
+}
+
+.tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
 .tabela tbody tr:hover {
-    background-color: #fcfcfc;
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
 }
 
 /* Estilo para reserva concluída (presença marcada) */
 .tabela tr.status-concluida,
 .tabela tr:has(.check-presenca:checked) {
-    background-color: #eafaf1 !important; /* Verde suave para indicar sucesso */
+    background-color: color-mix(in srgb, var(--success) 15%, var(--bg-card)) !important;
     transition: background-color 0.3s ease;
 }
 
 .tabela tr.status-concluida td,
 .tabela tr:has(.check-presenca:checked) td {
-    color: #1b5e20;
+    color: var(--text-primary);
 }
 
 /* Estilo para reserva cancelada */
 .status-cancelada {
-    background-color: #fcfcfc;
+    background-color: color-mix(in srgb, var(--text-light) 12%, var(--bg-card));
 }
 
 .status-cancelada td {
-    color: #a0a0a0;
+    color: var(--text-secondary);
     font-style: italic;
 }
 
@@ -135,9 +149,9 @@
 }
 
 .badge-status.cancelado {
-    background-color: #ffe5e5;
-    color: #d9534f;
-    border: 1px solid #ffcccc;
+    background: color-mix(in srgb, var(--danger) 18%, var(--bg-card));
+    color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
 }
 
 .check {
@@ -152,7 +166,7 @@
 
 .vazia {
     text-align: center;
-    color: #999;
+    color: var(--text-secondary);
     padding: 40px !important;
 }
 
@@ -218,8 +232,8 @@
 }
 
 .btn-salvar-presenca {
-    background-color: var(--primary);
-    color: white;
+    background-color: var(--accent);
+    color: var(--bg-card);
     border: none;
     padding: 14px 32px;
     border-radius: 8px;
@@ -231,12 +245,19 @@
     gap: 10px;
     transition: all 0.2s ease;
     box-shadow: var(--shadow);
+    text-decoration: none;
 }
 
 .btn-salvar-presenca:hover {
-    background-color: var(--accent);
-    color: var(--primary);
+    background-color: var(--accent-hover);
+    color: var(--bg-card);
     transform: translateY(-2px);
+}
+
+.btn-salvar-presenca:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* Estilos para o Toast */
@@ -304,18 +325,18 @@
 }
 
 .voltar-painel:hover {
-    color: var(--primary);
+    color: var(--accent);
 }
 
 .horario-refeicao {
     font-size: 0.85em;
-    color: var(--text-light);
+    color: var(--text-secondary);
     font-weight: 500;
     margin-left: 8px;
 }
 
 .contador-presenca {
-    background: color-mix(in srgb, var(--accent) 12%, white);
+    background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 12px 20px;
@@ -325,7 +346,7 @@
 .contador-valor {
     font-size: 2rem;
     font-weight: 800;
-    color: var(--primary);
+    color: var(--text-primary);
 }
 
 .contador-sep, .contador-total {
@@ -352,13 +373,13 @@
 }
 
 .badge-finalizado {
-    background: #eee;
-    color: #666;
+    background: color-mix(in srgb, var(--text-light) 20%, var(--bg-card));
+    color: var(--text-secondary);
 }
 
 .badge-andamento {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: color-mix(in srgb, var(--success) 20%, var(--bg-card));
+    color: var(--success);
 }
 
 .aviso-strikes {
@@ -368,32 +389,32 @@
 }
 
 .badge-status.presente {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+    background: color-mix(in srgb, var(--success) 20%, var(--bg-card));
+    color: var(--success);
 }
 
 .badge-status.pendente {
-    background-color: #fff8e1;
-    color: #f57f17;
+    background: color-mix(in srgb, var(--warning) 22%, var(--bg-card));
+    color: var(--warning);
 }
 
 .badge-status.ausente {
-    background-color: #ffebee;
-    color: #c62828;
+    background: color-mix(in srgb, var(--danger) 18%, var(--bg-card));
+    color: var(--danger);
 }
 
 .tabela tr.status-presente,
 .tabela tr.status-concluida,
 .tabela tr:has(.check-presenca:checked) {
-    background-color: #eafaf1 !important;
+    background-color: color-mix(in srgb, var(--success) 15%, var(--bg-card)) !important;
 }
 
 .tabela tr.status-pendente {
-    background-color: #fffef5;
+    background-color: color-mix(in srgb, var(--warning) 8%, var(--bg-card));
 }
 
 .tabela tr.status-ausente {
-    background-color: #fff5f5 !important;
+    background-color: color-mix(in srgb, var(--danger) 10%, var(--bg-card)) !important;
 }
 
 .lista-presenca-acoes {
@@ -426,16 +447,23 @@
 }
 
 .modal-conteudo {
-    background: white;
+    background: var(--bg-card);
+    color: var(--text-primary);
     border-radius: 12px;
     padding: 28px;
     max-width: 440px;
     width: 90%;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-hover);
+    border: 1px solid var(--border);
 }
 
 .modal-conteudo h3 {
     margin: 0 0 12px;
+    color: var(--text-primary);
+}
+
+.modal-conteudo p {
+    color: var(--text-secondary);
 }
 
 .modal-acoes {
@@ -454,7 +482,8 @@
 }
 
 .btn-modal-cancelar {
-    background: #eee;
+    background: color-mix(in srgb, var(--border) 50%, var(--bg-card));
+    color: var(--text-primary);
 }
 
 .btn-modal-confirmar {
@@ -477,26 +506,56 @@
     border: 1px solid var(--border);
 }
 
-.resumo-card.presente { background: #e8f5e9; }
-.resumo-card.ausente { background: #ffebee; }
-.resumo-card.strike { background: #fff3e0; }
+.resumo-card.presente {
+    background: color-mix(in srgb, var(--success) 18%, var(--bg-card));
+}
+
+.resumo-card.ausente {
+    background: color-mix(in srgb, var(--danger) 15%, var(--bg-card));
+}
+
+.resumo-card.strike {
+    background: color-mix(in srgb, var(--warning) 18%, var(--bg-card));
+}
 
 .resumo-numero {
     display: block;
     font-size: 2.2rem;
     font-weight: 800;
+    color: var(--text-primary);
 }
 
 .resumo-label {
     font-size: 12px;
     text-transform: uppercase;
     font-weight: 600;
+    color: var(--text-secondary);
 }
 
 .resumo-secoes {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
+}
+
+.resumo-chamada h3,
+.resumo-secoes section h3 {
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.alerta-bloqueio h3 {
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.alerta-bloqueio ul {
+    color: var(--text-secondary);
+    padding-left: 1.2rem;
+}
+
+.text-muted {
+    color: var(--text-secondary);
 }
 
 .lista-resumo {
@@ -508,11 +567,12 @@
 .lista-resumo li {
     padding: 8px 0;
     border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
 }
 
 .tag-strike {
-    background: #ffcdd2;
-    color: #b71c1c;
+    background: color-mix(in srgb, var(--danger) 22%, var(--bg-card));
+    color: var(--danger);
     font-size: 10px;
     padding: 2px 8px;
     border-radius: 10px;
@@ -520,15 +580,16 @@
 }
 
 .alerta-bloqueio {
-    background: #ffebee;
-    border: 1px solid #ef9a9a;
+    background: color-mix(in srgb, var(--danger) 12%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 24px;
+    color: var(--text-primary);
 }
 
 .vazio-resumo {
-    color: #999;
+    color: var(--text-secondary);
     font-style: italic;
 }
 

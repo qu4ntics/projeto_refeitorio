@@ -76,9 +76,18 @@
             <div class="refeicao-horarios" data-horarios>
               <div class="nova-refeicao-linha">
                 <div class="campo-grupo">
-                  <label for="id_horario_consumo_{{ item.id }}">Horário da Refeição</label>
+                  <label for="id_horario_consumo_{{ item.id }}">Início da refeição</label>
                   <input type="time" name="horario_consumo_{{ item.id }}" id="id_horario_consumo_{{ item.id }}" class="campo" value="{{ item.horario_consumo }}">
                 </div>
+
+                <div class="campo-grupo">
+                  <label for="id_horario_fim_consumo_{{ item.id }}">Término da refeição</label>
+                  <input type="time" name="horario_fim_consumo_{{ item.id }}" id="id_horario_fim_consumo_{{ item.id }}" class="campo" value="{{ item.horario_fim_consumo }}">
+                </div>
+              </div>
+
+              <div class="nova-refeicao-janela status-janela status-janela--consumo">
+                <p>O refeitório só pode abrir a chamada entre o início e o término da refeição.</p>
               </div>
 
               <div class="nova-refeicao-linha">

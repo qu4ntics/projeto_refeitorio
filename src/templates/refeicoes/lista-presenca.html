@@ -16,7 +16,11 @@
             <div>
                 <a href="{% url 'administrativo:painel_refeitorio' %}" class="voltar-painel"><i class="bi bi-arrow-left"></i> Painel</a>
                 <h2>{{ refeicao.get_tipo_display }} — {{ refeicao.data|date:"d/m/Y" }}
-                    {% if horario %}<span class="horario-refeicao">{{ horario|time:"H:i" }}</span>{% endif %}
+                    {% if horario_inicio and horario_fim %}
+                      <span class="horario-refeicao">{{ horario_inicio|time:"H:i" }}–{{ horario_fim|time:"H:i" }}</span>
+                    {% elif horario_inicio %}
+                      <span class="horario-refeicao">{{ horario_inicio|time:"H:i" }}</span>
+                    {% endif %}
                 </h2>
             </div>
             <div class="contador-presenca">

@@ -1,8 +1,118 @@
-.painel-nutri .cards-topo {
+.painel-nutri {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.painel-nutri .painel-header {
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.painel-nutri .painel-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.painel-nutri .painel-header .page-date {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .secao-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.painel-nutri .secao-titulo {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.painel-nutri .secao-subtitulo {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .painel-resumo-hoje {
+  margin-bottom: 32px;
+}
+
+.painel-nutri .painel-alertas {
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, #f0ad4e 12%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, #f0ad4e 35%, var(--border));
+  border-radius: 12px;
+}
+
+.painel-nutri .painel-alertas__lista {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.painel-nutri .painel-alertas__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.painel-nutri .painel-alertas__item i {
+  color: #f0ad4e;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.painel-nutri .painel-alertas__item a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.painel-nutri .cards-resumo-hoje {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  margin-bottom: 30px;
+}
+
+.painel-nutri .card-metrica--link {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.painel-nutri .card-metrica--link:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  transform: translateY(-1px);
+}
+
+.painel-nutri .painel-indicadores {
+  margin-bottom: 32px;
+}
+
+.painel-nutri .cards-topo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
 }
 
 .painel-nutri .card-metrica {
@@ -49,6 +159,31 @@
   background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+.painel-nutri .card-metrica__icon--reservas {
+  color: #2f6fed;
+  background: color-mix(in srgb, #2f6fed 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--ocupacao {
+  color: #6f42c1;
+  background: color-mix(in srgb, #6f42c1 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--cancelamento {
+  color: #d9534f;
+  background: color-mix(in srgb, #d9534f 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--bloqueio {
+  color: #c0392b;
+  background: color-mix(in srgb, #c0392b 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--pratos-mais {
+  color: #e6a817;
+  background: color-mix(in srgb, #f5e5a1 60%, transparent);
+}
+
 .painel-nutri .card-metrica__info {
   display: flex;
   flex-direction: column;
@@ -93,18 +228,7 @@
   line-height: 1.35;
 }
 
-.painel-nutri .secao-refeicoes {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-
-.painel-nutri .lado-esquerdo {
-  flex: 1;
-  min-width: 0;
-}
-
-.painel-nutri .painel-semana {
+.painel-nutri .painel-refeicoes-hoje {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -112,53 +236,7 @@
   box-shadow: var(--shadow);
 }
 
-.painel-nutri .painel-semana__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.painel-nutri .painel-semana__titulo h2 {
-  margin: 0 0 4px;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  color: var(--text-primary);
-  text-transform: uppercase;
-}
-
-.painel-nutri .painel-semana__titulo .page-date {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-}
-
-.painel-nutri .painel-semana__nav {
-  flex-shrink: 0;
-}
-
-.painel-nutri .painel-semana__nav .btn-navegacao {
-  padding: 8px 12px;
-}
-
-.painel-nutri .painel-semana__nav .btn-hoje {
-  padding: 8px 14px;
-}
-
-.painel-nutri .painel-semana__tabs {
-  margin-bottom: 1.25rem;
-}
-
-.painel-nutri .painel-semana__panel .day-label {
-  margin-bottom: 0.85rem;
-}
-
-.painel-nutri .painel-semana__cards {
+.painel-nutri .painel-refeicoes__cards {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -166,36 +244,37 @@
 
 .painel-nutri .meal-card--painel {
   margin-bottom: 0;
+  padding: 0;
+}
+
+.painel-nutri .meal-card--painel .meal-card__body {
   padding: 14px 16px;
 }
 
-.painel-nutri .meal-card--painel .meal-title {
-  font-size: 0.95rem;
-  line-height: 1.4;
-  margin-top: 0.35rem;
+.painel-nutri .meal-card--painel .meal-menu {
+  margin-bottom: 0.75rem;
 }
 
-.painel-nutri .meal-card-painel__editar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+.painel-nutri .meal-card--painel .meal-footer {
+  margin-top: 0;
+}
+
+.painel-nutri .painel-vazio {
+  padding: 2.5rem 1rem;
+  text-align: center;
   color: var(--text-secondary);
-  text-decoration: none;
-  transition: background 0.15s, color 0.15s;
 }
 
-.painel-nutri .meal-card-painel__editar:hover {
-  background: color-mix(in srgb, #2f6fed 12%, transparent);
-  border-color: #2f6fed;
-  color: #2f6fed;
+.painel-nutri .painel-vazio i {
+  display: block;
+  font-size: 1.75rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
 }
 
-.painel-nutri .day-empty--compact {
-  padding: 2rem 1rem;
+.painel-nutri .painel-vazio p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .painel-nutri .btn-adicionar {
@@ -210,102 +289,8 @@
   flex-shrink: 0;
 }
 
-.painel-nutri .painel-direito {
-  width: 300px;
-  min-height: 420px;
-  padding: 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-}
-
-.painel-nutri .painel-direito__titulo {
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  margin: 0 0 4px;
-}
-
-.painel-nutri .painel-direito__data {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin: 0 0 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.painel-nutri .painel-direito__vazio {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.painel-nutri .lista-refeicoes-hoje {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.painel-nutri .item-refeicao-hoje {
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.painel-nutri .item-refeicao-hoje:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.painel-nutri .item-refeicao-hoje__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.painel-nutri .item-refeicao-hoje__horario {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.painel-nutri .item-refeicao-hoje__desc {
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  margin: 0 0 6px;
-  line-height: 1.4;
-}
-
-.painel-nutri .item-refeicao-hoje__meta {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin: 0 0 8px;
-}
-
-.painel-nutri .item-refeicao-hoje__link {
-  font-size: 0.8rem;
-  color: #2f6fed;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.painel-nutri .item-refeicao-hoje__link:hover {
-  text-decoration: underline;
-}
-
-.painel-nutri .tag-refeicao {
-  background: #f5e5a1;
-  color: #8a6c00;
-  border: 1px solid #c7a83c;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+.painel-nutri .btn-adicionar:hover {
+  filter: brightness(1.05);
 }
 
 .meal-info .meta-sep {
@@ -313,12 +298,17 @@
 }
 
 @media (max-width: 1200px) {
-  .painel-nutri .cards-topo {
+  .painel-nutri .cards-resumo-hoje {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 960px) {
+  .painel-nutri .cards-resumo-hoje {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   .painel-nutri .cards-topo {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -328,26 +318,12 @@
     min-height: unset;
   }
 
-  .painel-nutri .secao-refeicoes {
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .painel-nutri .painel-semana__toolbar {
+  .painel-nutri .secao-cabecalho {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .painel-nutri .painel-semana__nav {
-    align-self: center;
-  }
-
   .painel-nutri .btn-adicionar {
     text-align: center;
-  }
-
-  .painel-nutri .painel-direito {
-    width: 100%;
-    min-height: unset;
   }
 }

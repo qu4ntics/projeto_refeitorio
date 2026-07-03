@@ -5,7 +5,8 @@ from django.db.models import Count, Q
 from django.db.models.functions import ExtractWeekDay
 from django.utils import timezone
 
-from administrativo.models import Presenca, TipoRefeicao
+from accounts.models import Usuario
+from administrativo.models import Notificacao, Presenca, Strike, TipoRefeicao
 from refeicoes.models import Refeicao, RefeicaoPrato
 from reservas.models import Reserva
 
@@ -20,6 +21,9 @@ DIAS_SEMANA = {
 }
 
 RESERVAS_VALIDAS = Q(status__in=['ativa', 'concluida'])
+RESERVAS_ATIVAS = Q(status='ativa')
+RESERVAS_VALIDAS_AGG = Q(reservas__status__in=['ativa', 'concluida'])
+RESERVAS_ATIVAS_AGG = Q(reservas__status='ativa')
 
 
 def _periodo(inicio_dias=30):
@@ -97,7 +101,7 @@ def calcular_dia_pico_almoco(periodo_dias=30):
     }
 
 
-def calcular_pratos_menos_populares(periodo_dias=30, limite=3, min_ocorrencias=2):
+def _ranking_pratos_almoco(periodo_dias=30, limite=3, min_ocorrencias=2, reverse=False):
     inicio, fim = _periodo(periodo_dias)
     refeicoes = _refeicoes_encerradas_periodo(inicio, fim).filter(tipo='almoco')
 
@@ -127,7 +131,7 @@ def calcular_pratos_menos_populares(periodo_dias=30, limite=3, min_ocorrencias=2
             media = sum(data['reservas']) / len(data['reservas'])
             rankings.append((media, data['nome']))
 
-    rankings.sort(key=lambda item: item[0])
+    rankings.sort(key=lambda item: item[0], reverse=reverse)
     nomes = [nome for _, nome in rankings[:limite]]
 
     return {
@@ -135,6 +139,24 @@ def calcular_pratos_menos_populares(periodo_dias=30, limite=3, min_ocorrencias=2
         'nomes': nomes,
         'texto': ', '.join(nomes) if nomes else '',
     }
+
+
+def calcular_pratos_menos_populares(periodo_dias=30, limite=3, min_ocorrencias=2):
+    return _ranking_pratos_almoco(
+        periodo_dias=periodo_dias,
+        limite=limite,
+        min_ocorrencias=min_ocorrencias,
+        reverse=False,
+    )
+
+
+def calcular_pratos_mais_populares(periodo_dias=30, limite=3, min_ocorrencias=2):
+    return _ranking_pratos_almoco(
+        periodo_dias=periodo_dias,
+        limite=limite,
+        min_ocorrencias=min_ocorrencias,
+        reverse=True,
+    )
 
 
 def calcular_taxa_comparecimento(periodo_dias=30):
@@ -229,12 +251,124 @@ def listar_refeicoes_hoje():
     return itens
 
 
-def metricas_painel(periodo_dias=30):
+def calcular_resumo_hoje():
+    """Totais operacionais das refeições com reserva cadastradas para hoje."""
+    hoje = timezone.localdate()
+    refeicoes = list(
+        Refeicao.objects.filter(data=hoje, exige_reserva=True).annotate(
+            total_reservas=Count('reservas', filter=RESERVAS_VALIDAS_AGG),
+            reservas_ativas=Count('reservas', filter=RESERVAS_ATIVAS_AGG),
+        )
+    )
+
+    total_reservas = sum(r.total_reservas for r in refeicoes)
+    total_vagas = sum(r.limite_vagas for r in refeicoes)
+    lotadas = sum(
+        1 for r in refeicoes
+        if r.limite_vagas > 0 and r.reservas_ativas >= r.limite_vagas
+    )
+
+    cancelamentos = Reserva.objects.filter(
+        status='cancelada',
+        cancelado_em__date=hoje,
+    ).count()
+
+    taxa_ocupacao = round(100 * total_reservas / total_vagas) if total_vagas else None
+
+    return {
+        'disponivel': bool(refeicoes),
+        'total_reservas': total_reservas,
+        'total_vagas': total_vagas,
+        'taxa_ocupacao': taxa_ocupacao,
+        'cancelamentos': cancelamentos,
+        'refeicoes_lotadas': lotadas,
+        'qtd_refeicoes': len(refeicoes),
+    }
+
+
+def calcular_disciplina(periodo_dias=30):
+    inicio, _ = _periodo(periodo_dias)
+    bloqueados = Usuario.objects.filter(perfil='aluno', bloqueado=True).count()
+    strikes_periodo = Strike.objects.filter(aplicado_em__date__gte=inicio).count()
+    return {
+        'bloqueados': bloqueados,
+        'strikes_periodo': strikes_periodo,
+    }
+
+
+def _label_tipo_refeicao(codigo):
+    return dict(Refeicao.TIPOS).get(codigo, codigo)
+
+
+def listar_alertas(usuario=None):
+    hoje = timezone.localdate()
+    amanha = hoje + timedelta(days=1)
+    alertas = []
+
+    if usuario:
+        nao_lidas = Notificacao.objects.filter(usuario=usuario, lida=False).count()
+        if nao_lidas:
+            alertas.append({
+                'tipo': 'notificacao',
+                'texto': (
+                    f'{nao_lidas} notificação não lida'
+                    if nao_lidas == 1
+                    else f'{nao_lidas} notificações não lidas'
+                ),
+            })
+
+    tipos_ativos = set(TipoRefeicao.objects.filter(ativo=True).values_list('nome', flat=True))
+    tipos_por_data = {
+        hoje: set(Refeicao.objects.filter(data=hoje).values_list('tipo', flat=True)),
+        amanha: set(Refeicao.objects.filter(data=amanha).values_list('tipo', flat=True)),
+    }
+
+    for data, rotulo in ((hoje, 'hoje'), (amanha, 'amanhã')):
+        faltando = tipos_ativos - tipos_por_data[data]
+        for tipo in sorted(faltando, key=lambda t: ORDEM_TIPOS.index(t) if t in ORDEM_TIPOS else 99):
+            alertas.append({
+                'tipo': 'falta_refeicao',
+                'texto': f'Nenhuma refeição de {_label_tipo_refeicao(tipo)} cadastrada para {rotulo}',
+                'url_name': 'refeicoes:cardapio_semana',
+            })
+
+    refeicoes_hoje = (
+        Refeicao.objects.filter(data=hoje, exige_reserva=True)
+        .annotate(
+            num_pratos=Count('itens_prato', distinct=True),
+            reservas_ativas=Count('reservas', filter=RESERVAS_ATIVAS_AGG),
+        )
+    )
+    for refeicao in refeicoes_hoje:
+        label = refeicao.get_tipo_display()
+        if refeicao.num_pratos == 0:
+            alertas.append({
+                'tipo': 'cardapio',
+                'texto': f'{label} de hoje sem pratos no cardápio',
+                'url_name': 'refeicoes:nutricionista_editar',
+                'url_args': [refeicao.pk],
+            })
+        if refeicao.limite_vagas > 0 and refeicao.reservas_ativas >= refeicao.limite_vagas:
+            alertas.append({
+                'tipo': 'lotada',
+                'texto': f'{label} de hoje com vagas esgotadas',
+                'url_name': 'refeicoes:nutricionista_editar',
+                'url_args': [refeicao.pk],
+            })
+
+    return alertas
+
+
+def metricas_painel(periodo_dias=30, usuario=None):
     return {
         'periodo_dias': periodo_dias,
+        'resumo_hoje': calcular_resumo_hoje(),
+        'disciplina': calcular_disciplina(periodo_dias),
+        'alertas': listar_alertas(usuario),
         'ausencias': calcular_ausencias(periodo_dias),
         'dia_pico': calcular_dia_pico_almoco(periodo_dias),
         'pratos_menos_populares': calcular_pratos_menos_populares(periodo_dias),
+        'pratos_mais_populares': calcular_pratos_mais_populares(periodo_dias),
         'comparecimento': calcular_taxa_comparecimento(periodo_dias),
         'refeicoes_hoje': listar_refeicoes_hoje(),
     }

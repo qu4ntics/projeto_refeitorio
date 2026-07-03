@@ -1,14 +1,8 @@
 <div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}">
-  <div class="badges">
-    <div class="badge yellow">{{ refeicao.get_tipo_display }}</div>
-    {% if refeicao.exige_reserva %}
-      <div class="badge green">{{ refeicao.vagas_display }}</div>
-    {% else %}
-      <div class="badge gray">Informativa</div>
-    {% endif %}
-  </div>
+  {% include "refeicoes/_meal_card_header.html" with refeicao=refeicao %}
 
-  <div class="meal-title">{% firstof refeicao.descricao_exibicao "(sem descrição)" %}</div>
+  <div class="meal-card__body">
+  {% include "refeicoes/_meal_cardapio.html" with refeicao=refeicao %}
 
   {% if refeicao.pre_reserva %}
     <div class="pre-reserva-banner">
@@ -80,5 +74,6 @@
       {% endif %}
       {% endif %}
     {% endif %}
+  </div>
   </div>
 </div>

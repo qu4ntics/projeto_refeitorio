@@ -4,6 +4,8 @@ from django.db import transaction
 from administrativo.models import Presenca, Strike
 from reservas.models import Reserva
 
+from .horarios_refeicao import pode_abrir_chamada, pode_reabrir_chamada
+
 
 class ChamadaError(ValidationError):
     pass
@@ -14,6 +16,9 @@ def abrir_chamada(refeicao):
         raise ChamadaError('Esta refeição não exige reserva e não possui chamada.')
     if refeicao.chamada_finalizada:
         raise ChamadaError('A chamada desta refeição já foi encerrada.')
+    ok, mensagem = pode_abrir_chamada(refeicao)
+    if not ok:
+        raise ChamadaError(mensagem)
     refeicao.chamada_aberta = True
     refeicao.save(update_fields=['chamada_aberta'])
 
@@ -104,6 +109,10 @@ def encerrar_chamada(refeicao, usuario_refeitorio):
 def reabrir_chamada(refeicao):
     if not refeicao.exige_reserva:
         raise ChamadaError('Esta refeição não exige reserva e não possui chamada.')
+    if not pode_reabrir_chamada(refeicao):
+        raise ChamadaError(
+            'A chamada só pode ser reaberta no dia da refeição.'
+        )
     refeicao.chamada_aberta = True
     refeicao.chamada_finalizada = False
     refeicao.save(update_fields=['chamada_aberta', 'chamada_finalizada'])

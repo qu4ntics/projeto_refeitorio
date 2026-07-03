@@ -137,6 +137,24 @@ class TipoRefeicao(UUIDModel):
         null=True,
         blank=True,
     )
+    horario_fim_consumo = models.TimeField(
+        'Horário de Término da Refeição',
+        null=True,
+        blank=True,
+    )
+
+    def clean(self):
+        super().clean()
+        if (
+            self.horario_inicio_consumo
+            and self.horario_fim_consumo
+            and self.horario_fim_consumo <= self.horario_inicio_consumo
+        ):
+            raise ValidationError({
+                'horario_fim_consumo': (
+                    'O término da refeição deve ser posterior ao início.'
+                ),
+            })
 
     @classmethod
     def codigos_habilitados(cls):

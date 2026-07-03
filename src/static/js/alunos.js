@@ -2,8 +2,6 @@ const CORES_AVATAR = ['av-verde', 'av-roxo', 'av-azul', 'av-laranja', 'av-rosa',
 
 let todosAlunos = [];
 let alunoParaDesbloquear = null;
-let salvandoContraturno = false;
-let timeoutContraturno = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarAlunos();
@@ -30,10 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modal-excluir-overlay')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) fecharModalExcluir();
   });
-
-  document.querySelectorAll('#dias-contraturno-grid input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', agendarSalvarContraturno);
-  });
 });
 
 async function carregarAlunos() {
@@ -58,40 +52,6 @@ async function carregarAlunos() {
   } catch (err) {
     console.error(err);
     mostrarEstado('erro');
-  }
-}
-
-function agendarSalvarContraturno() {
-  clearTimeout(timeoutContraturno);
-  timeoutContraturno = setTimeout(salvarContraturno, 400);
-}
-
-async function salvarContraturno() {
-  if (salvandoContraturno) return;
-
-  const grid = document.getElementById('dias-contraturno-grid');
-  const indicador = document.getElementById('contraturno-salvando');
-  const dias = [...grid.querySelectorAll('input[type="checkbox"]:checked')].map(cb => Number(cb.value));
-
-  salvandoContraturno = true;
-  if (indicador) indicador.hidden = false;
-
-  try {
-    const res = await fetch(`/administrativo/alunos/${TURMA_ID}/contraturno/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken'),
-      },
-      body: JSON.stringify({ dias_contraturno: dias }),
-    });
-    if (!res.ok) throw new Error();
-    mostrarToast('Dias de contraturno atualizados.', 'success');
-  } catch {
-    mostrarToast('Erro ao salvar contraturno. Tente novamente.', 'error');
-  } finally {
-    salvandoContraturno = false;
-    if (indicador) indicador.hidden = true;
   }
 }
 

@@ -84,10 +84,10 @@ class Refeicao(UUIDModel):
         return self.reservas.filter(status='ativa').count()
 
     @property
-    def descricao_exibicao(self):
+    def cardapio_por_categoria(self):
         pratos = [item.prato for item in self.itens_prato.all()]
         if not pratos:
-            return ''
+            return []
 
         ordem = {cat: i for i, cat in enumerate(Prato.ORDEM_CATEGORIAS)}
         pratos.sort(key=lambda p: (ordem.get(p.categoria, 99), p.nome))
@@ -99,13 +99,23 @@ class Refeicao(UUIDModel):
                 continue
             por_categoria.setdefault(prato.categoria, []).append(texto)
 
-        partes = []
-        for cat in Prato.ORDEM_CATEGORIAS:
-            if cat not in por_categoria:
-                continue
-            label = dict(Prato.CATEGORIAS).get(cat, cat)
-            nomes = ', '.join(por_categoria[cat])
-            partes.append(f'{label}: {nomes}')
+        categorias_labels = dict(Prato.CATEGORIAS)
+        return [
+            {
+                'categoria': cat,
+                'label': categorias_labels.get(cat, cat),
+                'itens': por_categoria[cat],
+            }
+            for cat in Prato.ORDEM_CATEGORIAS
+            if cat in por_categoria
+        ]
+
+    @property
+    def descricao_exibicao(self):
+        grupos = self.cardapio_por_categoria
+        if not grupos:
+            return ''
+        partes = [f'{g["label"]}: {", ".join(g["itens"])}' for g in grupos]
         return ' · '.join(partes)
 
     @property
@@ -119,6 +129,10 @@ class Refeicao(UUIDModel):
             + self.pre_reservas.filter(status='pendente').count()
         )
         return max(0, self.limite_vagas - ocupadas)
+
+    @property
+    def vagas_ocupadas(self):
+        return max(0, self.limite_vagas - self.vagas_disponiveis)
 
     @property
     def vagas_display(self):

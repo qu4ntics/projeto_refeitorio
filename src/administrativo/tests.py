@@ -1,5 +1,7 @@
 import json
-from datetime import timedelta, time
+from datetime import datetime, timedelta, time
+from unittest.mock import patch
+
 from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
@@ -12,8 +14,12 @@ from .models import Turma, TipoRefeicao, JanelaReserva, Presenca, Strike, Config
 from .services.dashboard_nutri import (
     calcular_ausencias,
     calcular_dia_pico_almoco,
+    calcular_disciplina,
+    calcular_pratos_mais_populares,
     calcular_pratos_menos_populares,
+    calcular_resumo_hoje,
     calcular_taxa_comparecimento,
+    listar_alertas,
     listar_refeicoes_hoje,
     metricas_painel,
     preparar_dias_semana_painel,
@@ -247,6 +253,7 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
             f'abertura_{tipo.id}': '15:00',
             f'encerramento_{tipo.id}': '07:00',
             f'horario_consumo_{tipo.id}': '12:30',
+            f'horario_fim_consumo_{tipo.id}': '14:00',
         })
         self.assertRedirects(
             response,
@@ -254,6 +261,21 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
         )
         tipo.refresh_from_db()
         self.assertEqual(tipo.horario_inicio_consumo.strftime('%H:%M'), '12:30')
+        self.assertEqual(tipo.horario_fim_consumo.strftime('%H:%M'), '14:00')
+
+    def test_salvar_horario_fim_anterior_ao_inicio_rejeita(self):
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        response = self.client.post(reverse('administrativo:configuracoes'), {
+            'acao': 'salvar_refeicoes',
+            f'ativo_{tipo.id}': 'on',
+            f'abertura_{tipo.id}': '15:00',
+            f'encerramento_{tipo.id}': '07:00',
+            f'horario_consumo_{tipo.id}': '12:30',
+            f'horario_fim_consumo_{tipo.id}': '12:00',
+        })
+        self.assertEqual(response.status_code, 200)
+        tipo.refresh_from_db()
+        self.assertNotEqual(tipo.horario_fim_consumo.strftime('%H:%M'), '12:00')
 
     def test_habilitar_tipo_e_salvar_horarios(self):
         tipo = TipoRefeicao.objects.get(nome='almoco')
@@ -442,6 +464,15 @@ class ListaPresencaTests(TestCase):
         self.refeicao_hoje = Refeicao.objects.create(
             data=timezone.localdate(), tipo='almoco', limite_vagas=10, exige_reserva=True
         )
+        TipoRefeicao.objects.all().update(
+            horario_inicio_consumo=time(0, 0),
+            horario_fim_consumo=time(23, 59),
+        )
+
+    def _mock_agora(self, hora, minuto=0):
+        hoje = timezone.localdate()
+        agora = timezone.make_aware(datetime.combine(hoje, time(hora, minuto)))
+        return patch('django.utils.timezone.localtime', return_value=agora)
 
     def _login_refeitorio(self):
         self.client.login(username='ref@test.com', password='123')
@@ -710,6 +741,106 @@ class ListaPresencaTests(TestCase):
         self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
 
 
+class HorarioChamadaTests(TestCase):
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='Turma horário', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_hor', email='hor@test.com', password='123',
+            perfil='aluno', first_name='João', turma=self.turma,
+        )
+        Usuario.objects.create_user(
+            username='ref_hor', email='ref_hor@test.com', password='123', perfil='refeitorio',
+        )
+        self.refeicao_hoje = Refeicao.objects.create(
+            data=timezone.localdate(), tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        TipoRefeicao.objects.filter(nome='almoco').update(
+            horario_inicio_consumo=time(12, 0),
+            horario_fim_consumo=time(13, 30),
+        )
+        self.client.login(username='ref_hor@test.com', password='123')
+        Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
+
+    def _mock_agora(self, hora, minuto=0):
+        hoje = timezone.localdate()
+        agora = timezone.make_aware(datetime.combine(hoje, time(hora, minuto)))
+        return patch('django.utils.timezone.localtime', return_value=agora)
+
+    def test_abrir_chamada_antes_do_horario_bloqueia(self):
+        with self._mock_agora(11, 0):
+            response = self.client.post(
+                reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]),
+            )
+        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
+        self.refeicao_hoje.refresh_from_db()
+        self.assertFalse(self.refeicao_hoje.chamada_aberta)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('12:00' in str(m) for m in messages))
+
+    def test_abrir_chamada_durante_horario_sucesso(self):
+        with self._mock_agora(12, 30):
+            response = self.client.post(
+                reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]),
+            )
+        self.assertRedirects(response, reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
+        self.refeicao_hoje.refresh_from_db()
+        self.assertTrue(self.refeicao_hoje.chamada_aberta)
+
+    def test_abrir_chamada_depois_do_horario_bloqueia(self):
+        with self._mock_agora(14, 0):
+            response = self.client.post(
+                reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]),
+            )
+        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('encerrou' in str(m).lower() for m in messages))
+
+    def test_chamada_em_andamento_apos_fim_do_periodo(self):
+        with self._mock_agora(12, 30):
+            self.client.post(reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]))
+        with self._mock_agora(14, 0):
+            response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
+            self.assertEqual(response.status_code, 200)
+            reserva = Reserva.objects.get(refeicao=self.refeicao_hoje, aluno=self.aluno)
+            resp_presenca = self.client.post(
+                reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
+                data=json.dumps({'checked': True}),
+                content_type='application/json',
+            )
+            self.assertEqual(resp_presenca.status_code, 200)
+
+    def test_get_chamada_fora_periodo_redireciona(self):
+        with self._mock_agora(11, 0):
+            response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
+        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
+
+    def test_reabrir_apos_fim_periodo_mesmo_dia(self):
+        with self._mock_agora(12, 30):
+            self.client.post(reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]))
+            self.client.post(reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]))
+        with self._mock_agora(14, 0):
+            response = self.client.post(
+                reverse('administrativo:reabrir_chamada', args=[self.refeicao_hoje.id]),
+            )
+        self.assertRedirects(response, reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
+        self.refeicao_hoje.refresh_from_db()
+        self.assertTrue(self.refeicao_hoje.chamada_aberta)
+
+    def test_reabrir_dia_seguinte_bloqueia(self):
+        ontem = timezone.localdate() - timedelta(days=1)
+        refeicao_ontem = Refeicao.objects.create(
+            data=ontem, tipo='almoco', limite_vagas=10, exige_reserva=True,
+            chamada_finalizada=True,
+        )
+        with self._mock_agora(10, 0):
+            response = self.client.post(
+                reverse('administrativo:reabrir_chamada', args=[refeicao_ontem.id]),
+            )
+        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('dia da refeição' in str(m).lower() for m in messages))
+
+
 class PainelNutricionistaDashboardTests(TestCase):
     def setUp(self):
         self.turma = Turma.objects.create(nome='3º Informática', turno='matutino')
@@ -788,7 +919,8 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.client.login(username='nutri_dash@test.com', password='senha123')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Refeições da semana')
+        self.assertContains(response, 'Painel')
+        self.assertContains(response, 'Indicadores')
         self.assertContains(response, 'Refeições de hoje')
 
     def test_aluno_nao_acessa_painel(self):
@@ -924,16 +1056,69 @@ class PainelNutricionistaDashboardTests(TestCase):
         response = self.client.get(self.url)
         self.assertContains(response, 'Ausências')
         self.assertContains(response, 'Comparecimento')
+        self.assertContains(response, 'Painel')
+        self.assertContains(response, 'Indicadores')
         self.assertContains(response, 'Refeições de hoje')
-        self.assertContains(response, 'Refeições da semana')
-        self.assertContains(response, 'Editar refeição')
+        self.assertContains(response, 'Resumo de hoje')
+        self.assertContains(response, 'Pratos mais populares')
+        self.assertContains(response, 'Editar refeição', count=None)
 
     def test_metricas_painel_estrutura(self):
-        metricas = metricas_painel()
+        metricas = metricas_painel(usuario=self.nutri)
+        self.assertIn('resumo_hoje', metricas)
+        self.assertIn('disciplina', metricas)
+        self.assertIn('alertas', metricas)
         self.assertIn('ausencias', metricas)
         self.assertIn('dia_pico', metricas)
+        self.assertIn('pratos_mais_populares', metricas)
         self.assertIn('pratos_menos_populares', metricas)
         self.assertIn('comparecimento', metricas)
         self.assertIn('refeicoes_hoje', metricas)
         self.assertEqual(metricas['periodo_dias'], 30)
+
+    def test_resumo_hoje_conta_reservas_e_ocupacao(self):
+        hoje = timezone.localdate()
+        refeicao = Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self._criar_aluno(), refeicao=refeicao, status='ativa',
+        )
+        resumo = calcular_resumo_hoje()
+        self.assertEqual(resumo['total_reservas'], 1)
+        self.assertEqual(resumo['taxa_ocupacao'], 10)
+        self.assertEqual(resumo['refeicoes_lotadas'], 0)
+
+    def test_resumo_hoje_detecta_refeicao_lotada(self):
+        hoje = timezone.localdate()
+        refeicao = Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=1, exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self._criar_aluno(), refeicao=refeicao, status='ativa',
+        )
+        resumo = calcular_resumo_hoje()
+        self.assertEqual(resumo['refeicoes_lotadas'], 1)
+
+    def test_listar_alertas_refeicao_sem_pratos(self):
+        hoje = timezone.localdate()
+        refeicao = Refeicao.objects.create(
+            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        alertas = listar_alertas(usuario=self.nutri)
+        textos = [a['texto'] for a in alertas]
+        self.assertTrue(any('sem pratos' in t for t in textos))
+
+    def test_calcular_disciplina_conta_bloqueados(self):
+        aluno = self._criar_aluno()
+        aluno.bloqueado = True
+        aluno.save(update_fields=['bloqueado'])
+        resultado = calcular_disciplina()
+        self.assertGreaterEqual(resultado['bloqueados'], 1)
+
+    def test_pratos_mais_e_menos_populares(self):
+        menos = calcular_pratos_menos_populares(periodo_dias=30)
+        mais = calcular_pratos_mais_populares(periodo_dias=30)
+        self.assertIn('disponivel', menos)
+        self.assertIn('disponivel', mais)
 

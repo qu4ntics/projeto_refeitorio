@@ -89,9 +89,11 @@
 
             aria-controls="painel-{{ dia.id }}" id="tab-{{ dia.id }}"
 
+            aria-label="{{ dia.nome }}"
+
             data-panel="painel-{{ dia.id }}">
 
-      {{ dia.nome|upper }}
+      {{ dia.id|upper }}
 
     </button>
 

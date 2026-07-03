@@ -1,191 +1,234 @@
 {% extends "base/base.html" %}
 {% load static %}
 
-{% block title %}Dashboard Nutricionista{% endblock %}
+{% block title %}Painel{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
   <link rel="stylesheet" href="{% static 'css/painel-nutricionista.css' %}">
 {% endblock %}
 
 {% block content %}
   <div class="painel-nutri">
-    <section class="cards-topo">
-      <div class="card-metrica">
-        <div class="card-metrica__icon card-metrica__icon--ausencia">
-          <i class="fa-solid fa-user-xmark"></i>
-        </div>
-        <div class="card-metrica__info">
-          <span class="card-metrica__label">Ausências</span>
-          {% if metricas.ausencias.disponivel %}
-            {% if metricas.ausencias.total %}
-              <span class="card-metrica__valor">{{ metricas.ausencias.total }}</span>
-              <span class="card-metrica__sub">{{ metricas.ausencias.taxa|floatformat:1 }}% das reservas no período</span>
+    <header class="painel-header">
+      <h1>Painel</h1>
+      <p class="page-date">Hoje é {{ hoje|date:"d \d\e F \d\e Y" }}</p>
+    </header>
+
+  {% if metricas.alertas %}
+    <section class="painel-alertas">
+      <h2 class="secao-titulo">Alertas</h2>
+      <ul class="painel-alertas__lista">
+        {% for alerta in metricas.alertas %}
+          <li class="painel-alertas__item painel-alertas__item--{{ alerta.tipo }}">
+            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+            {% if alerta.url_name and alerta.url_args %}
+              <a href="{% url alerta.url_name alerta.url_args.0 %}">{{ alerta.texto }}</a>
+            {% elif alerta.url_name %}
+              <a href="{% url alerta.url_name %}">{{ alerta.texto }}</a>
             {% else %}
-              <span class="card-metrica__valor card-metrica__valor--texto">Nenhuma</span>
-              <span class="card-metrica__sub">0% das reservas no período</span>
+              <span>{{ alerta.texto }}</span>
             {% endif %}
-          {% else %}
-            <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
-            <span class="card-metrica__sub">Sem dados (últimos {{ metricas.periodo_dias }} dias)</span>
-          {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+    <section class="painel-resumo-hoje">
+      <div class="secao-cabecalho">
+        <div>
+          <h2 class="secao-titulo">Resumo de hoje</h2>
+          <p class="secao-subtitulo">Situação operacional do dia</p>
         </div>
       </div>
 
-      <div class="card-metrica">
-        <div class="card-metrica__icon card-metrica__icon--pico">
-          <i class="fa-solid fa-chart-line"></i>
+      <div class="cards-resumo-hoje">
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--reservas">
+            <i class="fa-solid fa-utensils"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Reservas</span>
+            {% if metricas.resumo_hoje.disponivel %}
+              <span class="card-metrica__valor">{{ metricas.resumo_hoje.total_reservas }}</span>
+              <span class="card-metrica__sub">
+                em {{ metricas.resumo_hoje.qtd_refeicoes }} refeição{{ metricas.resumo_hoje.qtd_refeicoes|pluralize:"ões" }}
+              </span>
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Nenhuma refeição com reserva hoje</span>
+            {% endif %}
+          </div>
         </div>
-        <div class="card-metrica__info">
-          <span class="card-metrica__label">Dia de pico</span>
-          {% if metricas.dia_pico.disponivel %}
-            <span class="card-metrica__valor card-metrica__valor--texto">{{ metricas.dia_pico.dia }}</span>
-            <span class="card-metrica__sub">média de {{ metricas.dia_pico.media|floatformat:1 }} reservas/almoço</span>
-          {% else %}
-            <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
-            <span class="card-metrica__sub">Sem reservas de almoço no período</span>
-          {% endif %}
+
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--ocupacao">
+            <i class="fa-solid fa-chart-pie"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Ocupação</span>
+            {% if metricas.resumo_hoje.taxa_ocupacao is not None %}
+              <span class="card-metrica__valor">{{ metricas.resumo_hoje.taxa_ocupacao }}%</span>
+              <span class="card-metrica__sub">
+                {{ metricas.resumo_hoje.total_reservas }}/{{ metricas.resumo_hoje.total_vagas }} vagas
+              </span>
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Sem vagas configuradas</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--cancelamento">
+            <i class="fa-solid fa-ban"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Cancelamentos</span>
+            <span class="card-metrica__valor">{{ metricas.resumo_hoje.cancelamentos }}</span>
+            <span class="card-metrica__sub">cancelados hoje</span>
+          </div>
+        </div>
+
+        <a href="{% url 'administrativo:alunos_bloqueados' %}" class="card-metrica card-metrica--link">
+          <div class="card-metrica__icon card-metrica__icon--bloqueio">
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Alunos bloqueados</span>
+            <span class="card-metrica__valor">{{ metricas.disciplina.bloqueados }}</span>
+            <span class="card-metrica__sub">
+              {{ metricas.disciplina.strikes_periodo }} strike{{ metricas.disciplina.strikes_periodo|pluralize:"s" }} nos últimos {{ metricas.periodo_dias }} dias
+            </span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="painel-indicadores">
+      <div class="secao-cabecalho">
+        <div>
+          <h2 class="secao-titulo">Indicadores</h2>
+          <p class="secao-subtitulo">Últimos {{ metricas.periodo_dias }} dias</p>
         </div>
       </div>
 
-      <div class="card-metrica">
-        <div class="card-metrica__icon card-metrica__icon--pratos">
-          <i class="fa-solid fa-bowl-food"></i>
+      <div class="cards-topo">
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--ausencia">
+            <i class="fa-solid fa-user-xmark"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Ausências</span>
+            {% if metricas.ausencias.disponivel %}
+              {% if metricas.ausencias.total %}
+                <span class="card-metrica__valor">{{ metricas.ausencias.total }}</span>
+                <span class="card-metrica__sub">{{ metricas.ausencias.taxa|floatformat:1 }}% das reservas no período</span>
+              {% else %}
+                <span class="card-metrica__valor card-metrica__valor--texto">Nenhuma</span>
+                <span class="card-metrica__sub">0% das reservas no período</span>
+              {% endif %}
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Sem dados no período</span>
+            {% endif %}
+          </div>
         </div>
-        <div class="card-metrica__info">
-          <span class="card-metrica__label">Pratos menos populares</span>
-          {% if metricas.pratos_menos_populares.disponivel %}
-            <span class="card-metrica__valor card-metrica__valor--texto">{{ metricas.pratos_menos_populares.texto }}</span>
-            <span class="card-metrica__sub">menor média de reservas</span>
-          {% else %}
-            <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
-            <span class="card-metrica__sub">Dados insuficientes no período</span>
-          {% endif %}
-        </div>
-      </div>
 
-      <div class="card-metrica">
-        <div class="card-metrica__icon card-metrica__icon--comparecimento">
-          <i class="fa-solid fa-check-double"></i>
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--pico">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Dia de pico</span>
+            {% if metricas.dia_pico.disponivel %}
+              <span class="card-metrica__valor card-metrica__valor--texto">{{ metricas.dia_pico.dia }}</span>
+              <span class="card-metrica__sub">média de {{ metricas.dia_pico.media|floatformat:1 }} reservas/almoço</span>
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Sem reservas de almoço no período</span>
+            {% endif %}
+          </div>
         </div>
-        <div class="card-metrica__info">
-          <span class="card-metrica__label">Comparecimento</span>
-          {% if metricas.comparecimento.disponivel %}
-            <span class="card-metrica__valor">{{ metricas.comparecimento.taxa }}%</span>
-            <span class="card-metrica__sub">nos últimos {{ metricas.periodo_dias }} dias</span>
-          {% else %}
-            <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
-            <span class="card-metrica__sub">Sem chamadas encerradas no período</span>
-          {% endif %}
+
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--pratos-mais">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Pratos mais populares</span>
+            {% if metricas.pratos_mais_populares.disponivel %}
+              <span class="card-metrica__valor card-metrica__valor--texto">{{ metricas.pratos_mais_populares.texto }}</span>
+              <span class="card-metrica__sub">maior média de reservas</span>
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Dados insuficientes no período</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--pratos">
+            <i class="fa-solid fa-bowl-food"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Pratos menos populares</span>
+            {% if metricas.pratos_menos_populares.disponivel %}
+              <span class="card-metrica__valor card-metrica__valor--texto">{{ metricas.pratos_menos_populares.texto }}</span>
+              <span class="card-metrica__sub">menor média de reservas</span>
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Dados insuficientes no período</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-metrica">
+          <div class="card-metrica__icon card-metrica__icon--comparecimento">
+            <i class="fa-solid fa-check-double"></i>
+          </div>
+          <div class="card-metrica__info">
+            <span class="card-metrica__label">Comparecimento</span>
+            {% if metricas.comparecimento.disponivel %}
+              <span class="card-metrica__valor">{{ metricas.comparecimento.taxa }}%</span>
+              <span class="card-metrica__sub">taxa no período</span>
+            {% else %}
+              <span class="card-metrica__valor card-metrica__valor--vazio">—</span>
+              <span class="card-metrica__sub">Sem chamadas encerradas no período</span>
+            {% endif %}
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="secao-refeicoes">
-      <div class="lado-esquerdo">
-        <div class="painel-semana">
-          <div class="painel-semana__toolbar">
-            <div class="painel-semana__titulo">
-              <h2>Refeições da semana</h2>
-              <p class="page-date">Semana de {{ semana_inicio|date:"d/m" }} até {{ semana_fim|date:"d/m" }}</p>
-            </div>
+    <section class="painel-refeicoes-hoje">
+      <div class="secao-cabecalho">
+        <div>
+          <h2 class="secao-titulo">Refeições de hoje</h2>
+          {% if dia_hoje %}
+            <p class="secao-subtitulo">{{ dia_hoje.nome }} — {{ dia_hoje.data|date:"d/m/Y" }}</p>
+          {% endif %}
+        </div>
+        <a href="{% url 'refeicoes:cardapio_semana' %}" class="btn-adicionar">Gerenciar refeições</a>
+      </div>
 
-            <div class="nav-container painel-semana__nav">
-              <a href="?data={{ semana_anterior }}" class="btn-navegacao" title="Semana anterior">
-                <i class="fa-solid fa-chevron-left"></i>
-              </a>
-              {% if data_selecionada %}
-              <a href="." class="btn-hoje" title="Voltar para a semana atual">
-                <i class="fa-solid fa-calendar-day"></i> Hoje
-              </a>
-              {% endif %}
-              <a href="?data={{ proxima_semana }}" class="btn-navegacao" title="Próxima semana">
-                <i class="fa-solid fa-chevron-right"></i>
-              </a>
-            </div>
-
-            <a href="{% url 'refeicoes:cardapio_semana' %}" class="btn-adicionar">Gerenciar refeições</a>
-          </div>
-
-          <div class="week-tabs painel-semana__tabs" role="tablist" aria-label="Dias da semana">
-            {% for dia in dias_semana %}
-              <button
-                class="week-tab {% if dia.hoje %}today-tab{% endif %} {% if dia.id == tab_inicial %}active{% endif %}"
-                type="button"
-                role="tab"
-                aria-selected="{% if dia.id == tab_inicial %}true{% else %}false{% endif %}"
-                aria-controls="painel-{{ dia.id }}"
-                id="tab-{{ dia.id }}"
-                data-panel="painel-{{ dia.id }}"
-              >
-                {{ dia.id|upper }}
-              </button>
-            {% endfor %}
-          </div>
-
-          {% for dia in dias_semana %}
-            <div
-              class="day-panel painel-semana__panel {% if dia.id == tab_inicial %}active{% endif %}"
-              id="painel-{{ dia.id }}"
-              role="tabpanel"
-              aria-labelledby="tab-{{ dia.id }}"
-            >
-              <div class="day-label">
-                <span class="day-name">{{ dia.nome }}</span>
-                — {{ dia.data|date:"d/m/Y" }}
-                {% if dia.hoje %}<span class="day-today-badge">HOJE</span>{% endif %}
-              </div>
-
-              <div class="painel-semana__cards">
-                {% for refeicao in dia.refeicoes %}
-                  {% include "refeicoes/_meal_card_painel.html" with refeicao=refeicao %}
-                {% empty %}
-                  <div class="day-empty day-empty--compact">
-                    <i class="fa-solid fa-bowl-food"></i>
-                    <p>Nenhuma refeição cadastrada.</p>
-                  </div>
-                {% endfor %}
-              </div>
+      <div class="painel-refeicoes__cards">
+        {% if dia_hoje %}
+          {% for refeicao in dia_hoje.refeicoes %}
+            {% include "refeicoes/_meal_card_painel.html" with refeicao=refeicao %}
+          {% empty %}
+            <div class="painel-vazio">
+              <i class="fa-solid fa-bowl-food"></i>
+              <p>Nenhuma refeição cadastrada para hoje.</p>
             </div>
           {% endfor %}
-        </div>
-      </div>
-
-      <aside class="painel-direito">
-        <h3 class="painel-direito__titulo">Refeições de hoje</h3>
-        <p class="painel-direito__data">{{ hoje|date:"d/m/Y" }}</p>
-
-        {% if metricas.refeicoes_hoje %}
-          <ul class="lista-refeicoes-hoje">
-            {% for item in metricas.refeicoes_hoje %}
-              <li class="item-refeicao-hoje">
-                <div class="item-refeicao-hoje__header">
-                  <span class="tag-refeicao">{{ item.refeicao.get_tipo_display }}</span>
-                  {% if item.horario %}
-                    <span class="item-refeicao-hoje__horario">{{ item.horario|time:"H:i" }}</span>
-                  {% endif %}
-                </div>
-                <p class="item-refeicao-hoje__desc">
-                  {% firstof item.refeicao.descricao_exibicao "Sem descrição" %}
-                </p>
-                <p class="item-refeicao-hoje__meta">
-                  {{ item.total_reservas }} reserva{{ item.total_reservas|pluralize:"s" }} ·
-                  {% include "refeicoes/_refeicao_meta.html" with refeicao=item.refeicao %}
-                </p>
-                <a href="{% url 'refeicoes:nutricionista_editar' item.refeicao.id %}" class="item-refeicao-hoje__link">
-                  Editar refeição
-                </a>
-              </li>
-            {% endfor %}
-          </ul>
         {% else %}
-          <p class="painel-direito__vazio">Nenhuma refeição com reserva cadastrada para hoje.</p>
+          <div class="painel-vazio">
+            <i class="fa-solid fa-bowl-food"></i>
+            <p>Nenhuma refeição cadastrada para hoje.</p>
+          </div>
         {% endif %}
-      </aside>
+      </div>
     </section>
   </div>
-{% endblock %}
-
-{% block extra_js %}
-  <script src="{% static 'js/cardapio_semana.js' %}"></script>
 {% endblock %}
