@@ -135,3 +135,68 @@ CREATE TABLE IF NOT EXISTS refeicoes_refeicao_prato (
     FOREIGN KEY (prato_id) REFERENCES refeicoes_prato(id) ON DELETE CASCADE,
     UNIQUE (refeicao_id, prato_id)
 );
+
+-- =============================================
+-- Funções de compatibilidade (retornam inteiros)
+-- =============================================
+
+-- Retorna o primeiro dia de `dias_contraturno` como INTEGER (ou NULL)
+CREATE OR REPLACE FUNCTION administrativo_get_dia_contraturno(turma_uuid UUID)
+RETURNS INTEGER AS $$
+    SELECT (dias_contraturno->>0)::INTEGER
+    FROM administrativo_turma
+    WHERE id = turma_uuid;
+$$ LANGUAGE SQL STABLE;
+
+-- Retorna todos os dias de `dias_contraturno` como um array de INTEGER
+CREATE OR REPLACE FUNCTION administrativo_get_dias_contraturno_ints(turma_uuid UUID)
+RETURNS INTEGER[] AS $$
+    SELECT array_agg((elem)::INTEGER)
+    FROM administrativo_turma,
+         jsonb_array_elements_text(administrativo_turma.dias_contraturno) AS elem
+    WHERE administrativo_turma.id = turma_uuid;
+$$ LANGUAGE SQL STABLE;
+
+-- View de compatibilidade (leitura): expõe `dias_contraturno` como INTEGER[]
+CREATE OR REPLACE VIEW administrativo_turma_compat AS
+SELECT
+    id,
+    nome,
+    turno,
+    (
+        SELECT array_agg((e)::INTEGER)
+        FROM jsonb_array_elements_text(dias_contraturno) AS e
+    ) AS dias_contraturno_int,
+    dias_contraturno AS dias_contraturno_json,
+    ativo
+FROM administrativo_turma;
+
+-- Coluna compatível para código legado: INTEGER[]
+ALTER TABLE administrativo_turma
+    ADD COLUMN IF NOT EXISTS dias_contraturno_int INTEGER[] DEFAULT '{}'::integer[];
+
+-- Função trigger para manter JSONB <-> INTEGER[] sincronizados
+CREATE OR REPLACE FUNCTION administrativo_sync_dias_contraturno()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Prioriza o valor explícito em dias_contraturno_int quando presente
+    IF NEW.dias_contraturno_int IS NOT NULL AND array_length(NEW.dias_contraturno_int, 1) IS NOT NULL THEN
+        NEW.dias_contraturno = to_jsonb(NEW.dias_contraturno_int);
+    ELSIF NEW.dias_contraturno IS NOT NULL THEN
+        NEW.dias_contraturno_int = ARRAY(
+            SELECT (e)::INTEGER
+            FROM jsonb_array_elements_text(NEW.dias_contraturno) AS e
+        );
+    ELSE
+        NEW.dias_contraturno = '[]'::jsonb;
+        NEW.dias_contraturno_int = '{}'::integer[];
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- Trigger que executa antes de INSERT ou UPDATE
+DROP TRIGGER IF EXISTS administrativo_sync_dias_contraturno_trg ON administrativo_turma;
+CREATE TRIGGER administrativo_sync_dias_contraturno_trg
+BEFORE INSERT OR UPDATE ON administrativo_turma
+FOR EACH ROW EXECUTE FUNCTION administrativo_sync_dias_contraturno();
