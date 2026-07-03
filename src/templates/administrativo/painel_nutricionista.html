@@ -14,26 +14,6 @@
       <p class="page-date">Hoje é {{ hoje|date:"d \d\e F \d\e Y" }}</p>
     </header>
 
-  {% if metricas.alertas %}
-    <section class="painel-alertas">
-      <h2 class="secao-titulo">Alertas</h2>
-      <ul class="painel-alertas__lista">
-        {% for alerta in metricas.alertas %}
-          <li class="painel-alertas__item painel-alertas__item--{{ alerta.tipo }}">
-            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-            {% if alerta.url_name and alerta.url_args %}
-              <a href="{% url alerta.url_name alerta.url_args.0 %}">{{ alerta.texto }}</a>
-            {% elif alerta.url_name %}
-              <a href="{% url alerta.url_name %}">{{ alerta.texto }}</a>
-            {% else %}
-              <span>{{ alerta.texto }}</span>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
-
     <section class="painel-resumo-hoje">
       <div class="secao-cabecalho">
         <div>

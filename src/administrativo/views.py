@@ -34,6 +34,7 @@ from .services.horarios_refeicao import (
     pode_abrir_chamada,
     pode_reabrir_chamada,
 )
+from .services.dashboard_nutri import metricas_painel, preparar_dias_semana_painel
 
 
 @login_required

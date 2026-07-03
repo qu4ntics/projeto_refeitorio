@@ -1,11 +1,12 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Usuario
-from administrativo.models import Presenca, Strike, TipoRefeicao, Turma
+from administrativo.models import ConfigReserva, Presenca, Strike, TipoRefeicao, Turma
 from reservas.models import Reserva
 
 from .forms import RefeicaoForm
@@ -44,6 +45,68 @@ class RefeicaoFormTipoTests(TestCase):
         form = RefeicaoForm(instance=refeicao)
         self.assertEqual(form['data'].value(), date(2099, 3, 15))
         self.assertIn('2099-03-15', str(form['data']))
+
+
+class PodeCancelarTests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri',
+            email='nutri@test.com',
+            password='123',
+            perfil='nutricionista',
+        )
+        self.tipo_almoco = TipoRefeicao.objects.get(nome='almoco')
+        self.tipo_almoco.horario_inicio_consumo = time(12, 0)
+        self.tipo_almoco.save(update_fields=['horario_inicio_consumo'])
+        ConfigReserva.objects.create(
+            abertura=time(0, 0),
+            encerramento=time(23, 59),
+            minutos_cancelamento=60,
+            criado_por=self.nutri,
+        )
+        self.hoje = timezone.localdate()
+        self.refeicao = Refeicao.objects.create(
+            data=self.hoje,
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+
+    def test_pode_cancelar_antes_do_limite(self):
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(10, 30)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            self.assertTrue(self.refeicao.pode_cancelar)
+
+    def test_nao_pode_cancelar_apos_limite(self):
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(11, 30)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            self.assertFalse(self.refeicao.pode_cancelar)
+
+    def test_fallback_usa_fechamento_da_janela_sem_horario_inicio(self):
+        self.tipo_almoco.horario_inicio_consumo = None
+        self.tipo_almoco.save(update_fields=['horario_inicio_consumo'])
+
+        from administrativo.models import JanelaReserva
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=self.tipo_almoco,
+            defaults={
+                'horario_abertura': time(0, 0),
+                'horario_fechamento': time(9, 0),
+            },
+        )
+
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(8, 30)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            self.assertFalse(self.refeicao.pode_cancelar)
 
 
 class StrikesAlunoViewTests(TestCase):

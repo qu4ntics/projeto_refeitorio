@@ -19,7 +19,6 @@ from .services.dashboard_nutri import (
     calcular_pratos_menos_populares,
     calcular_resumo_hoje,
     calcular_taxa_comparecimento,
-    listar_alertas,
     listar_refeicoes_hoje,
     metricas_painel,
     preparar_dias_semana_painel,
@@ -1067,7 +1066,6 @@ class PainelNutricionistaDashboardTests(TestCase):
         metricas = metricas_painel(usuario=self.nutri)
         self.assertIn('resumo_hoje', metricas)
         self.assertIn('disciplina', metricas)
-        self.assertIn('alertas', metricas)
         self.assertIn('ausencias', metricas)
         self.assertIn('dia_pico', metricas)
         self.assertIn('pratos_mais_populares', metricas)
@@ -1099,15 +1097,6 @@ class PainelNutricionistaDashboardTests(TestCase):
         )
         resumo = calcular_resumo_hoje()
         self.assertEqual(resumo['refeicoes_lotadas'], 1)
-
-    def test_listar_alertas_refeicao_sem_pratos(self):
-        hoje = timezone.localdate()
-        refeicao = Refeicao.objects.create(
-            data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
-        )
-        alertas = listar_alertas(usuario=self.nutri)
-        textos = [a['texto'] for a in alertas]
-        self.assertTrue(any('sem pratos' in t for t in textos))
 
     def test_calcular_disciplina_conta_bloqueados(self):
         aluno = self._criar_aluno()

@@ -41,21 +41,24 @@ function initCancelamentoExemplo() {
   const input = document.getElementById('id_minutos_cancelamento');
   const saida = document.getElementById('exemplo-horario-cancelamento');
   const minutosEl = document.getElementById('exemplo-minutos');
+  const inicioEl = document.getElementById('exemplo-inicio-refeicao');
   if (!input || !saida) return;
 
-  const encerramento = '09:30';
+  function horarioMenosMinutos(horarioStr, minutos) {
+    const [h, m] = horarioStr.split(':').map(Number);
+    let total = h * 60 + m - minutos;
+    if (total < 0) total += 24 * 60;
+    const horas = Math.floor(total / 60);
+    const mins = total % 60;
+    return String(horas).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+  }
 
   function atualizar() {
     const minutos = parseInt(input.value, 10);
     if (Number.isNaN(minutos) || minutos < 0) return;
 
-    const [h, m] = encerramento.split(':').map(Number);
-    const total = h * 60 + m - minutos;
-    const horas = Math.floor((total + 1440) % 1440 / 60);
-    const mins = (total + 1440) % 60;
-    const horario = String(horas).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-
-    saida.textContent = horario;
+    const inicioRefeicao = (inicioEl && inicioEl.textContent.trim()) || '12:00';
+    saida.textContent = horarioMenosMinutos(inicioRefeicao, minutos);
     if (minutosEl) minutosEl.textContent = String(minutos);
   }
 

@@ -126,20 +126,20 @@
         <div class="config-card config-reservas-card">
           <h2 class="config-section-title"><i class="fa-solid fa-clock"></i> Cancelamento pelo aluno</h2>
           <p class="config-desc">
-            Define até quantos minutos antes do encerramento da reserva o aluno ainda pode cancelar.
+            Define até quantos minutos antes do início da refeição o aluno ainda pode cancelar.
           </p>
 
           <div class="config-field">
-            <label for="id_minutos_cancelamento">Minutos antes do encerramento</label>
+            <label for="id_minutos_cancelamento">Minutos antes da refeição</label>
             <input type="number" name="minutos_cancelamento" id="id_minutos_cancelamento"
                    class="config-input config-input--numero" min="15" max="240" step="1"
                    value="{{ minutos_cancelamento }}" required>
           </div>
 
           <p class="config-ajuda-cancelamento" id="ajuda-cancelamento">
-            Exemplo: se a reserva encerra às <strong id="exemplo-encerramento">09:30</strong>,
+            Exemplo: se a refeição começa às <strong id="exemplo-inicio-refeicao">12:00</strong>,
             com prazo de <strong id="exemplo-minutos">{{ minutos_cancelamento }}</strong> minutos,
-            o aluno pode cancelar até <strong id="exemplo-horario-cancelamento">08:30</strong>.
+            o aluno pode cancelar até <strong id="exemplo-horario-cancelamento">11:00</strong>.
           </p>
         </div>
 
@@ -237,6 +237,6 @@
 <script>
   window.CONFIG_ABA_ATIVA = "{{ aba_ativa }}";
 </script>
-<script src="{% static 'js/configuracoes_nutri.js' %}?v=2"></script>
+<script src="{% static 'js/configuracoes_nutri.js' %}?v=3"></script>
 <script src="{% static 'js/configuracoes_aluno.js' %}?v=1"></script>
 {% endblock %}

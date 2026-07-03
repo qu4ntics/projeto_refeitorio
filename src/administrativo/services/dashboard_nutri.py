@@ -6,7 +6,7 @@ from django.db.models.functions import ExtractWeekDay
 from django.utils import timezone
 
 from accounts.models import Usuario
-from administrativo.models import Notificacao, Presenca, Strike, TipoRefeicao
+from administrativo.models import Presenca, Strike, TipoRefeicao
 from refeicoes.models import Refeicao, RefeicaoPrato
 from reservas.models import Reserva
 
@@ -296,75 +296,11 @@ def calcular_disciplina(periodo_dias=30):
     }
 
 
-def _label_tipo_refeicao(codigo):
-    return dict(Refeicao.TIPOS).get(codigo, codigo)
-
-
-def listar_alertas(usuario=None):
-    hoje = timezone.localdate()
-    amanha = hoje + timedelta(days=1)
-    alertas = []
-
-    if usuario:
-        nao_lidas = Notificacao.objects.filter(usuario=usuario, lida=False).count()
-        if nao_lidas:
-            alertas.append({
-                'tipo': 'notificacao',
-                'texto': (
-                    f'{nao_lidas} notificação não lida'
-                    if nao_lidas == 1
-                    else f'{nao_lidas} notificações não lidas'
-                ),
-            })
-
-    tipos_ativos = set(TipoRefeicao.objects.filter(ativo=True).values_list('nome', flat=True))
-    tipos_por_data = {
-        hoje: set(Refeicao.objects.filter(data=hoje).values_list('tipo', flat=True)),
-        amanha: set(Refeicao.objects.filter(data=amanha).values_list('tipo', flat=True)),
-    }
-
-    for data, rotulo in ((hoje, 'hoje'), (amanha, 'amanhã')):
-        faltando = tipos_ativos - tipos_por_data[data]
-        for tipo in sorted(faltando, key=lambda t: ORDEM_TIPOS.index(t) if t in ORDEM_TIPOS else 99):
-            alertas.append({
-                'tipo': 'falta_refeicao',
-                'texto': f'Nenhuma refeição de {_label_tipo_refeicao(tipo)} cadastrada para {rotulo}',
-                'url_name': 'refeicoes:cardapio_semana',
-            })
-
-    refeicoes_hoje = (
-        Refeicao.objects.filter(data=hoje, exige_reserva=True)
-        .annotate(
-            num_pratos=Count('itens_prato', distinct=True),
-            reservas_ativas=Count('reservas', filter=RESERVAS_ATIVAS_AGG),
-        )
-    )
-    for refeicao in refeicoes_hoje:
-        label = refeicao.get_tipo_display()
-        if refeicao.num_pratos == 0:
-            alertas.append({
-                'tipo': 'cardapio',
-                'texto': f'{label} de hoje sem pratos no cardápio',
-                'url_name': 'refeicoes:nutricionista_editar',
-                'url_args': [refeicao.pk],
-            })
-        if refeicao.limite_vagas > 0 and refeicao.reservas_ativas >= refeicao.limite_vagas:
-            alertas.append({
-                'tipo': 'lotada',
-                'texto': f'{label} de hoje com vagas esgotadas',
-                'url_name': 'refeicoes:nutricionista_editar',
-                'url_args': [refeicao.pk],
-            })
-
-    return alertas
-
-
 def metricas_painel(periodo_dias=30, usuario=None):
     return {
         'periodo_dias': periodo_dias,
         'resumo_hoje': calcular_resumo_hoje(),
         'disciplina': calcular_disciplina(periodo_dias),
-        'alertas': listar_alertas(usuario),
         'ausencias': calcular_ausencias(periodo_dias),
         'dia_pico': calcular_dia_pico_almoco(periodo_dias),
         'pratos_menos_populares': calcular_pratos_menos_populares(periodo_dias),

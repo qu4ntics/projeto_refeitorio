@@ -216,15 +216,37 @@ class Refeicao(UUIDModel):
         if not limites: return True
         return limites['inicio'] <= timezone.localtime() <= limites['fim']
 
+    def get_limite_cancelamento(self):
+        """
+        Retorna o datetime limite para cancelamento pelo aluno.
+        Usa o início da refeição como referência; se não configurado, cai no
+        fechamento da janela de reserva.
+        """
+        from administrativo.models import TipoRefeicao
+
+        limites = self.get_janela_reserva()
+        if not limites:
+            return None
+
+        minutos = limites['minutos_cancelamento']
+        tz = timezone.get_current_timezone()
+        tipo = TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+        if tipo and tipo.horario_inicio_consumo:
+            inicio_refeicao = timezone.make_aware(
+                datetime.combine(self.data, tipo.horario_inicio_consumo),
+                tz,
+            )
+            return inicio_refeicao - timedelta(minutes=minutos)
+
+        return limites['fim'] - timedelta(minutes=minutos)
+
     @property
     def pode_cancelar(self):
         """Verifica se ainda é permitido cancelar a reserva baseado no prazo de minutos."""
-        limites = self.get_janela_reserva()
-        if not limites:
+        limite_cancelamento = self.get_limite_cancelamento()
+        if limite_cancelamento is None:
             return True
-        agora = timezone.localtime()
-        limite_cancelamento = limites['fim'] - timedelta(minutes=limites['minutos_cancelamento'])
-        return agora <= limite_cancelamento
+        return timezone.localtime() <= limite_cancelamento
 
     @property
     def reserva_futura(self):

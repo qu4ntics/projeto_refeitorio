@@ -267,22 +267,26 @@ class ReservaViewTests(TestCase):
         self.assertTrue(any("cancelada com sucesso" in str(m).lower() for m in messages))
 
     def test_cancelamento_fora_do_prazo(self):
-        """Regra 3.2: Bloquear cancelamento após o prazo limite (config.minutos_cancelamento)."""
-        self.refeicao.data = timezone.localdate()
+        """Regra 3.2: Bloquear cancelamento após o prazo limite (minutos antes do início da refeição)."""
+        hoje = timezone.localdate()
+        self.refeicao.data = hoje
         self.refeicao.save()
 
-        # Encerramento à meia-noite do dia da refeição; com 60 min de antecedência, o prazo já expirou.
-        # Alteramos na Janela pois a view agora prioriza o tipo da refeição
-        self.janela.horario_fechamento = time(0, 0, 0)
-        self.janela.save()
+        self.tipo_almoco.horario_inicio_consumo = time(12, 0)
+        self.tipo_almoco.save(update_fields=['horario_inicio_consumo'])
         self.config.minutos_cancelamento = 60
         self.config.save()
-        
+
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
-        response = self.client.post(reverse('reservas:cancelar_reserva', args=[reserva.id]))
-        
+        agora = timezone.make_aware(
+            datetime.combine(hoje, time(11, 30)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.post(reverse('reservas:cancelar_reserva', args=[reserva.id]))
+
         reserva.refresh_from_db()
-        self.assertEqual(reserva.status, 'ativa') # Não deve mudar para cancelada
+        self.assertEqual(reserva.status, 'ativa')
         messages = list(get_messages(response.wsgi_request))
         self.assertTrue(any("prazo para cancelamento" in str(m).lower() for m in messages))
 
