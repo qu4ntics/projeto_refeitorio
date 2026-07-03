@@ -1,0 +1,246 @@
+body {
+    background: linear-gradient(to left, var(--primary-light), var(--accent));
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 100dvh;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+h1 {
+    font-size: 32px;
+    text-align: center;
+    margin: 0;
+}
+
+p {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    letter-spacing: 0.5px;
+}
+
+.caixa-login {
+    background-color: #eff0f3;
+    width: 100%;
+    max-width: 500px;
+    padding: 40px 30px;
+    border-radius: 10px;
+    box-shadow: 3px 4px 30px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    box-sizing: border-box;
+}
+
+.caixa-login img {
+    margin: auto;
+    margin-bottom: 0;
+    width: 150px;
+}
+
+.form-login {
+    display: grid;
+    gap: 22px;
+}
+
+.form-login .helptext {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.form-login ul {
+    margin: -8px 0 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* Campo outlined — label sobre a borda */
+.campo-outline {
+    position: relative;
+    border: 1px solid #9e9e9e;
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.campo-outline:focus-within {
+    border-color: #8ad957;
+    box-shadow: 0 0 0 1px #8ad957;
+}
+
+.campo-outline label {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    z-index: 1;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    color: #424242;
+    background-color: #eff0f3;
+    pointer-events: none;
+}
+
+.campo-outline:focus-within label {
+    color: #2d8a4e;
+}
+
+.campo-outline input {
+    width: 100%;
+    padding: 16px 14px 14px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 16px;
+    color: #212121;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.campo-outline input::placeholder {
+    color: transparent;
+}
+
+/* Senha com botão de mostrar */
+.campo-senha input {
+    padding-right: 48px;
+}
+
+.btn-toggle-senha {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    color: #666;
+}
+
+.btn-toggle-senha:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.btn-toggle-senha i {
+    font-size: 22px;
+}
+
+.form-login .btn-submit,
+.form-login input[type="submit"] {
+    margin-top: 0;
+}
+
+.erro-login {
+    margin: -10px 0 0;
+    text-align: center;
+    color: #c62828;
+    font-size: 14px;
+}
+
+.erro-form {
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #fdecea;
+    border: 1px solid #f5b7b1;
+    color: #c62828;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.erro-form ul {
+    margin: 0;
+    padding-left: 18px;
+    color: inherit;
+    font-size: inherit;
+}
+
+.texto-apoio {
+    margin: -12px 0 0;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: 0;
+}
+
+.link-esqueci-senha {
+    display: block;
+    margin: -10px 2px 0;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.link-esqueci-senha:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.caixa-login > a {
+    text-align: center;
+    text-decoration: none;
+    color: #43b6ff;
+    font-weight: 600;
+    padding-top: 5px;
+}
+
+.caixa-login > a:hover {
+    color: #2587c4;
+    text-decoration: underline;
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #d0d0d0;
+    margin: 0;
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 28px;
+    }
+
+    body {
+        padding: 0;
+        margin: 0;
+    }
+
+    .caixa-login {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+
+        background: linear-gradient(
+            180deg,
+            var(--accent) 0%,
+            #eff0f3 100%
+        );
+        /* controla onde o degradê termina */
+        background-size: 100% 37%;
+        background-repeat: no-repeat;
+        background-color: #eff0f3;
+    }
+}

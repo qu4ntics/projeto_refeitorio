@@ -1,0 +1,238 @@
+.painel-refeitorio {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.painel-header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+}
+
+.painel-header h1 {
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.painel-header .page-date {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.cards-resumo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.card-resumo {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: var(--shadow);
+}
+
+.card-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--accent);
+    background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.card-icon.total {
+    color: #3498db;
+    background-color: color-mix(in srgb, #3498db 15%, transparent);
+}
+
+.card-icon.pendente {
+    color: var(--warning);
+    background-color: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.card-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.painel-secoes {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.btn-lista-presenca {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 25px;
+    background-color: var(--primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+    justify-content: center;
+}
+
+.btn-lista-presenca:hover {
+    background-color: var(--primary-light);
+}
+
+.painel-refeicoes {
+    margin-top: 20px;
+}
+
+.secao-titulo {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.tabela-refeicoes {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
+.tabela-refeicoes table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabela-refeicoes th,
+.tabela-refeicoes td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.tabela-refeicoes th {
+    background: color-mix(in srgb, var(--border) 40%, var(--bg-card));
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 0.4px;
+}
+
+.tabela-refeicoes td {
+    color: var(--text-primary);
+}
+
+.tabela-refeicoes tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.tabela-refeicoes tbody tr:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-status.encerrada {
+    background: color-mix(in srgb, var(--text-light) 20%, var(--bg-card));
+    color: var(--text-secondary);
+}
+
+.badge-status.andamento {
+    background: color-mix(in srgb, var(--success) 20%, var(--bg-card));
+    color: var(--success);
+}
+
+.badge-status.fechada {
+    background: color-mix(in srgb, var(--warning) 22%, var(--bg-card));
+    color: var(--warning);
+}
+
+.acoes-refeicao {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.form-inline {
+    display: inline;
+}
+
+.btn-acao {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-acao.primario {
+    background: var(--accent);
+    color: var(--bg-card);
+}
+
+.btn-acao.primario:hover {
+    background: var(--accent-hover);
+}
+
+.btn-acao.primario:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-acao.secundario {
+    background: var(--accent);
+    color: var(--bg-card);
+}
+
+.btn-acao.outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.btn-acao.outline:hover {
+    background: color-mix(in srgb, var(--border) 35%, var(--bg-card));
+    color: var(--text-primary);
+}
+
+.sem-refeicoes {
+    color: var(--text-secondary);
+    font-style: italic;
+}
