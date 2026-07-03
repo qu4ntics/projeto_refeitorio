@@ -1,0 +1,291 @@
+.painel-nutri {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.painel-nutri .painel-header {
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.painel-nutri .painel-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.painel-nutri .painel-header .page-date {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .secao-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.painel-nutri .secao-titulo {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.painel-nutri .secao-subtitulo {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .painel-resumo-hoje {
+  margin-bottom: 32px;
+}
+
+.painel-nutri .cards-resumo-hoje {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.painel-nutri .card-metrica--link {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.painel-nutri .card-metrica--link:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  transform: translateY(-1px);
+}
+
+.painel-nutri .painel-indicadores {
+  margin-bottom: 32px;
+}
+
+.painel-nutri .cards-topo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.painel-nutri .card-metrica {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 120px;
+  padding: 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.painel-nutri .card-metrica__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.painel-nutri .card-metrica__icon--ausencia {
+  color: #d9534f;
+  background: color-mix(in srgb, #d9534f 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--pico {
+  color: #2f6fed;
+  background: color-mix(in srgb, #2f6fed 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--pratos {
+  color: #8a6c00;
+  background: color-mix(in srgb, #f5e5a1 60%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--comparecimento {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--reservas {
+  color: #2f6fed;
+  background: color-mix(in srgb, #2f6fed 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--ocupacao {
+  color: #6f42c1;
+  background: color-mix(in srgb, #6f42c1 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--cancelamento {
+  color: #d9534f;
+  background: color-mix(in srgb, #d9534f 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--bloqueio {
+  color: #c0392b;
+  background: color-mix(in srgb, #c0392b 15%, transparent);
+}
+
+.painel-nutri .card-metrica__icon--pratos-mais {
+  color: #e6a817;
+  background: color-mix(in srgb, #f5e5a1 60%, transparent);
+}
+
+.painel-nutri .card-metrica__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.painel-nutri .card-metrica__label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .card-metrica__valor {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.painel-nutri .card-metrica__valor--texto {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.painel-nutri .card-metrica__valor--vazio {
+  color: var(--text-secondary);
+}
+
+.painel-nutri .card-metrica__sub {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.painel-nutri .painel-refeicoes-hoje {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px 24px;
+  box-shadow: var(--shadow);
+}
+
+.painel-nutri .painel-refeicoes__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.painel-nutri .meal-card--painel {
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.painel-nutri .meal-card--painel .meal-card__body {
+  padding: 14px 16px;
+}
+
+.painel-nutri .meal-card--painel .meal-menu {
+  margin-bottom: 0.75rem;
+}
+
+.painel-nutri .meal-card--painel .meal-footer {
+  margin-top: 0;
+}
+
+.painel-nutri .painel-vazio {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.painel-nutri .painel-vazio i {
+  display: block;
+  font-size: 1.75rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+.painel-nutri .painel-vazio p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.painel-nutri .btn-adicionar {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #2f6fed;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.painel-nutri .btn-adicionar:hover {
+  filter: brightness(1.05);
+}
+
+.meal-info .meta-sep {
+  margin: 0 6px;
+}
+
+@media (max-width: 1200px) {
+  .painel-nutri .cards-resumo-hoje {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 960px) {
+  .painel-nutri .cards-resumo-hoje {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .painel-nutri .cards-topo {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .painel-nutri .card-metrica {
+    min-height: unset;
+  }
+
+  .painel-nutri .secao-cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .painel-nutri .btn-adicionar {
+    text-align: center;
+  }
+}

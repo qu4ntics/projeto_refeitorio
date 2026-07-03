@@ -1,0 +1,174 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo|default:"Nova Refeição" }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/pratos-style.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="nova-refeicao-page">
+    <div class="nova-refeicao-card">
+      <header class="nova-refeicao-header">
+        <a href="{% url 'refeicoes:cardapio_semana' %}" class="nova-refeicao-voltar" title="Voltar ao cardápio">&larr;</a>
+        <div class="nova-refeicao-titulo">
+          <h1>{{ titulo|default:"Nova refeição" }}</h1>
+          <p>{{ subtitulo|default:"Cadastre uma refeição para o cardápio da semana." }}</p>
+        </div>
+      </header>
+
+      <form method="post" class="nova-refeicao-form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert-error">
+            {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if nenhum_tipo_habilitado %}
+          <div class="alert-error">
+            <p>Nenhum tipo de refeição está habilitado. Acesse <a href="{% url 'administrativo:configuracoes' %}">Configurações</a> e habilite ao menos um tipo.</p>
+          </div>
+        {% endif %}
+
+        <div class="nova-refeicao-linha">
+          <div class="campo-grupo {% if form.data.errors %}has-error{% endif %}">
+            {{ form.data.label_tag }}
+            {{ form.data }}
+            {% for error in form.data.errors %}
+              <span class="form-error">{{ error }}</span>
+            {% endfor %}
+          </div>
+
+          <div class="campo-grupo {% if form.tipo.errors %}has-error{% endif %}">
+            {{ form.tipo.label_tag }}
+            {{ form.tipo }}
+            {% for error in form.tipo.errors %}
+              <span class="form-error">{{ error }}</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="campo-grupo {% if form.pratos.errors %}has-error{% endif %}">
+          <label>{{ form.pratos.label }}</label>
+          {% if pratos_por_categoria %}
+            <div class="pratos-selecao">
+              {% for grupo in pratos_por_categoria %}
+                <fieldset class="pratos-grupo">
+                  <legend>{{ grupo.label }}</legend>
+                  <ul class="pratos-lista-check">
+                    {% for prato in grupo.pratos %}
+                      <li>
+                        <label class="prato-check-label">
+                          <input type="checkbox" name="pratos" value="{{ prato.pk }}"
+                            class="check-prato"
+                            {% if prato.pk|stringformat:"s" in pratos_selecionados %}checked{% endif %}>
+                          <span class="prato-check-nome">{{ prato.nome }}</span>
+                          {% if prato.descricao %}
+                            <span class="prato-check-desc">{{ prato.descricao }}</span>
+                          {% endif %}
+                        </label>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </fieldset>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="pratos-vazio">
+              Nenhum prato cadastrado.
+              <a href="{% url 'refeicoes:prato_criar' %}">Cadastre pratos</a>
+              antes de montar a refeição.
+            </p>
+          {% endif %}
+          {% for error in form.pratos.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="nova-refeicao-opcoes">
+          <div class="nova-refeicao-toggle {% if form.exige_reserva.errors %}has-error{% endif %}">
+            <div class="nova-refeicao-toggle-inner">
+              <div class="nova-refeicao-toggle-texto">
+                <span class="toggle-titulo">Exige reserva</span>
+                <p class="toggle-subtitulo">Se desativado, a refeição aparece apenas como informativa no cardápio.</p>
+              </div>
+              <div class="nova-refeicao-toggle-switch">
+                {{ form.exige_reserva }}
+                <label for="{{ form.exige_reserva.id_for_label }}" class="toggle-label"></label>
+              </div>
+            </div>
+            {% for error in form.exige_reserva.errors %}
+              <span class="form-error">{{ error }}</span>
+            {% endfor %}
+          </div>
+
+          <div class="nova-refeicao-vagas {% if form.limite_vagas.errors %}has-error{% endif %}" id="grupo-limite-vagas">
+            {{ form.limite_vagas.label_tag }}
+            {{ form.limite_vagas }}
+            {% for error in form.limite_vagas.errors %}
+              <span class="form-error">{{ error }}</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% if config_reserva %}
+          <div class="nova-refeicao-janela">
+            <div class="nova-refeicao-janela-titulo">Janela de reserva (configuração global)</div>
+            <p>
+              Abertura: <strong>{{ config_reserva.abertura|time:"H:i" }}</strong> do dia anterior —
+              Encerramento: <strong>{{ config_reserva.encerramento|time:"H:i" }}</strong> do dia da refeição.
+            </p>
+          </div>
+        {% endif %}
+
+        <div class="nova-refeicao-acoes">
+          <a href="{% url 'refeicoes:cardapio_semana' %}" class="btn-cancelar">Cancelar</a>
+          <button type="submit" class="btn-salvar" data-loading-text="Salvando...">
+            {% if refeicao %}Salvar alterações{% else %}Salvar refeição{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    (function () {
+      const checkbox = document.getElementById('{{ form.exige_reserva.id_for_label }}');
+      const grupo = document.getElementById('grupo-limite-vagas');
+      const input = document.getElementById('{{ form.limite_vagas.id_for_label }}');
+      const form = document.querySelector('.nova-refeicao-form');
+      if (!checkbox || !input || !grupo) return;
+
+      function syncLimiteVagas() {
+        const ativo = checkbox.checked;
+        grupo.classList.toggle('is-inativo', !ativo);
+        input.required = ativo;
+        input.readOnly = !ativo;
+        if (!ativo) {
+          input.value = '0';
+        } else if (input.value === '' || input.value === '0') {
+          input.value = '180';
+        }
+      }
+
+      checkbox.addEventListener('change', syncLimiteVagas);
+      if (form) {
+        form.addEventListener('submit', function () {
+          if (!checkbox.checked) {
+            input.required = false;
+            input.value = '0';
+          }
+        });
+      }
+      syncLimiteVagas();
+    })();
+  </script>
+{% endblock %}

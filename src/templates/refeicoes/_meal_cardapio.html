@@ -1,0 +1,11 @@
+{% with cardapio=refeicao.cardapio_por_categoria %}
+{% if cardapio %}
+<ul class="meal-menu">
+  {% for grupo in cardapio %}
+  <li class="meal-menu__item">{{ grupo.itens|join:", " }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="meal-menu meal-menu--empty">(sem cardápio)</p>
+{% endif %}
+{% endwith %}

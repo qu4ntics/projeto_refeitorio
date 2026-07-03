@@ -1,0 +1,66 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Cardápio da Semana{% endblock %}
+
+{% block menu_refeicoes %}active{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="cardapio-header">
+  <div class="header-top">
+    <div>
+      <h1>CARDÁPIO</h1>
+      <p class="page-date">Semana de {{ semana_inicio|date:"d/m" }} até {{ semana_fim|date:"d/m" }}</p>
+    </div>
+    <a href="{% url 'refeicoes:criar' %}" class="btn-nova-refeicao">
+      <i class="fa-solid fa-plus"></i> Nova Refeição
+    </a>
+  </div>
+</div>
+
+<div class="cardapio-divider"></div>
+
+<div class="week-tabs week-tabs--full" role="tablist" aria-label="Dias da semana">
+
+  {% for dia in dias_semana %}
+  <button class="week-tab {% if dia.hoje %}today-tab{% endif %} {% if dia.id == tab_inicial %}active{% endif %}" type="button" role="tab"
+          aria-selected="{% if dia.id == tab_inicial %}true{% else %}false{% endif %}" aria-controls="painel-{{ dia.id }}" id="tab-{{ dia.id }}"
+          aria-label="{{ dia.nome }}"
+          data-panel="painel-{{ dia.id }}">
+    {{ dia.id|upper }}
+  </button>
+  {% endfor %}
+
+</div>
+
+{% for dia in dias_semana %}
+<div class="day-panel {% if dia.id == tab_inicial %}active{% endif %}" id="painel-{{ dia.id }}" role="tabpanel" aria-labelledby="tab-{{ dia.id }}">
+
+  <div class="day-label">
+    <span class="day-name">{{ dia.nome }}</span>
+    — {{ dia.data|date:"d \d\e F" }}
+    {% if dia.hoje %}<span class="day-today-badge">HOJE</span>{% endif %}
+  </div>
+
+  {% for refeicao in dia.refeicoes %}
+    {% include "refeicoes/_meal_card_nutri.html" with refeicao=refeicao %}
+  {% empty %}
+    <div class="day-empty">
+      <i class="fa-solid fa-bowl-food"></i>
+      <p>Nenhuma refeição cadastrada para este dia.</p>
+    </div>
+  {% endfor %}
+
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/cardapio_semana.js' %}"></script>
+{% endblock %}

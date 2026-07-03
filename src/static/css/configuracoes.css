@@ -1,0 +1,177 @@
+/* =============================================
+   AJUSTES EXCLUSIVOS DA TELA DE CONFIGURAÇÃO
+   ============================================= */
+
+.config-tabs {
+  margin-bottom: 1.75rem;
+}
+
+.config-tab-panel {
+  display: none;
+}
+
+.config-tab-panel.active {
+  display: block;
+}
+
+.config-container-refeicoes {
+  display: flex;
+  flex-direction: column;
+  gap: 2.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.refeicao-config-box {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.refeicao-config-box:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.refeicao-config-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.refeicao-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+  margin-bottom: 0;
+}
+
+.refeicao-toggle-habilitar {
+  margin: 0;
+}
+
+.refeicao-config-box.is-inativo .refeicao-horarios {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.status-janela {
+  margin-top: 0.25rem;
+}
+
+.refeicao-config-box .campo {
+  width: 100%;
+}
+
+.refeicao-config-box.has-error .campo {
+  border-color: var(--danger) !important;
+}
+
+.msg-erro-inline {
+  display: block;
+  color: var(--danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.refeicao-config-box .campo::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+body.dark-mode .refeicao-config-box .campo::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .refeicao-config-box .campo::-webkit-calendar-picker-indicator {
+  filter: invert(1) !important;
+}
+
+.config-nutri-page .config-section--nutri {
+  margin-bottom: 1.5rem;
+}
+
+.config-nutri-page .config-section--nutri:last-child {
+  margin-bottom: 0;
+}
+
+.config-reservas-card {
+  margin-bottom: 1.25rem;
+}
+
+.config-reservas-card .config-section-title {
+  margin-bottom: 0.5rem;
+}
+
+.config-input--numero {
+  max-width: 140px;
+}
+
+.config-ajuda-cancelamento {
+  margin-top: 1rem;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.config-strikes-card .config-link--acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.config-tabs.week-tabs {
+  overflow-x: visible;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.config-tabs .week-tab {
+  flex-shrink: unset;
+  min-width: 0;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  padding: 8px 6px;
+}
+
+.config-nutri-logout {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.config-nutri-logout .config-perfil-logout {
+  width: auto;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.config-nutri-logout .config-btn--logout {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.config-nutri-logout .config-btn--logout:hover {
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-card));
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+@media (max-width: 480px) {
+  .config-tabs .week-tab {
+    font-size: 10px;
+    padding: 8px 4px;
+  }
+}
