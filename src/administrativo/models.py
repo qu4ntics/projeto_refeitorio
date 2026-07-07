@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db import models
@@ -22,6 +22,7 @@ class Turma(UUIDModel):
         (5, 'Sábado'),
         (6, 'Domingo'),
     ]
+    DIAS_CONTRATURNO = DIAS_SEMANA[:5]
 
     nome = models.CharField('Nome', max_length=100)
     turno = models.CharField('Turno', max_length=20, choices=TURNOS, default='matutino')
@@ -29,7 +30,7 @@ class Turma(UUIDModel):
         'Dias de contraturno',
         default=list,
         blank=True,
-        help_text='Dias da semana (0=segunda … 6=domingo) em que a turma possui contraturno.',
+        help_text='Dias da semana (0=segunda … 4=sexta) em que a turma possui contraturno.',
     )
     ativo = models.BooleanField('Ativa', default=True)
 
@@ -167,6 +168,9 @@ class TipoRefeicao(UUIDModel):
 
 
 class JanelaReserva(UUIDModel):
+    HORARIO_FECHAMENTO_PRE_PADRAO = time(6, 0)
+    BUFFER_PRE_RESERVA_HORAS = 1
+
     tipo_refeicao = models.OneToOneField(
         TipoRefeicao,
         on_delete=models.PROTECT,
@@ -174,16 +178,78 @@ class JanelaReserva(UUIDModel):
     )
     horario_abertura = models.TimeField('Horário de Abertura (Dia Anterior)')
     horario_fechamento = models.TimeField('Horário de Fechamento (Dia da Refeição)')
+    horario_fechamento_pre_reserva = models.TimeField(
+        'Horário de Fechamento da Pré-reserva',
+        default=HORARIO_FECHAMENTO_PRE_PADRAO,
+        help_text=(
+            'Prazo para o aluno confirmar ou rejeitar a pré-reserva. '
+            'Deve ser pelo menos 1 hora antes do fechamento da janela geral.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'Janela de Reserva'
         verbose_name_plural = 'Janelas de Reserva'
 
+    @classmethod
+    def calcular_limites(cls, data_refeicao, horario_abertura, horario_fechamento, horario_fechamento_pre):
+        """Retorna (inicio, fim_pre, fim) como datetimes aware para uma data de refeição."""
+        tz = timezone.get_current_timezone()
+        inicio = timezone.make_aware(
+            datetime.combine(data_refeicao - timedelta(days=1), horario_abertura),
+            tz,
+        )
+        fim = timezone.make_aware(
+            datetime.combine(data_refeicao, horario_fechamento),
+            tz,
+        )
+        if horario_fechamento_pre > horario_abertura:
+            fim_pre = timezone.make_aware(
+                datetime.combine(data_refeicao - timedelta(days=1), horario_fechamento_pre),
+                tz,
+            )
+        else:
+            fim_pre = timezone.make_aware(
+                datetime.combine(data_refeicao, horario_fechamento_pre),
+                tz,
+            )
+        return inicio, fim_pre, fim
+
+    def calcular_limites_janela(self, data_refeicao):
+        return self.calcular_limites(
+            data_refeicao,
+            self.horario_abertura,
+            self.horario_fechamento,
+            self.horario_fechamento_pre_reserva,
+        )
+
     def clean(self):
-        # Validação: Abertura vs Fechamento (Evitar janelas maiores que 24h ou negativas)
         if self.horario_abertura == self.horario_fechamento:
             raise ValidationError({
                 'horario_abertura': 'O horário de abertura não pode ser igual ao de fechamento.'
+            })
+
+        inicio, fim_pre, fim = self.calcular_limites_janela(date(2000, 1, 2))
+        buffer = timedelta(hours=self.BUFFER_PRE_RESERVA_HORAS)
+
+        if fim_pre <= inicio:
+            raise ValidationError({
+                'horario_fechamento_pre_reserva': (
+                    'O fechamento da pré-reserva deve ser posterior à abertura da janela.'
+                ),
+            })
+        if fim_pre >= fim:
+            raise ValidationError({
+                'horario_fechamento_pre_reserva': (
+                    'O fechamento da pré-reserva deve ser anterior ao fechamento da janela de reservas.'
+                ),
+            })
+        if fim_pre > fim - buffer:
+            raise ValidationError({
+                'horario_fechamento_pre_reserva': (
+                    'O fechamento da pré-reserva deve ser pelo menos 1 hora antes '
+                    'do fechamento da janela de reservas.'
+                ),
             })
 
     def __str__(self):

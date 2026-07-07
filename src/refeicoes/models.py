@@ -67,6 +67,11 @@ class Refeicao(UUIDModel):
     criado_em = models.DateTimeField(auto_now_add=True)
     chamada_aberta = models.BooleanField(default=False, verbose_name='Chamada Aberta')
     chamada_finalizada = models.BooleanField(default=False, verbose_name="Chamada Finalizada")
+    pre_reservas_disparadas_em = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Pré-reservas disparadas em',
+    )
     pratos = models.ManyToManyField(Prato, through='RefeicaoPrato', related_name='refeicoes')
 
     class Meta:
@@ -142,10 +147,50 @@ class Refeicao(UUIDModel):
         v_word = "vaga" if v == 1 else "vagas"
         r_word = "restante" if v == 1 else "restantes"
         texto = f"{v} {v_word} {r_word}"
-
-        if self.exige_reserva and self.reserva_encerrada:
-            return f"{texto} (Encerrada)"
         return texto
+
+    @property
+    def inicio_consumo_datetime(self):
+        """Datetime aware do início da refeição, se configurado no tipo."""
+        from administrativo.models import TipoRefeicao
+
+        tipo = TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+        if not tipo or not tipo.horario_inicio_consumo:
+            return None
+        tz = timezone.get_current_timezone()
+        return timezone.make_aware(
+            datetime.combine(self.data, tipo.horario_inicio_consumo),
+            tz,
+        )
+
+    @property
+    def refeicao_ainda_nao_iniciou(self):
+        inicio = self.inicio_consumo_datetime
+        if not inicio:
+            return True
+        return timezone.localtime() < inicio
+
+    @property
+    def janela_encerrada_aguardando_refeicao(self):
+        """Janela de reserva fechou, mas o horário da refeição ainda não chegou."""
+        return (
+            self.exige_reserva
+            and self.reserva_encerrada
+            and self.refeicao_ainda_nao_iniciou
+        )
+
+    @property
+    def aviso_reserva_encerrada(self):
+        if not self.janela_encerrada_aguardando_refeicao:
+            return ''
+        fechamento = self.fechamento_reserva_display
+        inicio = self.inicio_consumo_datetime
+        if inicio:
+            return (
+                f'O prazo encerrou em {fechamento}. '
+                f'A refeição começa às {inicio.strftime("%H:%M")}.'
+            )
+        return f'O prazo de reservas encerrou em {fechamento}.'
 
     def get_janela_reserva(self):
         """
@@ -160,21 +205,33 @@ class Refeicao(UUIDModel):
         if not janela and not config:
             return None
 
+        from administrativo.models import JanelaReserva as JanelaReservaModel
+
         hora_abre = janela.horario_abertura if janela else config.abertura
         hora_fecha = janela.horario_fechamento if janela else config.encerramento
+        hora_fecha_pre = (
+            janela.horario_fechamento_pre_reserva
+            if janela
+            else JanelaReservaModel.HORARIO_FECHAMENTO_PRE_PADRAO
+        )
         minutos_cancelamento = config.minutos_cancelamento if config else 60
 
-        # Local helpers para converter para datetime aware
-        tz = timezone.get_current_timezone()
-        inicio = timezone.make_aware(datetime.combine(self.data - timedelta(days=1), hora_abre), tz)
-        fim = timezone.make_aware(datetime.combine(self.data, hora_fecha), tz)
+        inicio, fim_pre_reserva, fim = JanelaReservaModel.calcular_limites(
+            self.data,
+            hora_abre,
+            hora_fecha,
+            hora_fecha_pre,
+        )
 
         return {
             'inicio': inicio,
+            'inicio_pre_reserva': inicio,
             'fim': fim,
+            'fim_pre_reserva': fim_pre_reserva,
             'hora_abre': hora_abre,
             'hora_fecha': hora_fecha,
-            'minutos_cancelamento': minutos_cancelamento
+            'hora_fecha_pre': hora_fecha_pre,
+            'minutos_cancelamento': minutos_cancelamento,
         }
 
     @property
@@ -215,6 +272,22 @@ class Refeicao(UUIDModel):
         limites = self.get_janela_reserva()
         if not limites: return True
         return limites['inicio'] <= timezone.localtime() <= limites['fim']
+
+    @property
+    def periodo_pre_reserva_ativo(self):
+        """True enquanto houver pré-reservas pendentes dentro do prazo de confirmação."""
+        if not self.pre_reservas_disparadas_em:
+            return False
+        limites = self.get_janela_reserva()
+        if not limites:
+            return False
+        agora = timezone.now()
+        if agora >= limites['fim_pre_reserva']:
+            return False
+        return self.pre_reservas.filter(
+            status='pendente',
+            expira_em__gt=agora,
+        ).exists()
 
     def get_limite_cancelamento(self):
         """

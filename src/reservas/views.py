@@ -12,6 +12,7 @@ from refeicoes.models import Refeicao
 from .models import Reserva
 from .services.pre_reserva import (
     PreReservaError,
+    ativar_pre_reservas,
     confirmar_pre_reserva,
     expirar_pendentes,
     rejeitar_pre_reserva,
@@ -29,7 +30,9 @@ def criar_reserva(request, refeicao_id):
     refeicao = get_object_or_404(Refeicao.objects.select_for_update(), pk=refeicao_id)
     usuario = request.user
 
+    ativar_pre_reservas(refeicao)
     expirar_pendentes(refeicao)
+    refeicao.refresh_from_db()
 
     # 1. Validação: Aluno bloqueado
     if usuario.bloqueado:
@@ -132,6 +135,11 @@ def cancelar_reserva(request, reserva_id):
 @perfil_required('aluno')
 @require_POST
 def confirmar_pre_reserva_view(request, pre_reserva_id):
+    from reservas.models import PreReserva
+
+    pre = get_object_or_404(PreReserva, pk=pre_reserva_id, aluno=request.user)
+    ativar_pre_reservas(pre.refeicao)
+    expirar_pendentes(pre.refeicao)
     try:
         confirmar_pre_reserva(pre_reserva_id, request.user)
         messages.success(request, 'Pré-reserva confirmada com sucesso!')
@@ -144,6 +152,11 @@ def confirmar_pre_reserva_view(request, pre_reserva_id):
 @perfil_required('aluno')
 @require_POST
 def rejeitar_pre_reserva_view(request, pre_reserva_id):
+    from reservas.models import PreReserva
+
+    pre = get_object_or_404(PreReserva, pk=pre_reserva_id, aluno=request.user)
+    ativar_pre_reservas(pre.refeicao)
+    expirar_pendentes(pre.refeicao)
     try:
         rejeitar_pre_reserva(pre_reserva_id, request.user)
         messages.info(request, 'Pré-reserva rejeitada.')

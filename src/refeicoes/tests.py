@@ -213,3 +213,61 @@ class StrikesAlunoViewTests(TestCase):
         self.assertContains(response, 'Expirado')
         self.assertNotContains(response, 'strike-badge--ativo')
 
+
+class JanelaEncerradaAguardandoRefeicaoTests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_enc',
+            email='nutri_enc@test.com',
+            password='123',
+            perfil='nutricionista',
+        )
+        self.tipo_almoco = TipoRefeicao.objects.get(nome='almoco')
+        self.tipo_almoco.ativo = True
+        self.tipo_almoco.horario_inicio_consumo = time(12, 0)
+        self.tipo_almoco.save(update_fields=['ativo', 'horario_inicio_consumo'])
+        from administrativo.models import JanelaReserva
+
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=self.tipo_almoco,
+            defaults={
+                'horario_abertura': time(15, 0),
+                'horario_fechamento': time(7, 0),
+                'horario_fechamento_pre_reserva': time(6, 0),
+            },
+        )
+        self.hoje = timezone.localdate()
+        self.refeicao = Refeicao.objects.create(
+            data=self.hoje,
+            tipo='almoco',
+            limite_vagas=10,
+            exige_reserva=True,
+        )
+
+    def test_detecta_janela_encerrada_antes_da_refeicao(self):
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(10, 30)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            self.assertTrue(self.refeicao.janela_encerrada_aguardando_refeicao)
+            self.assertIn('12:00', self.refeicao.aviso_reserva_encerrada)
+
+    def test_homepage_exibe_aviso_reserva_encerrada(self):
+        Usuario.objects.create_user(
+            username='aluno_enc',
+            email='aluno_enc@test.com',
+            password='123',
+            perfil='aluno',
+        )
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(10, 30)),
+            timezone.get_current_timezone(),
+        )
+        self.client.login(username='aluno_enc@test.com', password='123')
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            response = self.client.get(reverse('refeicoes:homepage'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Reservas encerradas')
+        self.assertNotContains(response, 'RESERVAS ENCERRADAS')
+

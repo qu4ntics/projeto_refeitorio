@@ -155,13 +155,21 @@ def homepage(request):
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
 
     from reservas.models import Reserva, PreReserva
+    from reservas.services.pre_reserva import sincronizar_pre_reservas
 
     hoje = ctx['hoje']
     almoco_destaque = _resolver_almoco_destaque(hoje)
 
-    refeicao_ids = list(ctx['refeicoes_raw'].values_list('id', flat=True))
-    if almoco_destaque and almoco_destaque['refeicao'].id not in refeicao_ids:
-        refeicao_ids.append(almoco_destaque['refeicao'].id)
+    refeicoes_semana = list(ctx['refeicoes_raw'])
+    refeicao_ids_set = {r.id for r in refeicoes_semana}
+    if almoco_destaque:
+        refeicao_destaque = almoco_destaque['refeicao']
+        if refeicao_destaque.id not in refeicao_ids_set:
+            refeicoes_semana.append(refeicao_destaque)
+
+    sincronizar_pre_reservas(refeicoes_semana)
+
+    refeicao_ids = [r.id for r in refeicoes_semana]
 
     reservas_ativas = {
         res.refeicao_id: res.id
