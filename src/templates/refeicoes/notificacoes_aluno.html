@@ -1,0 +1,48 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Notificações{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+  <link rel="stylesheet" href="{% static 'css/configuracoes_aluno.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cardapio-header cardapio-header--pagina">
+  <h1>NOTIFICAÇÕES</h1>
+</div>
+
+<div class="cardapio-divider"></div>
+
+<section class="config-section config-section--pagina">
+  <div class="config-section-header">
+    {% if notificacoes_nao_lidas %}
+    <form method="post" class="config-inline-form config-inline-form--direita">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="marcar_lidas">
+      <button type="submit" class="config-btn config-btn--ghost" data-loading-text="Salvando...">
+        Marcar todas como lidas
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="config-card config-card--lista">
+    {% if notificacoes %}
+    <ul class="config-notificacoes">
+      {% for notif in notificacoes %}
+      <li class="config-notif{% if not notif.lida %} config-notif--nao-lida{% endif %}">
+        <div class="config-notif-top">
+          <strong>{{ notif.titulo }}</strong>
+          <time>{{ notif.criada_em|date:"d/m/Y H:i" }}</time>
+        </div>
+        <p>{{ notif.mensagem }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="config-vazio">Nenhuma notificação por aqui.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

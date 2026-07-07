@@ -333,7 +333,7 @@
   color: var(--text-secondary);
 }
 
-.pratos-estado-vazio i {
+.pratos-estado-vazio > i {
   font-size: 2.5rem;
   color: var(--text-light);
   margin-bottom: 1rem;
@@ -341,8 +341,26 @@
 }
 
 .pratos-estado-vazio p {
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
   font-size: 0.9375rem;
+}
+
+.pratos-estado-vazio .btn-novo-prato {
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  box-shadow: none;
+}
+
+.pratos-estado-vazio .btn-novo-prato:hover {
+  transform: none;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.pratos-estado-vazio .btn-novo-prato i {
+  font-size: 0.7rem;
 }
 
 /* Nova refeição — seleção de pratos */
@@ -493,7 +511,7 @@
     align-items: stretch;
   }
 
-  .btn-novo-prato {
+  .pratos-header .btn-novo-prato {
     width: 100%;
     justify-content: center;
   }

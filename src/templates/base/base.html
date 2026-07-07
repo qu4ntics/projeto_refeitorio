@@ -62,7 +62,8 @@
 
 
 
-      <a href="{% if user.perfil == 'aluno' %}{% url 'refeicoes:configuracoes_aluno' %}#notificacoes{% else %}#{% endif %}" title="Notificações" style="color: inherit; text-decoration: none; position: relative;">
+      {% if user.perfil == 'aluno' or user.perfil == 'nutricionista' %}
+      <a href="{% url 'refeicoes:notificacoes_aluno' %}" title="Notificações" class="topbar-notificacoes" style="color: inherit; text-decoration: none; position: relative;">
 
         <i class="fa-regular fa-bell"></i>
 
@@ -73,6 +74,7 @@
         {% endif %}
 
       </a>
+      {% endif %}
 
 
 
