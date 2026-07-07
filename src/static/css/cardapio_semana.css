@@ -186,6 +186,72 @@
   border-left: 3px solid var(--accent);
 }
 
+.almoco-atual__aviso--encerrada {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--text-light) 10%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--text-light) 35%, var(--border));
+  border-left: 4px solid var(--text-secondary);
+}
+
+.almoco-atual__aviso--encerrada > i {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.meal-card--reserva-encerrada {
+  border-color: color-mix(in srgb, var(--text-light) 45%, var(--border));
+  background: color-mix(in srgb, var(--text-light) 4%, var(--bg-card));
+}
+
+.reserva-encerrada-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--text-light) 10%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--text-light) 35%, var(--border));
+  border-radius: 8px;
+  border-left: 4px solid var(--text-secondary);
+}
+
+.reserva-encerrada-banner > i {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.reserva-encerrada-banner__texto strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.reserva-encerrada-banner__texto p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.almoco-atual .meal-card--reserva-encerrada {
+  border-color: color-mix(in srgb, var(--text-light) 50%, var(--border));
+  box-shadow: none;
+}
+
+.almoco-atual .meal-card--reserva-encerrada .meal-card__header {
+  background: color-mix(in srgb, var(--text-light) 8%, var(--bg-card));
+  border-bottom-color: color-mix(in srgb, var(--text-light) 30%, var(--border));
+}
+
 .aluno-bloqueio-banner {
   display: flex;
   align-items: flex-start;

@@ -10,7 +10,7 @@
 
 {% block extra_css %}
 
-  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}?v=2">
 
 {% endblock %}
 
@@ -52,9 +52,12 @@
   </div>
 
   {% if almoco_destaque.refeicao.reserva_futura %}
-
     <p class="almoco-atual__aviso">{{ almoco_destaque.refeicao.get_status_reserva }}</p>
-
+  {% elif almoco_destaque.refeicao.janela_encerrada_aguardando_refeicao %}
+    <p class="almoco-atual__aviso almoco-atual__aviso--encerrada" role="status">
+      <i class="fa-solid fa-lock" aria-hidden="true"></i>
+      {{ almoco_destaque.refeicao.aviso_reserva_encerrada }}
+    </p>
   {% endif %}
 
   {% include "refeicoes/_meal_card_aluno.html" with refeicao=almoco_destaque.refeicao %}

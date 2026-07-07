@@ -13,17 +13,29 @@ class PreReservaError(ValidationError):
     pass
 
 
-def criar_pre_reservas(refeicao):
-    if not refeicao.exige_reserva:
+def _marcar_pre_reservas_disparadas(refeicao, quando=None):
+    refeicao.pre_reservas_disparadas_em = quando or timezone.now()
+    refeicao.save(update_fields=['pre_reservas_disparadas_em'])
+
+
+def ativar_pre_reservas(refeicao):
+    if not refeicao.exige_reserva or refeicao.pre_reservas_disparadas_em:
         return
 
     limites = refeicao.get_janela_reserva()
     if not limites:
         return
 
-    expira_em = limites['inicio']
-    weekday = refeicao.data.weekday()
+    agora = timezone.now()
+    if agora < limites['inicio']:
+        return
 
+    fim_pre = limites['fim_pre_reserva']
+    if agora >= fim_pre:
+        _marcar_pre_reservas_disparadas(refeicao, agora)
+        return
+
+    weekday = refeicao.data.weekday()
     alunos = Usuario.objects.filter(
         perfil='aluno',
         bloqueado=False,
@@ -34,9 +46,12 @@ def criar_pre_reservas(refeicao):
     )
 
     pre_reservas = [
-        PreReserva(aluno=aluno, refeicao=refeicao, expira_em=expira_em)
+        PreReserva(aluno=aluno, refeicao=refeicao, expira_em=fim_pre)
         for aluno in alunos
     ]
+
+    _marcar_pre_reservas_disparadas(refeicao, agora)
+
     if not pre_reservas:
         return
 
@@ -48,7 +63,7 @@ def criar_pre_reservas(refeicao):
         aluno__in=alunos,
     ).select_related('aluno')
 
-    prazo = expira_em.strftime('%d/%m/%Y às %H:%M')
+    prazo = fim_pre.strftime('%d/%m/%Y às %H:%M')
     tipo = refeicao.get_tipo_display()
     data = refeicao.data.strftime('%d/%m/%Y')
     notificacoes = [
@@ -56,7 +71,7 @@ def criar_pre_reservas(refeicao):
             usuario=pr.aluno,
             titulo='Pré-reserva de contra-turno',
             mensagem=(
-                f'Você tem uma pré-reserva para {tipo} em {data}. '
+                f'A janela de reservas abriu e você tem uma pré-reserva para {tipo} em {data}. '
                 f'Confirme ou rejeite até {prazo}.'
             ),
         )
@@ -64,6 +79,12 @@ def criar_pre_reservas(refeicao):
     ]
     if notificacoes:
         Notificacao.objects.bulk_create(notificacoes)
+
+
+def sincronizar_pre_reservas(refeicoes):
+    for refeicao in refeicoes:
+        expirar_pendentes(refeicao)
+        ativar_pre_reservas(refeicao)
 
 
 def confirmar_pre_reserva(pre_reserva_id, aluno):

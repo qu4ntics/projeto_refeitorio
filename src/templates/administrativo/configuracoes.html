@@ -105,6 +105,29 @@
               <div class="nova-refeicao-janela status-janela">
                 <p>Reservas abertas das <strong class="txt-abertura">{{ item.abertura }}</strong> do dia anterior até as <strong class="txt-fechamento">{{ item.encerramento }}</strong> do dia da refeição.</p>
               </div>
+
+              <div class="nova-refeicao-linha">
+                <div class="campo-grupo">
+                  <label>Abertura da pré-reserva</label>
+                  <p class="campo-informativo txt-abertura-pre">{{ item.abertura }} <span class="campo-informativo__dia">(dia anterior)</span></p>
+                </div>
+
+                <div class="campo-grupo">
+                  <label for="id_fechamento_pre_reserva_{{ item.id }}">Fechamento da pré-reserva</label>
+                  <input type="time" name="fechamento_pre_reserva_{{ item.id }}" id="id_fechamento_pre_reserva_{{ item.id }}"
+                         class="campo" value="{{ item.fechamento_pre_reserva }}" required>
+                </div>
+              </div>
+
+              <div class="nova-refeicao-janela status-janela status-janela--pre-reserva">
+                <p>
+                  Alunos de contraturno recebem pré-reserva ao abrir a janela (<strong class="txt-abertura-pre-resumo">{{ item.abertura }}</strong> do dia anterior)
+                  e devem confirmar ou rejeitar até <strong class="txt-fechamento-pre">{{ item.fechamento_pre_reserva }}</strong>
+                  (<span class="txt-dia-fechamento-pre">dia anterior ou dia da refeição</span>).
+                  O fechamento deve ser <strong>pelo menos 1 hora antes</strong> do fechamento geral (<strong class="txt-fechamento-pre-limite">{{ item.encerramento }}</strong>).
+                  Vagas não confirmadas liberam para todos.
+                </p>
+              </div>
             </div>
             <span class="form-error msg-erro-inline" id="error-{{ item.id }}"></span>
           </div>

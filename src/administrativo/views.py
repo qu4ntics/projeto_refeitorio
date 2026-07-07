@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, time
+from datetime import date, datetime, timedelta, time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -149,7 +149,7 @@ def alunos_turma(request, turma_id):
     nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
     dias_semana = [
         {'valor': d, 'label': label, 'curto': nomes_curtos[d]}
-        for d, label in Turma.DIAS_SEMANA
+        for d, label in Turma.DIAS_CONTRATURNO
     ]
     return render(request, 'administrativo/alunos.html', {
         'turma': turma,
@@ -208,7 +208,7 @@ def lista_alunos_turma(request, turma_id):
         },
         'dias_semana': [
             {'valor': d, 'label': label, 'curto': NOMES_CURTOS[d]}
-            for d, label in Turma.DIAS_SEMANA
+            for d, label in Turma.DIAS_CONTRATURNO
         ],
         'alunos': lista,
     })
@@ -222,7 +222,7 @@ def turma_atualizar_contraturno(request, turma_id):
     try:
         payload = json.loads(request.body)
         dias = payload.get('dias_contraturno', [])
-        dias = sorted({int(d) for d in dias if 0 <= int(d) <= 6})
+        dias = sorted({int(d) for d in dias if 0 <= int(d) <= 4})
     except (json.JSONDecodeError, ValueError, TypeError):
         return JsonResponse({'erro': 'Dados inválidos.'}, status=400)
 
@@ -245,6 +245,11 @@ def _dados_janelas_configuracao():
             'ativo': tipo.ativo,
             'abertura': janela.horario_abertura.strftime('%H:%M') if janela else '15:00',
             'encerramento': janela.horario_fechamento.strftime('%H:%M') if janela else '07:00',
+            'fechamento_pre_reserva': (
+                janela.horario_fechamento_pre_reserva.strftime('%H:%M')
+                if janela
+                else JanelaReserva.HORARIO_FECHAMENTO_PRE_PADRAO.strftime('%H:%M')
+            ),
             'horario_consumo': (
                 tipo.horario_inicio_consumo.strftime('%H:%M')
                 if tipo.horario_inicio_consumo else '12:00'
@@ -260,6 +265,14 @@ def _dados_janelas_configuracao():
 ABAS_CONFIGURACOES = frozenset({'refeicoes', 'reservas', 'strikes', 'conta'})
 MINUTOS_CANCELAMENTO_MIN = 15
 MINUTOS_CANCELAMENTO_MAX = 240
+
+
+def _default_fechamento_pre_reserva(encerramento_time):
+    """Horário padrão: 1 hora antes do fechamento da janela geral."""
+    ref = datetime.combine(date(2000, 1, 2), encerramento_time) - timedelta(
+        hours=JanelaReserva.BUFFER_PRE_RESERVA_HORAS
+    )
+    return ref.time()
 
 
 def _redirect_configuracoes(aba='refeicoes'):
@@ -384,6 +397,7 @@ def _salvar_config_refeicoes(request):
 
         abertura_str = request.POST.get(f'abertura_{tipo.id}')
         encerramento_str = request.POST.get(f'encerramento_{tipo.id}')
+        fechamento_pre_str = request.POST.get(f'fechamento_pre_reserva_{tipo.id}')
 
         if abertura_str and encerramento_str:
             try:
@@ -395,17 +409,36 @@ def _salvar_config_refeicoes(request):
                         'O horário de fechamento não pode ser idêntico ao de abertura.'
                     )
 
+                if not fechamento_pre_str:
+                    raise ValidationError(
+                        'O horário de fechamento da pré-reserva é obrigatório.'
+                    )
+                try:
+                    fechamento_pre_time = datetime.strptime(
+                        fechamento_pre_str, '%H:%M'
+                    ).time()
+                except ValueError:
+                    raise ValidationError(
+                        'O horário de fechamento da pré-reserva é inválido.'
+                    )
+
                 janela, created = JanelaReserva.objects.get_or_create(
                     tipo_refeicao=tipo,
                     defaults={
                         'horario_abertura': abertura_time,
                         'horario_fechamento': encerramento_time,
+                        'horario_fechamento_pre_reserva': fechamento_pre_time,
                     },
                 )
 
                 if not created:
                     janela.horario_abertura = abertura_time
                     janela.horario_fechamento = encerramento_time
+                    janela.horario_fechamento_pre_reserva = fechamento_pre_time
+                    janela.full_clean()
+                    janela.save()
+                else:
+                    janela.full_clean()
                     janela.save()
 
             except ValidationError as e:
@@ -555,7 +588,7 @@ def _context_turma_form(form, **extra):
     nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
     dias_semana = [
         {'valor': d, 'label': label, 'curto': nomes_curtos[d]}
-        for d, label in Turma.DIAS_SEMANA
+        for d, label in Turma.DIAS_CONTRATURNO
     ]
     raw = form['dias_contraturno'].value() or []
     dias_contraturno_set = {int(d) for d in raw}
@@ -648,7 +681,8 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
                 "tipo_refeicao_id": str(j.tipo_refeicao.id),
                 "tipo_refeicao_nome": j.tipo_refeicao.nome,
                 "horario_abertura": j.horario_abertura.strftime('%H:%M'),
-                "horario_fechamento": j.horario_fechamento.strftime('%H:%M')
+                "horario_fechamento": j.horario_fechamento.strftime('%H:%M'),
+                "horario_fechamento_pre_reserva": j.horario_fechamento_pre_reserva.strftime('%H:%M'),
             } for j in janelas
         ]
         return JsonResponse(data, safe=False)
@@ -668,6 +702,14 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
 
             janela.horario_abertura = datetime.strptime(payload['horario_abertura'], '%H:%M').time()
             janela.horario_fechamento = datetime.strptime(payload['horario_fechamento'], '%H:%M').time()
+            if 'horario_fechamento_pre_reserva' in payload:
+                janela.horario_fechamento_pre_reserva = datetime.strptime(
+                    payload['horario_fechamento_pre_reserva'], '%H:%M'
+                ).time()
+            elif not janela.pk or not janela.horario_fechamento_pre_reserva:
+                janela.horario_fechamento_pre_reserva = _default_fechamento_pre_reserva(
+                    janela.horario_fechamento
+                )
 
             janela.full_clean()
             janela.save()
@@ -676,7 +718,8 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
                 'sucesso': True,
                 'tipo_refeicao': tipo.nome,
                 'horario_abertura': janela.horario_abertura.strftime('%H:%M'),
-                'horario_fechamento': janela.horario_fechamento.strftime('%H:%M')
+                'horario_fechamento': janela.horario_fechamento.strftime('%H:%M'),
+                'horario_fechamento_pre_reserva': janela.horario_fechamento_pre_reserva.strftime('%H:%M'),
             })
         except json.JSONDecodeError:
             return JsonResponse({'erro': 'JSON malformado.'}, status=400)
