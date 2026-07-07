@@ -5,6 +5,7 @@ from .models import Notificacao
 NAV_SECTION_BY_URL = {
     'homepage': 'cardapio',
     'strikes_aluno': 'strikes',
+    'notificacoes_aluno': 'notificacoes',
     'configuracoes_aluno': 'configuracoes',
     'painel_nutricionista': 'painel',
     'cardapio_semana': 'refeicoes',
