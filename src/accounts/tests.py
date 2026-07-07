@@ -125,11 +125,6 @@ class ConfiguracoesAlunoTests(TestCase):
 
     def test_aluno_acessa_configuracoes(self):
         self.client.login(username='cfg@test.com', password='senha12345')
-        Notificacao.objects.create(
-            usuario=self.aluno,
-            titulo='Novo Strike Recebido',
-            mensagem='Você recebeu um strike.',
-        )
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'CONFIGURAÇÕES')
@@ -140,7 +135,7 @@ class ConfiguracoesAlunoTests(TestCase):
         self.assertContains(response, 'Ver histórico de strikes')
         self.assertContains(response, 'Sair')
         self.assertContains(response, reverse('accounts:logout'))
-        self.assertContains(response, 'Novo Strike Recebido')
+        self.assertNotContains(response, 'Marcar todas como lidas')
 
     def test_nutricionista_nao_acessa(self):
         Usuario.objects.create_user(
@@ -155,9 +150,40 @@ class ConfiguracoesAlunoTests(TestCase):
         Notificacao.objects.create(
             usuario=self.aluno, titulo='Teste', mensagem='Msg',
         )
-        response = self.client.post(self.url, {'acao': 'marcar_lidas'})
-        self.assertRedirects(response, self.url)
+        url = reverse('refeicoes:notificacoes_aluno')
+        response = self.client.post(url, {'acao': 'marcar_lidas'})
+        self.assertRedirects(response, url)
         self.assertFalse(Notificacao.objects.filter(usuario=self.aluno, lida=False).exists())
+
+    def test_aluno_acessa_notificacoes(self):
+        self.client.login(username='cfg@test.com', password='senha12345')
+        Notificacao.objects.create(
+            usuario=self.aluno,
+            titulo='Novo Strike Recebido',
+            mensagem='Você recebeu um strike.',
+        )
+        url = reverse('refeicoes:notificacoes_aluno')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'NOTIFICAÇÕES')
+        self.assertContains(response, 'Novo Strike Recebido')
+        self.assertContains(response, 'Marcar todas como lidas')
+
+    def test_nutricionista_acessa_notificacoes(self):
+        nutri = Usuario.objects.create_user(
+            username='nutri', email='nutri@test.com', password='123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri@test.com', password='123')
+        Notificacao.objects.create(
+            usuario=nutri,
+            titulo='Vagas Esgotadas!',
+            mensagem='As vagas para o almoço acabaram.',
+        )
+        url = reverse('refeicoes:notificacoes_aluno')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'NOTIFICAÇÕES')
+        self.assertContains(response, 'Vagas Esgotadas!')
 
     def test_alterar_senha(self):
         self.client.login(username='cfg@test.com', password='senha12345')

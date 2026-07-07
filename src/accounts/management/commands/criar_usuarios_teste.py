@@ -12,20 +12,12 @@ from django.core.management.base import BaseCommand
 from accounts.models import Usuario
 from administrativo.models import Turma
 
-SENHA_PADRAO = 'teste12345'
+SENHA_PADRAO = 'senha'
 
 USUARIOS_TESTE = [
     {
-        'username': 'aluno_teste',
-        'email': 'aluno@teste.local',
-        'first_name': 'Aluno',
-        'last_name': 'Teste',
-        'perfil': 'aluno',
-        'precisa_turma': True,
-    },
-    {
         'username': 'nutri_teste',
-        'email': 'nutri@teste.local',
+        'email': 'nutri@gmail.com',
         'first_name': 'Nutricionista',
         'last_name': 'Teste',
         'perfil': 'nutricionista',
@@ -33,7 +25,7 @@ USUARIOS_TESTE = [
     },
     {
         'username': 'refeitorio_teste',
-        'email': 'refeitorio@teste.local',
+        'email': 'refeitorio@gmail.com',
         'first_name': 'Refeitório',
         'last_name': 'Teste',
         'perfil': 'refeitorio',
@@ -66,7 +58,6 @@ class Command(BaseCommand):
             if removidos:
                 self.stdout.write(self.style.WARNING(f'Removidos {removidos} registro(s) de teste.'))
 
-        turma = self._obter_turma()
 
         for dados in USUARIOS_TESTE:
             usuario, criado = Usuario.objects.get_or_create(
@@ -106,11 +97,3 @@ class Command(BaseCommand):
         for dados in USUARIOS_TESTE:
             self.stdout.write(f"  {dados['perfil'].capitalize():14} -> {dados['email']}")
 
-    def _obter_turma(self):
-        turma, criada = Turma.objects.get_or_create(
-            nome='Turma Teste',
-            defaults={'turno': 'matutino', 'dias_contraturno': [2, 4]},
-        )
-        if criada:
-            self.stdout.write(self.style.NOTICE(f'Turma criada: {turma.nome}'))
-        return turma

@@ -66,36 +66,6 @@
   </div>
 </section>
 
-<section class="config-section" id="notificacoes">
-  <div class="config-section-header">
-    <h2 class="config-section-title"><i class="fa-regular fa-bell"></i> Notificações</h2>
-    {% if notificacoes_nao_lidas %}
-    <form method="post" class="config-inline-form">
-      {% csrf_token %}
-      <input type="hidden" name="acao" value="marcar_lidas">
-      <button type="submit" class="config-btn config-btn--ghost" data-loading-text="Salvando...">Marcar todas como lidas</button>
-    </form>
-    {% endif %}
-  </div>
-  <div class="config-card config-card--lista">
-    {% if notificacoes %}
-    <ul class="config-notificacoes">
-      {% for notif in notificacoes %}
-      <li class="config-notif{% if not notif.lida %} config-notif--nao-lida{% endif %}">
-        <div class="config-notif-top">
-          <strong>{{ notif.titulo }}</strong>
-          <time>{{ notif.criada_em|date:"d/m/Y H:i" }}</time>
-        </div>
-        <p>{{ notif.mensagem }}</p>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="config-vazio">Nenhuma notificação por aqui.</p>
-    {% endif %}
-  </div>
-</section>
-
 <section class="config-section">
   <h2 class="config-section-title"><i class="fa-solid fa-lock"></i> Segurança</h2>
   <div class="config-card">

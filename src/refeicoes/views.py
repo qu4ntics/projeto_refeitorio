@@ -336,7 +336,9 @@ def nutricionista_nova(request):
     if request.method == 'POST':
         form = RefeicaoForm(request.POST)
         if form.is_valid():
-            form.save()
+            refeicao = form.save()
+            from reservas.services.pre_reserva import ativar_pre_reservas
+            ativar_pre_reservas(refeicao)
             messages.success(request, 'Refeição cadastrada com sucesso.')
             return _redirect_apos_criar(request)
     else:
@@ -494,14 +496,23 @@ def _formulario_senha(usuario):
     return form
 
 
+@perfil_required('aluno', 'nutricionista')
+def notificacoes_aluno(request):
+    if request.method == 'POST' and request.POST.get('acao') == 'marcar_lidas':
+        Notificacao.objects.filter(usuario=request.user, lida=False).update(lida=True)
+        messages.success(request, 'Todas as notificações foram marcadas como lidas.')
+        return redirect('refeicoes:notificacoes_aluno')
+
+    notificacoes = Notificacao.objects.filter(usuario=request.user)[:30]
+    return render(request, 'refeicoes/notificacoes_aluno.html', {
+        'notificacoes': notificacoes,
+    })
+
+
 @perfil_required('aluno')
 def configuracoes_aluno(request):
     if request.method == 'POST':
         acao = request.POST.get('acao')
-        if acao == 'marcar_lidas':
-            Notificacao.objects.filter(usuario=request.user, lida=False).update(lida=True)
-            messages.success(request, 'Todas as notificações foram marcadas como lidas.')
-            return redirect('refeicoes:configuracoes_aluno')
         if acao == 'senha':
             form = PasswordChangeForm(user=request.user, data=request.POST)
             form.fields['old_password'].label = 'Senha atual'
@@ -519,9 +530,7 @@ def configuracoes_aluno(request):
     else:
         form = _formulario_senha(request.user)
 
-    notificacoes = Notificacao.objects.filter(usuario=request.user)[:30]
     return render(request, 'accounts/configuracoes_aluno.html', {
         'form_senha': form,
-        'notificacoes': notificacoes,
     })
 

@@ -35,6 +35,7 @@ from .services.horarios_refeicao import (
     pode_reabrir_chamada,
 )
 from .services.dashboard_nutri import metricas_painel, preparar_dias_semana_painel
+from .services.tipos_refeicao import garantir_tipos_refeicao
 
 
 @login_required
@@ -231,6 +232,8 @@ def turma_atualizar_contraturno(request, turma_id):
     return JsonResponse({'sucesso': True, 'dias_contraturno': dias})
 
 def _dados_janelas_configuracao():
+    if not TipoRefeicao.objects.exists():
+        garantir_tipos_refeicao()
     tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
     dados_janelas = []
     for codigo, label in Refeicao.TIPOS:
