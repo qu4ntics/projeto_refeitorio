@@ -254,7 +254,7 @@
 }
 
 .search-box {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 220px;
   display: flex;
   align-items: center;
@@ -263,6 +263,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 14px;
+  min-height: 42px;
   height: 42px;
 }
 
@@ -675,6 +676,24 @@
   .filtros-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .search-box {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    height: 48px;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
+
+  .search-box i {
+    font-size: 15px;
+  }
+
+  .search-box input {
+    font-size: 16px;
   }
 
   .filtros-direita {

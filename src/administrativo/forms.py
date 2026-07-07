@@ -12,7 +12,7 @@ def label_tipo_refeicao(codigo):
 class TurmaForm(forms.ModelForm):
     dias_contraturno = forms.MultipleChoiceField(
         label='Dias de contraturno',
-        choices=Turma.DIAS_SEMANA,
+        choices=Turma.DIAS_CONTRATURNO,
         required=False,
         widget=forms.CheckboxSelectMultiple,
     )
@@ -39,7 +39,8 @@ class TurmaForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         dias = self.cleaned_data.get('dias_contraturno', [])
-        instance.dias_contraturno = sorted(int(d) for d in dias)
+        validos = {str(d) for d, _ in Turma.DIAS_CONTRATURNO}
+        instance.dias_contraturno = sorted(int(d) for d in dias if d in validos)
         if commit:
             instance.save()
         return instance

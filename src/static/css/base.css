@@ -744,6 +744,41 @@ body.sidebar-open {
   color: var(--text-light);
 }
 
+.meal-capacity__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  vertical-align: middle;
+}
+
+.meal-capacity__badge--closed {
+  color: color-mix(in srgb, var(--text-secondary) 85%, #000);
+  background: color-mix(in srgb, var(--text-light) 14%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--text-light) 35%, var(--border));
+}
+
+.reserve-btn--closed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: color-mix(in srgb, var(--text-light) 12%, var(--bg-card));
+  color: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--text-light) 40%, var(--border));
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  cursor: not-allowed;
+  white-space: nowrap;
+}
+
 .meal-footer {
   display: flex;
   align-items: flex-end;
@@ -1162,7 +1197,9 @@ tbody td {
   }
 
   .content {
-    padding: 1rem 0.75rem;
+    padding-top: 1rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
   .content-auth {

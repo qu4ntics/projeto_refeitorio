@@ -1,4 +1,4 @@
-<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}">
+<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}{% if refeicao.janela_encerrada_aguardando_refeicao %} meal-card--reserva-encerrada{% endif %}">
   {% include "refeicoes/_meal_card_header.html" with refeicao=refeicao %}
 
   <div class="meal-card__body">
@@ -7,11 +7,11 @@
   {% if refeicao.pre_reserva %}
     <div class="pre-reserva-banner">
       <p class="pre-reserva-banner__text">
-        Você tem uma <strong>pré-reserva de contra-turno</strong> para esta refeição.
+        Com a abertura da janela de reservas, você recebeu uma <strong>pré-reserva de contra-turno</strong> para esta refeição.
         {% if somente_visualizacao %}
           Confirme ou rejeite no card de destaque acima até <strong>{{ refeicao.pre_reserva.expira_em|date:"d/m/Y H:i" }}</strong>.
         {% else %}
-          Confirme ou rejeite até <strong>{{ refeicao.pre_reserva.expira_em|date:"d/m/Y H:i" }}</strong>.
+          Confirme ou rejeite até <strong>{{ refeicao.pre_reserva.expira_em|date:"d/m/Y H:i" }}</strong> para garantir sua vaga.
         {% endif %}
       </p>
       {% if not somente_visualizacao %}
@@ -66,7 +66,7 @@
             {% csrf_token %}
             <button class="reserve-btn" type="submit" data-loading-text="Reservando...">RESERVAR</button>
           </form>
-        {% else %}
+        {% elif not refeicao.janela_encerrada_aguardando_refeicao %}
           <button class="reserve-btn" disabled title="{{ refeicao.get_status_reserva }}">
             RESERVAR
           </button>

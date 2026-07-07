@@ -11,6 +11,7 @@ from administrativo.models import ConfigReserva, JanelaReserva, Notificacao, Tip
 from .models import PreReserva, Reserva
 from .services.pre_reserva import (
     PreReservaError,
+    ativar_pre_reservas,
     confirmar_pre_reserva,
     expirar_pendentes,
     rejeitar_pre_reserva,
@@ -374,8 +375,11 @@ class PreReservaTests(TestCase):
             defaults={
                 'horario_abertura': time(15, 0),
                 'horario_fechamento': time(11, 0),
+                'horario_fechamento_pre_reserva': time(10, 0),
             },
         )
+        self.janela.horario_fechamento_pre_reserva = time(10, 0)
+        self.janela.save(update_fields=['horario_fechamento_pre_reserva'])
         self.nutri = Usuario.objects.create_user(
             username='nutri_ct',
             email='nutri_ct@teste.com',
@@ -399,31 +403,68 @@ class PreReservaTests(TestCase):
         defaults.update(kwargs)
         return Refeicao.objects.create(**defaults)
 
+    def _momento_na_janela(self, refeicao, minutos_apos_abertura=5):
+        limites = refeicao.get_janela_reserva()
+        return limites['inicio'] + timedelta(minutes=minutos_apos_abertura)
+
+    def _ativar_com_horario(self, refeicao, momento=None):
+        if momento is None:
+            momento = self._momento_na_janela(refeicao)
+        with patch('reservas.services.pre_reserva.timezone.now', return_value=momento):
+            ativar_pre_reservas(refeicao)
+        refeicao.refresh_from_db()
+
     def _criar_pre_reserva_pendente(self, refeicao=None, aluno=None, expira_em=None):
         if refeicao is None:
             refeicao = self._criar_refeicao()
+        self._ativar_com_horario(refeicao)
         aluno = aluno or self.aluno
         pre = PreReserva.objects.get(refeicao=refeicao, aluno=aluno)
-        pre.status = 'pendente'
-        pre.expira_em = expira_em or timezone.now() + timedelta(hours=2)
-        pre.save(update_fields=['status', 'expira_em'])
+        if expira_em is not None:
+            pre.expira_em = expira_em
+            pre.save(update_fields=['expira_em'])
         return pre
 
-    def test_signal_cria_pre_reservas_para_contraturno(self):
+    def test_criar_refeicao_antes_da_janela_nao_gera_pre_reserva(self):
         refeicao = self._criar_refeicao()
+        self.assertEqual(PreReserva.objects.filter(refeicao=refeicao).count(), 0)
+        self.assertIsNone(refeicao.pre_reservas_disparadas_em)
+
+    def test_ativar_na_abertura_cria_pre_reservas_para_contraturno(self):
+        refeicao = self._criar_refeicao()
+        self._ativar_com_horario(refeicao)
         self.assertEqual(PreReserva.objects.filter(refeicao=refeicao, aluno=self.aluno).count(), 1)
+        self.assertIsNotNone(refeicao.pre_reservas_disparadas_em)
         self.assertTrue(
             Notificacao.objects.filter(usuario=self.aluno, titulo='Pré-reserva de contra-turno').exists()
         )
 
-    def test_signal_ignora_turma_sem_contraturno_no_dia(self):
+    def test_expira_em_usa_horario_fechamento_pre_reserva(self):
+        refeicao = self._criar_refeicao()
+        self._ativar_com_horario(refeicao)
+        pre = PreReserva.objects.get(refeicao=refeicao, aluno=self.aluno)
+        limites = refeicao.get_janela_reserva()
+        self.assertEqual(pre.expira_em, limites['fim_pre_reserva'])
+
+    def test_ativar_ignora_turma_sem_contraturno_no_dia(self):
         self.turma.dias_contraturno = []
         self.turma.save(update_fields=['dias_contraturno'])
         refeicao = self._criar_refeicao()
+        self._ativar_com_horario(refeicao)
         self.assertEqual(PreReserva.objects.filter(refeicao=refeicao).count(), 0)
+        self.assertIsNotNone(refeicao.pre_reservas_disparadas_em)
+
+    def test_ativar_apos_periodo_pre_reserva_nao_cria_registros(self):
+        refeicao = self._criar_refeicao()
+        limites = refeicao.get_janela_reserva()
+        momento_tarde = limites['fim_pre_reserva'] + timedelta(minutes=1)
+        self._ativar_com_horario(refeicao, momento=momento_tarde)
+        self.assertEqual(PreReserva.objects.filter(refeicao=refeicao).count(), 0)
+        self.assertIsNotNone(refeicao.pre_reservas_disparadas_em)
 
     def test_vagas_disponiveis_conta_pre_reservas_pendentes(self):
         refeicao = self._criar_refeicao(limite_vagas=5)
+        self._ativar_com_horario(refeicao)
         pendentes = refeicao.pre_reservas.filter(status='pendente').count()
         self.assertGreater(pendentes, 0)
         self.assertEqual(refeicao.vagas_disponiveis, 5 - pendentes)
@@ -455,11 +496,16 @@ class PreReservaTests(TestCase):
         )
         self.aluno.turma = turma_solo
         self.aluno.save(update_fields=['turma'])
+        self.outro_aluno.turma = Turma.objects.create(
+            nome='Sem CT 3',
+            turno='vespertino',
+            dias_contraturno=[],
+        )
+        self.outro_aluno.save(update_fields=['turma'])
         refeicao = self._criar_refeicao(limite_vagas=1)
+        self._ativar_com_horario(refeicao)
         Reserva.objects.create(aluno=self.outro_aluno, refeicao=refeicao, status='ativa')
         pre = PreReserva.objects.get(refeicao=refeicao, aluno=self.aluno)
-        pre.expira_em = timezone.now() + timedelta(hours=2)
-        pre.save(update_fields=['expira_em'])
         with self.assertRaises(PreReservaError):
             confirmar_pre_reserva(pre.id, self.aluno)
 
@@ -478,6 +524,7 @@ class PreReservaTests(TestCase):
         )
         self.outro_aluno.save(update_fields=['turma'])
         refeicao = self._criar_refeicao(limite_vagas=1)
+        self._ativar_com_horario(refeicao)
         pre = PreReserva.objects.get(refeicao=refeicao, aluno=self.aluno)
         self.assertEqual(refeicao.vagas_disponiveis, 0)
         rejeitar_pre_reserva(pre.id, self.aluno)
@@ -491,6 +538,26 @@ class PreReservaTests(TestCase):
         expirar_pendentes(pre.refeicao)
         pre.refresh_from_db()
         self.assertEqual(pre.status, 'expirada')
+
+    def test_outro_aluno_pode_reservar_vaga_livre_durante_periodo_pre_reserva(self):
+        self.outro_aluno.turma = Turma.objects.create(
+            nome='Sem CT reserva',
+            turno='vespertino',
+            dias_contraturno=[],
+        )
+        self.outro_aluno.save(update_fields=['turma'])
+        refeicao = self._criar_refeicao(limite_vagas=2)
+        self._ativar_com_horario(refeicao)
+        self.assertEqual(refeicao.vagas_disponiveis, 1)
+
+        momento = self._momento_na_janela(refeicao)
+        with patch('django.utils.timezone.now', return_value=momento):
+            self.client.login(username='outro_ct@teste.com', password='password123')
+            response = self.client.post(reverse('reservas:criar_reserva', args=[refeicao.id]))
+        self.assertRedirects(response, reverse('refeicoes:homepage'))
+        self.assertTrue(
+            Reserva.objects.filter(aluno=self.outro_aluno, refeicao=refeicao, status='ativa').exists()
+        )
 
     def test_homepage_exibe_banner_pre_reserva(self):
         pre = self._criar_pre_reserva_pendente()

@@ -3,8 +3,12 @@
   <strong>{{ refeicao.vagas_ocupadas }}/{{ refeicao.limite_vagas }}</strong> reservadas
   - {{ refeicao.vagas_disponiveis }}
   {% if refeicao.vagas_disponiveis == 1 %}restante{% else %}restantes{% endif %}
-  {% if refeicao.reserva_encerrada %}
-  <span class="meal-capacity__closed">(Encerrada)</span>
+  {% if refeicao.janela_encerrada_aguardando_refeicao %}
+  <span class="meal-capacity__badge meal-capacity__badge--closed">
+    <i class="fa-solid fa-lock" aria-hidden="true"></i> Reservas encerradas
+  </span>
+  {% elif refeicao.reserva_encerrada %}
+  <span class="meal-capacity__badge meal-capacity__badge--closed">Encerrada</span>
   {% endif %}
 </p>
 {% else %}

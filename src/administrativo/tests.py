@@ -253,6 +253,7 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
             f'encerramento_{tipo.id}': '07:00',
             f'horario_consumo_{tipo.id}': '12:30',
             f'horario_fim_consumo_{tipo.id}': '14:00',
+            f'fechamento_pre_reserva_{tipo.id}': '06:00',
         })
         self.assertRedirects(
             response,
@@ -271,6 +272,7 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
             f'encerramento_{tipo.id}': '07:00',
             f'horario_consumo_{tipo.id}': '12:30',
             f'horario_fim_consumo_{tipo.id}': '12:00',
+            f'fechamento_pre_reserva_{tipo.id}': '06:00',
         })
         self.assertEqual(response.status_code, 200)
         tipo.refresh_from_db()
@@ -283,6 +285,7 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
             f'ativo_{tipo.id}': 'on',
             f'abertura_{tipo.id}': '15:00',
             f'encerramento_{tipo.id}': '07:00',
+            f'fechamento_pre_reserva_{tipo.id}': '15:45',
         })
         self.assertRedirects(
             response,
@@ -291,6 +294,7 @@ class ConfiguracoesTipoRefeicaoTests(TestCase):
         tipo.refresh_from_db()
         self.assertTrue(tipo.ativo)
         self.assertEqual(tipo.janela.horario_abertura.strftime('%H:%M'), '15:00')
+        self.assertEqual(tipo.janela.horario_fechamento_pre_reserva.strftime('%H:%M'), '15:45')
 
     def test_desabilitar_tipo_nao_exige_horarios(self):
         tipo = TipoRefeicao.objects.get(nome='almoco')
@@ -436,7 +440,8 @@ class JanelaReservaAPITests(TestCase):
         url = reverse('administrativo:janela_horarios_detalhe', args=[self.tipo.id])
         payload = {
             'horario_abertura': '15:30',
-            'horario_fechamento': '09:00'
+            'horario_fechamento': '09:00',
+            'horario_fechamento_pre_reserva': '08:00',
         }
         response = self.client.post(
             url, data=json.dumps(payload), content_type='application/json'
@@ -444,6 +449,19 @@ class JanelaReservaAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         janela = JanelaReserva.objects.get(tipo_refeicao=self.tipo)
         self.assertEqual(janela.horario_fechamento.strftime('%H:%M'), '09:00')
+        self.assertEqual(janela.horario_fechamento_pre_reserva.strftime('%H:%M'), '08:00')
+
+    def test_update_janela_rejeita_fechamento_pre_muito_proximo(self):
+        url = reverse('administrativo:janela_horarios_detalhe', args=[self.tipo.id])
+        payload = {
+            'horario_abertura': '15:00',
+            'horario_fechamento': '07:00',
+            'horario_fechamento_pre_reserva': '06:30',
+        }
+        response = self.client.post(
+            url, data=json.dumps(payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
 
 
 class ListaPresencaTests(TestCase):
