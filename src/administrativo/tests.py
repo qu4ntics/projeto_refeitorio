@@ -1,6 +1,10 @@
 import json
-from datetime import datetime, timedelta, time
+from datetime import date, datetime, timedelta, time
 from unittest.mock import patch
+
+# Quarta-feira fixa, para testes que dependem de "hoje" cair num dia útil
+# (a grade da semana mostra segunda a sexta).
+_DIA_UTIL_FIXO = date(2025, 6, 4)
 
 from django.contrib.messages import get_messages
 from django.test import TestCase
@@ -1039,10 +1043,11 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.assertEqual(len(itens), 1)
         self.assertEqual(itens[0]['refeicao'].id, ref_com_reserva.id)
 
-    def test_preparar_dias_semana_dedupe_por_tipo(self):
+    @patch('django.utils.timezone.localdate', return_value=_DIA_UTIL_FIXO)
+    def test_preparar_dias_semana_dedupe_por_tipo(self, _):
         from refeicoes.views import _preparar_contexto_semana
 
-        hoje = timezone.localdate()
+        hoje = _DIA_UTIL_FIXO
         ref_vazia = Refeicao.objects.create(
             data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
         )
@@ -1062,10 +1067,11 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.assertEqual(len(dia_hoje['refeicoes']), 1)
         self.assertEqual(dia_hoje['refeicoes'][0].id, ref_com_reserva.id)
 
-    def test_painel_exibe_metricas(self):
-        self._criar_refeicao_encerrada(timezone.localdate() - timedelta(days=1), presentes=1, ausentes=1)
+    @patch('django.utils.timezone.localdate', return_value=_DIA_UTIL_FIXO)
+    def test_painel_exibe_metricas(self, _):
+        self._criar_refeicao_encerrada(_DIA_UTIL_FIXO - timedelta(days=1), presentes=1, ausentes=1)
         refeicao_hoje = Refeicao.objects.create(
-            data=timezone.localdate(),
+            data=_DIA_UTIL_FIXO,
             tipo='almoco',
             limite_vagas=10,
             exige_reserva=True,
