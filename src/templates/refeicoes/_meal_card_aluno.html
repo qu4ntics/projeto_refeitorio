@@ -1,4 +1,4 @@
-<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}{% if refeicao.janela_encerrada_aguardando_refeicao %} meal-card--reserva-encerrada{% endif %}">
+<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}{% if refeicao.janela_encerrada_aguardando_refeicao %} meal-card--reserva-encerrada{% endif %}{% if refeicao.exige_reserva and refeicao.reserva_futura and not refeicao.reserva_id and not refeicao.pre_reserva %} meal-card--reserva-futura{% endif %}">
   {% include "refeicoes/_meal_card_header.html" with refeicao=refeicao %}
 
   <div class="meal-card__body">

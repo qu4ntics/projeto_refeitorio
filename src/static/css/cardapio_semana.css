@@ -208,6 +208,27 @@
   background: color-mix(in srgb, var(--text-light) 4%, var(--bg-card));
 }
 
+/* Janela de reserva ainda não abriu */
+.meal-card--reserva-futura {
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--border));
+  background: color-mix(in srgb, var(--warning) 10%, var(--bg-card));
+}
+
+.meal-card--visualizacao.meal-card--reserva-futura {
+  border-color: color-mix(in srgb, var(--warning) 50%, var(--border));
+  opacity: 1;
+}
+
+.meal-card--reserva-futura .meal-card__header {
+  background: color-mix(in srgb, var(--warning) 16%, var(--bg-card));
+  border-bottom-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+}
+
+.almoco-atual .meal-card--reserva-futura {
+  border-color: color-mix(in srgb, var(--warning) 60%, var(--border));
+  background: color-mix(in srgb, var(--warning) 10%, var(--bg-card));
+}
+
 .reserva-encerrada-banner {
   display: flex;
   align-items: flex-start;
@@ -250,6 +271,11 @@
 .almoco-atual .meal-card--reserva-encerrada .meal-card__header {
   background: color-mix(in srgb, var(--text-light) 8%, var(--bg-card));
   border-bottom-color: color-mix(in srgb, var(--text-light) 30%, var(--border));
+}
+
+.almoco-atual .meal-card--reserva-futura .meal-card__header {
+  background: color-mix(in srgb, var(--warning) 18%, var(--bg-card));
+  border-bottom-color: color-mix(in srgb, var(--warning) 45%, var(--border));
 }
 
 .aluno-bloqueio-banner {
