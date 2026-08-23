@@ -23,8 +23,9 @@ from .models import Prato, Refeicao
 
 def _obter_semana(data_ref_str=None):
     """
-    Retorna a data de hoje e o intervalo da semana (Segunda a Domingo)
-    baseado em uma data de referência.
+    Retorna a data de hoje e o intervalo da semana baseado numa data de
+    referência. A semana começa no DOMINGO: no domingo já se mostra a semana
+    útil seguinte (ex.: domingo 23/08 → segunda 24 a sexta 28).
     """
     hoje = timezone.localdate()
     if data_ref_str:
@@ -34,7 +35,9 @@ def _obter_semana(data_ref_str=None):
             ref = hoje
     else:
         ref = hoje
-    segunda = ref - timedelta(days=ref.weekday())
+    # Domingo que inicia a semana de `ref` (segunda=0 … domingo=6).
+    domingo = ref - timedelta(days=(ref.weekday() + 1) % 7)
+    segunda = domingo + timedelta(days=1)
     return hoje, segunda, segunda + timedelta(days=6)
 
 
