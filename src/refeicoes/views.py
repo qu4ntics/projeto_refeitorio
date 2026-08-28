@@ -366,10 +366,13 @@ def criar_refeicao(request):
 def nutricionista_deletar(request, pk):
     refeicao = get_object_or_404(Refeicao, pk=pk)
     if request.method == 'POST':
-        if refeicao.reservas.exists():
+        # Reservas canceladas não impedem a exclusão; ativas ou concluídas sim
+        # (concluídas carregam presença e strikes que seriam perdidos).
+        if refeicao.reservas.exclude(status='cancelada').exists():
             messages.error(
                 request,
-                'Esta refeição não pode ser excluída porque já possui reservas vinculadas.',
+                'Esta refeição não pode ser excluída porque possui reservas '
+                'ativas ou histórico de presença.',
             )
         else:
             refeicao.delete()
