@@ -75,6 +75,7 @@ CACHES = {
     }
 }
 SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003', 'django_ratelimit.W001']
+RATELIMIT_VIEW = 'accounts.views.ratelimited'
 
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
@@ -126,6 +127,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
 ROOT_URLCONF = 'reservaif.urls'
@@ -213,6 +215,7 @@ STORAGES = {
     },
 }
 
-# Testes: hasher rápido (a suíte cria muitos usuários).
+# Testes: hasher rápido e sem rate-limit (o cache persiste entre testes).
 if 'test' in sys.argv:
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+    RATELIMIT_ENABLE = False

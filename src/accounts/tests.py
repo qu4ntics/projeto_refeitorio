@@ -318,3 +318,19 @@ class ConfiguracoesAlunoTests(TestCase):
         self.assertRedirects(response, self.url)
         self.aluno.refresh_from_db()
         self.assertTrue(self.aluno.check_password('novaSenha999'))
+
+
+@override_settings(ALUNO_EMAIL_DOMINIOS=[], RATELIMIT_ENABLE=True)
+class RateLimitTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def test_cadastro_bloqueia_apos_muitas_tentativas_do_mesmo_ip(self):
+        url = reverse('accounts:cadastro')
+        for _ in range(10):
+            self.client.post(url, {'email': 'x@x.com'})
+        resposta = self.client.post(url, {'email': 'x@x.com'})
+        self.assertEqual(resposta.status_code, 429)
+        self.assertContains(resposta, 'muitas tentativas', status_code=429)

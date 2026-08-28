@@ -1,17 +1,23 @@
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from .emails import enviar_codigo_confirmacao
 from .forms import CadastroForm, ConfirmarCodigoForm, EmailAuthenticationForm
 from .models import CodigoConfirmacaoEmail, Usuario
 
-from django.contrib.auth.views import LoginView
-
 SESSAO_CONFIRMACAO = 'confirmacao_uid'
 LOGIN_BACKEND = 'accounts.backends.EmailBackend'
+
+
+def ratelimited(request, exception=None):
+    """Página amigável quando o limite de tentativas por IP é atingido."""
+    return render(request, 'accounts/muitas_tentativas.html', status=429)
 
 
 def _mascarar_email(email):
@@ -37,6 +43,7 @@ def _usuario_pendente(request):
     return usuario
 
 
+@ratelimit(key='ip', rate='10/h', method='POST', block=True)
 def cadastro_view(request):
     if request.method == 'POST':
         form = CadastroForm(request.POST)
@@ -52,6 +59,7 @@ def cadastro_view(request):
     return render(request, 'accounts/cadastrar.html', {'form': form})
 
 
+@ratelimit(key='ip', rate='30/h', method='POST', block=True)
 def confirmar_email_view(request):
     usuario = _usuario_pendente(request)
     if usuario is None:
@@ -83,6 +91,7 @@ def confirmar_email_view(request):
     })
 
 
+@ratelimit(key='ip', rate='5/h', method='POST', block=True)
 @require_POST
 def reenviar_codigo_view(request):
     usuario = _usuario_pendente(request)
@@ -110,6 +119,9 @@ REDIRECT_POR_PERFIL = {
 }
 
 
+@method_decorator(
+    ratelimit(key='post:username', rate='8/h', method='POST', block=True), name='post'
+)
 class LoginPerfilView(LoginView):
     template_name = 'accounts/login.html'
     authentication_form = EmailAuthenticationForm

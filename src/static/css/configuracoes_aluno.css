@@ -232,6 +232,22 @@
   color: var(--text-secondary);
 }
 
+.config-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 1.25rem 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.config-paginacao a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .config-form {
   display: grid;
   gap: 1rem;

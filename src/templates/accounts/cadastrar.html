@@ -7,9 +7,9 @@
     <title>Registrar</title>
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/cadastro-style.css' %}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
     <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
-</head>    
+</head>
 <body>
     <div class="caixa-login">
         <div class="barra-topo">
@@ -17,28 +17,37 @@
         <p>Criar conta</p>
         </div>
 
-        <form method="post">
+        <form method="post" novalidate>
             {% csrf_token %}
-            
-            {% if form.errors %}
+
+            {% if form.non_field_errors %}
             <div class="erro-form">
-                {{form.errors}}
+                {% for erro in form.non_field_errors %}<p>{{ erro }}</p>{% endfor %}
             </div>
             {% endif %}
 
-            <input type="text" name="nome_completo" placeholder="Nome completo" required>
-            <input type="email" name="email" placeholder="E-mail institucional" required>
+            <input type="text" name="nome_completo" placeholder="Nome completo"
+                   value="{{ form.nome_completo.value|default:'' }}" required>
+            {% for erro in form.nome_completo.errors %}<p class="erro-campo">{{ erro }}</p>{% endfor %}
+
+            <input type="email" name="email" placeholder="E-mail institucional"
+                   value="{{ form.email.value|default:'' }}" required>
+            {% for erro in form.email.errors %}<p class="erro-campo">{{ erro }}</p>{% endfor %}
+
             <div class="grupo-senha">
                 <div class="caixa-senha">
                     <input type="password" name="senha" placeholder="Senha" id="senha" required>
-                    <i class="bi bi-eye" id="btn-senha" onclick="mostrarSenha()"></i>
+                    <i class="fa-regular fa-eye" id="btn-senha" onclick="mostrarSenha()"></i>
                 </div>
 
                 <div class="caixa-senha">
                     <input type="password" name="confirmar_senha" placeholder="Confirme sua senha" id="confirme-senha" required>
-                    <i class="bi bi-eye" id="btn-conf-senha" onclick="mostrarSenhaConfirma()"></i>
+                    <i class="fa-regular fa-eye" id="btn-conf-senha" onclick="mostrarSenhaConfirma()"></i>
                 </div>
             </div>
+            {% for erro in form.senha.errors %}<p class="erro-campo">{{ erro }}</p>{% endfor %}
+            {% for erro in form.confirmar_senha.errors %}<p class="erro-campo">{{ erro }}</p>{% endfor %}
+
             <button type="submit" class="btn-submit" data-loading-text="Criando conta...">Criar conta</button>
         </form>
         <a href="{% url 'accounts:login' %}">Já tem uma conta? Entrar</a>

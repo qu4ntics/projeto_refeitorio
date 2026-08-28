@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from accounts.models import Usuario
 from administrativo.models import Notificacao, Presenca, Strike
+from administrativo.services.strikes import aplicar_strike
 from refeicoes.models import Refeicao
 from reservas.models import Reserva
 
@@ -116,10 +117,7 @@ def aplicar_strikes(aluno, quantidade, refeitorio=None):
             compareceu=False,
         )
         aplicado_em = agora - timedelta(days=indice + 1)
-        strike = Strike(aluno=aluno, presenca=presenca)
-        strike.aplicado_em = aplicado_em
-        strike.expira_em = aplicado_em + timedelta(days=30)
-        strike.save()
+        aplicar_strike(aluno, presenca, aplicado_em=aplicado_em)
         criados += 1
 
     aluno.refresh_from_db()
