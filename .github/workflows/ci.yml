@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reservaif_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-secret-not-used-in-prod
+      DEBUG: "True"
+      DB_NAME: reservaif_ci
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      ALUNO_EMAIL_DOMINIOS: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r src/requirements.txt
+
+      - name: Checar migracoes pendentes
+        working-directory: src
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Migrar
+        working-directory: src
+        run: python manage.py migrate
+
+      - name: Rodar testes
+        working-directory: src
+        run: python manage.py test --verbosity 2

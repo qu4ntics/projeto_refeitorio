@@ -131,6 +131,16 @@ class RefeicaoForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
+        data = cleaned_data.get('data')
+        tipo = cleaned_data.get('tipo')
+        if data and tipo:
+            conflito = Refeicao.objects.filter(data=data, tipo=tipo)
+            if self.instance.pk:
+                conflito = conflito.exclude(pk=self.instance.pk)
+            if conflito.exists():
+                self.add_error('tipo', 'Já existe uma refeição deste tipo nesta data.')
+
         exige_reserva = cleaned_data.get('exige_reserva')
         limite_vagas = cleaned_data.get('limite_vagas')
 

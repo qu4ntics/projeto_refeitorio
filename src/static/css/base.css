@@ -646,6 +646,12 @@ body.sidebar-open {
   background: color-mix(in srgb, var(--border) 40%, transparent);
 }
 
+.meal-card__tag--alerta {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
 .meal-card__body {
   padding: 1.25rem;
 }

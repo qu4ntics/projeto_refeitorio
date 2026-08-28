@@ -336,7 +336,7 @@ def lista_alunos_turma(request, turma_id):
         },
         'dias_semana': [
             {'valor': d, 'label': label, 'curto': NOMES_CURTOS[d]}
-            for d, label in Turma.DIAS_CONTRATURNO
+            for d, label in Turma.DIAS_SEMANA
         ],
         'alunos': lista,
     })

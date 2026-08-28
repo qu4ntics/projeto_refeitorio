@@ -13,9 +13,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import sys
 import dj_database_url
 
 load_dotenv()
+
+
+def _env_list(nome, padrao=''):
+    return [item.strip() for item in os.getenv(nome, padrao).split(',') if item.strip()]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,12 +34,26 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://projeto-refeitorio.onrender.com']
+ALLOWED_HOSTS = _env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+if DEBUG and not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = _env_list(
+    'CSRF_TRUSTED_ORIGINS', 'https://projeto-refeitorio.onrender.com'
+)
 
 # Configurações de Segurança
-SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+if not DEBUG:
+    # Render (e afins) terminam o TLS num proxy; sem isso o Django acha que é HTTP.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 AUTH_USER_MODEL = 'accounts.Usuario'
 
@@ -45,6 +64,17 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'refeicoes:homepage'  # fallback; login usa redirect por perfil
 LOGOUT_REDIRECT_URL = 'accounts:login'
+
+# Cache local por processo. Suficiente para o django-ratelimit nesta aplicação
+# (poucos workers, tráfego baixo); os limites passam a valer por worker. Trocar
+# por Redis/Memcached e remover o SILENCED abaixo se escalar.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'reservaif-ratelimit',
+    }
+}
+SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003', 'django_ratelimit.W001']
 
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
@@ -80,6 +110,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_ratelimit',
     'accounts',
     'refeicoes',
     'reservas',
@@ -166,4 +197,22 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-#STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        # Em produção o build roda collectstatic e gera o manifesto (hash nos
+        # nomes, dispensa o cache-busting manual). Em dev/teste não há manifesto.
+        'BACKEND': (
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            if not DEBUG
+            else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+        ),
+    },
+}
+
+# Testes: hasher rápido (a suíte cria muitos usuários).
+if 'test' in sys.argv:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']

@@ -10,7 +10,7 @@ from administrativo.models import ConfigReserva, Presenca, Strike, TipoRefeicao,
 from reservas.models import Reserva
 
 from .forms import RefeicaoForm
-from .models import Refeicao
+from .models import Prato, Refeicao
 
 
 class RefeicaoFormTipoTests(TestCase):
@@ -271,3 +271,57 @@ class JanelaEncerradaAguardandoRefeicaoTests(TestCase):
         self.assertContains(response, 'Reservas encerradas')
         self.assertNotContains(response, 'RESERVAS ENCERRADAS')
 
+
+
+class HomepageQueryCountTests(TestCase):
+    """Trava regressão do N+1 nas propriedades de janela/vaga da Refeicao."""
+
+    def setUp(self):
+        from administrativo.models import JanelaReserva
+
+        self.turma = Turma.objects.create(nome='1 Info', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_qc', email='aluno_qc@test.com', password='123',
+            perfil='aluno', turma=self.turma,
+        )
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.horario_inicio_consumo = time(12, 0)
+        tipo.save(update_fields=['ativo', 'horario_inicio_consumo'])
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=tipo,
+            defaults={
+                'horario_abertura': time(15, 0),
+                'horario_fechamento': time(7, 0),
+                'horario_fechamento_pre_reserva': time(6, 0),
+            },
+        )
+        segunda = timezone.localdate() - timedelta(days=timezone.localdate().weekday())
+        pratos = [
+            Prato.objects.create(nome=f'Prato {i}', categoria='principal')
+            for i in range(2)
+        ]
+        for offset in range(5):
+            refeicao = Refeicao.objects.create(
+                data=segunda + timedelta(days=offset),
+                tipo='almoco',
+                limite_vagas=50,
+                exige_reserva=True,
+            )
+            refeicao.pratos.set(pratos)
+
+    def test_homepage_nao_faz_n_mais_1_de_janela(self):
+        # Teto de regressão: hoje ~51 queries para uma semana de 5 refeições. Um
+        # N+1 de verdade (janela recalculada por acesso) passa de 100. A redução
+        # completa (preload/annotate) fica para a rodada de refactor.
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+
+        self.client.login(username='aluno_qc@test.com', password='123')
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(reverse('refeicoes:homepage'))
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(
+            len(ctx), 65,
+            f'homepage fez {len(ctx)} queries (regressão de N+1?)',
+        )
