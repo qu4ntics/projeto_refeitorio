@@ -111,33 +111,14 @@ class Strike(UUIDModel):
     expira_em = models.DateTimeField()
 
     def save(self, *args, **kwargs):
-        is_new = self._state.adding
-        if is_new:
+        if self._state.adding:
             if not self.aplicado_em:
                 self.aplicado_em = timezone.now()
             if not self.expira_em:
                 self.expira_em = self.aplicado_em + timedelta(days=30)
         super().save(*args, **kwargs)
-
-        if is_new:
-            # Notificação para o aluno sobre o novo strike
-            Notificacao.objects.create(
-                usuario=self.aluno,
-                titulo="Novo Strike Recebido",
-                mensagem=f"Você recebeu um strike por falta na refeição {self.presenca.reserva.refeicao}. Lembre-se que 2 strikes ativos resultam em bloqueio."
-            )
-
-            # Lógica de bloqueio automático
-            strikes_ativos = self.aluno.strikes.filter(expira_em__gt=timezone.now()).count()
-            if strikes_ativos >= 2:
-                self.aluno.bloqueado = True
-                self.aluno.save(update_fields=['bloqueado'])
-                
-                Notificacao.objects.create(
-                    usuario=self.aluno,
-                    titulo="Sua conta foi bloqueada",
-                    mensagem="Devido ao acúmulo de 2 strikes ativos, seu acesso a novas reservas foi suspenso. Procure a nutricionista."
-                )
+        # Notificação e bloqueio automático ficam em
+        # administrativo.services.strikes.aplicar_strike (efeito explícito).
 
 
 class Notificacao(UUIDModel):

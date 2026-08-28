@@ -557,7 +557,7 @@ class ListaPresencaTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(reserva.status, 'ativa')
 
-    def test_desmarcar_presenca_remove_registro(self):
+    def test_desmarcar_presenca_mantem_registro_como_ausente(self):
         from administrativo.models import Presenca
 
         self._login_refeitorio()
@@ -577,7 +577,8 @@ class ListaPresencaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         reserva.refresh_from_db()
         self.assertEqual(reserva.status, 'ativa')
-        self.assertFalse(Presenca.objects.filter(reserva=reserva).exists())
+        # O registro é preservado (auditoria); só o comparecimento muda.
+        self.assertTrue(Presenca.objects.filter(reserva=reserva, compareceu=False).exists())
 
     def test_encerrar_aplica_strike_apenas_ausentes(self):
         from administrativo.models import Presenca, Strike

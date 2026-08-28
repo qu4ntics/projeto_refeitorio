@@ -1,3 +1,4 @@
+import logging
 import re
 
 from django import forms
@@ -6,6 +7,16 @@ from django.contrib.auth.forms import AuthenticationForm
 
 from administrativo.models import AlunoAutorizado
 from .models import Usuario
+
+logger = logging.getLogger(__name__)
+
+# Mensagem única para as três recusas de e-mail (fora do roster, domínio errado,
+# já cadastrado): não revela qual é o caso, para não permitir enumerar a base.
+MSG_EMAIL_RECUSADO = (
+    'Não foi possível usar este e-mail para o cadastro. Se você é aluno do '
+    'campus, confirme com a nutricionista se seu e-mail institucional está na '
+    'lista de autorizados.'
+)
 
 
 def gerar_username_unico(email):
@@ -86,7 +97,7 @@ class CadastroForm(forms.ModelForm):
         confirmar_senha = dados.get('confirmar_senha')
 
         if senha != confirmar_senha:
-            raise forms.ValidationError("SENHAS NÃO COINCIDEM!!!")
+            raise forms.ValidationError('As senhas não coincidem.')
 
         return dados
 
@@ -95,23 +106,22 @@ class CadastroForm(forms.ModelForm):
         if not email:
             return email
         if ' ' in email:
-            raise forms.ValidationError("O email não pode conter espaços!")
+            raise forms.ValidationError('O e-mail não pode conter espaços.')
 
         email = email.strip().lower()
 
         existente = Usuario.objects.filter(email__iexact=email).first()
         if existente is not None:
             if existente.is_active:
-                raise forms.ValidationError("EMAIL JÁ CADASTRADO!")
+                logger.info('Cadastro recusado: e-mail já cadastrado (%s).', email)
+                raise forms.ValidationError(MSG_EMAIL_RECUSADO)
             # Conta nunca confirmada: reaproveita no save() e reenvia código.
             self._usuario_pendente = existente
 
         dominios = settings.ALUNO_EMAIL_DOMINIOS
         if dominios and email.rsplit('@', 1)[-1] not in dominios:
-            raise forms.ValidationError(
-                'Use seu e-mail institucional (%(dominios)s).'
-                % {'dominios': ', '.join(dominios)}
-            )
+            logger.info('Cadastro recusado: domínio fora da lista (%s).', email)
+            raise forms.ValidationError(MSG_EMAIL_RECUSADO)
 
         self._aluno_autorizado = (
             AlunoAutorizado.objects.select_related('turma')
@@ -119,10 +129,8 @@ class CadastroForm(forms.ModelForm):
             .first()
         )
         if self._aluno_autorizado is None:
-            raise forms.ValidationError(
-                'Este e-mail não está na lista de alunos autorizados do campus. '
-                'Procure a nutricionista.'
-            )
+            logger.info('Cadastro recusado: e-mail não autorizado (%s).', email)
+            raise forms.ValidationError(MSG_EMAIL_RECUSADO)
 
         return email
 

@@ -5,11 +5,11 @@ function mostrarSenha() {
 
     if (inputSen.type === 'password') {
         inputSen.type = 'text';
-        icon.classList.replace('bi-eye', 'bi-eye-slash');
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
         btnMostrar.setAttribute('aria-label', 'Ocultar senha');
     } else {
         inputSen.type = 'password';
-        icon.classList.replace('bi-eye-slash', 'bi-eye');
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
         btnMostrar.setAttribute('aria-label', 'Mostrar senha');
     }
 }
@@ -21,11 +21,11 @@ function mostrarSenhaConfirma() {
 
     if (inputSen.type === 'password') {
         inputSen.type = 'text';
-        icon.classList.replace('bi-eye', 'bi-eye-slash');
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
         btnMostrar.setAttribute('aria-label', 'Ocultar senha');
     } else {
         inputSen.type = 'password';
-        icon.classList.replace('bi-eye-slash', 'bi-eye');
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
         btnMostrar.setAttribute('aria-label', 'Mostrar senha');
     }
 }

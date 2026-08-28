@@ -104,7 +104,7 @@ pip install -r requirements.txt
 
 ### 4. Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na pasta `src/` com as variáveis abaixo:
+Copie `src/.env.example` para `src/.env` e preencha. As principais:
 
 ```env
 SECRET_KEY=sua-chave-secreta-aqui
@@ -179,6 +179,16 @@ python manage.py runserver
 ```
 
 Acesse: [http://localhost:8000](http://localhost:8000)
+
+### 9. Tarefa periódica (pré-reservas e chamadas)
+
+O comando abaixo ativa/expira pré-reservas de contraturno e encerra chamadas
+cujo horário já passou. Rode em **cron a cada 5–10 minutos** (em produção, um
+*Cron Job* no Render):
+
+```bash
+python manage.py sincronizar_reservas
+```
 
 O painel administrativo Django fica em [http://localhost:8000/django-admin](http://localhost:8000/django-admin).
 

@@ -40,6 +40,17 @@
       </li>
       {% endfor %}
     </ul>
+    {% if pagina.has_other_pages %}
+    <nav class="config-paginacao" aria-label="Paginação de notificações">
+      {% if pagina.has_previous %}
+        <a href="?page={{ pagina.previous_page_number }}">&larr; Mais recentes</a>
+      {% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}
+        <a href="?page={{ pagina.next_page_number }}">Mais antigas &rarr;</a>
+      {% endif %}
+    </nav>
+    {% endif %}
     {% else %}
     <p class="config-vazio">Nenhuma notificação por aqui.</p>
     {% endif %}

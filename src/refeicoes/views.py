@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
+from django.core.paginator import Paginator
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404, redirect, render
@@ -503,9 +504,11 @@ def notificacoes_aluno(request):
         messages.success(request, 'Todas as notificações foram marcadas como lidas.')
         return redirect('refeicoes:notificacoes_aluno')
 
-    notificacoes = Notificacao.objects.filter(usuario=request.user)[:30]
+    qs = Notificacao.objects.filter(usuario=request.user)
+    pagina = Paginator(qs, 20).get_page(request.GET.get('page'))
     return render(request, 'refeicoes/notificacoes_aluno.html', {
-        'notificacoes': notificacoes,
+        'notificacoes': pagina,
+        'pagina': pagina,
     })
 
 

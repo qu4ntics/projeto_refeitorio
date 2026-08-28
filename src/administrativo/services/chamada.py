@@ -1,10 +1,11 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from administrativo.models import Presenca, Strike
+from administrativo.models import Presenca
 from reservas.models import Reserva
 
 from .horarios_refeicao import pode_abrir_chamada, pode_reabrir_chamada
+from .strikes import aplicar_strike
 
 
 class ChamadaError(ValidationError):
@@ -32,18 +33,14 @@ def marcar_presenca(reserva, usuario_refeitorio, presente):
     if not refeicao.chamada_aberta:
         raise ChamadaError('A chamada desta refeição ainda não foi aberta.')
 
-    if presente:
-        Presenca.objects.update_or_create(
-            reserva=reserva,
-            defaults={
-                'compareceu': True,
-                'confirmado_por': usuario_refeitorio,
-            },
-        )
-        reserva.status = 'concluida'
-    else:
-        Presenca.objects.filter(reserva=reserva).delete()
-        reserva.status = 'ativa'
+    Presenca.objects.update_or_create(
+        reserva=reserva,
+        defaults={
+            'compareceu': presente,
+            'confirmado_por': usuario_refeitorio,
+        },
+    )
+    reserva.status = 'concluida' if presente else 'ativa'
     reserva.save(update_fields=['status'])
     return reserva.status
 
@@ -90,7 +87,7 @@ def encerrar_chamada(refeicao, usuario_refeitorio):
 
             if not hasattr(presenca, 'strike'):
                 aluno_bloqueado_antes = reserva.aluno.bloqueado
-                Strike.objects.create(aluno=reserva.aluno, presenca=presenca)
+                aplicar_strike(reserva.aluno, presenca)
                 resumo['strikes_aplicados'] += 1
                 reserva.aluno.refresh_from_db(fields=['bloqueado'])
                 if not aluno_bloqueado_antes and reserva.aluno.bloqueado:
