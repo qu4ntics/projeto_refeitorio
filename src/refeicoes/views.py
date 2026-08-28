@@ -155,7 +155,6 @@ def homepage(request):
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
 
     from reservas.models import Reserva, PreReserva
-    from reservas.services.pre_reserva import sincronizar_pre_reservas
 
     hoje = ctx['hoje']
     almoco_destaque = _resolver_almoco_destaque(hoje)
@@ -167,7 +166,8 @@ def homepage(request):
         if refeicao_destaque.id not in refeicao_ids_set:
             refeicoes_semana.append(refeicao_destaque)
 
-    sincronizar_pre_reservas(refeicoes_semana)
+    # A ativação/expiração de pré-reservas roda no cron (manage.py
+    # sincronizar_reservas), não mais em toda visita à home.
 
     refeicao_ids = [r.id for r in refeicoes_semana]
 

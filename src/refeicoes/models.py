@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, time
+from functools import cached_property
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -81,6 +83,11 @@ class Refeicao(UUIDModel):
     def __str__(self):
         return f'{self.get_tipo_display()} - {self.data}'
 
+    def refresh_from_db(self, *args, **kwargs):
+        super().refresh_from_db(*args, **kwargs)
+        self.__dict__.pop('janela_reserva', None)
+        self.__dict__.pop('tipo_refeicao', None)
+
     @property
     def reservas_ativas_count(self):
         if hasattr(self, 'reservas_ativas'):
@@ -128,8 +135,10 @@ class Refeicao(UUIDModel):
 
     @property
     def vagas_disponiveis(self):
+        # reservas_ativas_count aproveita a anotação `reservas_ativas` quando o
+        # queryset a trouxe (home/cardápio), evitando um COUNT por acesso.
         ocupadas = (
-            self.reservas.filter(status='ativa').count()
+            self.reservas_ativas_count
             + self.pre_reservas.filter(status='pendente').count()
         )
         return max(0, self.limite_vagas - ocupadas)
@@ -148,12 +157,17 @@ class Refeicao(UUIDModel):
         texto = f"{v} {v_word} {r_word}"
         return texto
 
+    @cached_property
+    def tipo_refeicao(self):
+        """O TipoRefeicao correspondente (cache por instância)."""
+        from administrativo.models import TipoRefeicao
+
+        return TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+
     @property
     def inicio_consumo_datetime(self):
         """Datetime aware do início da refeição, se configurado no tipo."""
-        from administrativo.models import TipoRefeicao
-
-        tipo = TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+        tipo = self.tipo_refeicao
         if not tipo or not tipo.horario_inicio_consumo:
             return None
         tz = timezone.get_current_timezone()
@@ -192,6 +206,11 @@ class Refeicao(UUIDModel):
         return f'O prazo de reservas encerrou em {fechamento}.'
 
     def get_janela_reserva(self):
+        """Limites da janela de reserva (com cache por instância)."""
+        return self.janela_reserva
+
+    @cached_property
+    def janela_reserva(self):
         """
         Retorna os limites de abertura e fechamento da reserva.
         Evita importação circular importando models de administrativo internamente.
@@ -252,7 +271,7 @@ class Refeicao(UUIDModel):
         
         limites = self.get_janela_reserva()
         if not limites:
-            return "Disponível"
+            return "Indisponível — refeição sem janela de reserva configurada"
 
         agora = timezone.localtime()
         abertura_str = self.abertura_reserva_display
@@ -267,10 +286,21 @@ class Refeicao(UUIDModel):
 
     @property
     def reserva_aberta(self):
-        """Retorna True se a janela de reserva está aberta no momento."""
+        """Retorna True se a janela de reserva está aberta no momento.
+
+        Sem janela configurada, a reserva fica FECHADA (falha fechado): é melhor
+        a nutricionista ver que faltou configurar do que aceitar reservas sem
+        prazo.
+        """
         limites = self.get_janela_reserva()
-        if not limites: return True
+        if not limites:
+            return False
         return limites['inicio'] <= timezone.localtime() <= limites['fim']
+
+    @property
+    def config_incompleta(self):
+        """True se a refeição exige reserva mas não tem janela configurada."""
+        return self.exige_reserva and self.get_janela_reserva() is None
 
     @property
     def periodo_pre_reserva_ativo(self):
@@ -294,15 +324,13 @@ class Refeicao(UUIDModel):
         Usa o início da refeição como referência; se não configurado, cai no
         fechamento da janela de reserva.
         """
-        from administrativo.models import TipoRefeicao
-
         limites = self.get_janela_reserva()
         if not limites:
             return None
 
         minutos = limites['minutos_cancelamento']
         tz = timezone.get_current_timezone()
-        tipo = TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+        tipo = self.tipo_refeicao
         if tipo and tipo.horario_inicio_consumo:
             inicio_refeicao = timezone.make_aware(
                 datetime.combine(self.data, tipo.horario_inicio_consumo),
@@ -329,9 +357,10 @@ class Refeicao(UUIDModel):
 
     @property
     def reserva_encerrada(self):
-        """Retorna True se o prazo de reserva já expirou."""
+        """Retorna True se o prazo de reserva já expirou (ou não há janela)."""
         limites = self.get_janela_reserva()
-        if not limites: return False
+        if not limites:
+            return True
         return timezone.localtime() > limites['fim']
     
     @property
