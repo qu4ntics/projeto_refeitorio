@@ -325,3 +325,39 @@ class HomepageQueryCountTests(TestCase):
             len(ctx), 65,
             f'homepage fez {len(ctx)} queries (regressão de N+1?)',
         )
+
+
+class ExcluirRefeicaoTests(TestCase):
+    def setUp(self):
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_del', email='nutri_del@test.com', password='123',
+            perfil='nutricionista',
+        )
+        self.turma = Turma.objects.create(nome='1 Del', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_del', email='aluno_del@test.com', password='123',
+            perfil='aluno', turma=self.turma,
+        )
+        self.refeicao = Refeicao.objects.create(
+            data=timezone.localdate() + timedelta(days=1),
+            tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        self.client.login(username='nutri_del@test.com', password='123')
+        self.url = reverse('refeicoes:nutricionista_deletar', args=[self.refeicao.id])
+
+    def test_exclui_com_apenas_reservas_canceladas(self):
+        Reserva.objects.create(
+            aluno=self.aluno, refeicao=self.refeicao, status='cancelada',
+            cancelado_em=timezone.now(),
+        )
+        self.client.post(self.url)
+        self.assertFalse(Refeicao.objects.filter(pk=self.refeicao.pk).exists())
+
+    def test_nao_exclui_com_reserva_ativa(self):
+        Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao, status='ativa')
+        self.client.post(self.url)
+        self.assertTrue(Refeicao.objects.filter(pk=self.refeicao.pk).exists())
+
+    def test_exclui_sem_reservas(self):
+        self.client.post(self.url)
+        self.assertFalse(Refeicao.objects.filter(pk=self.refeicao.pk).exists())
