@@ -4,6 +4,8 @@ from refeicoes.models import Refeicao
 
 from .models import Turma
 
+TAMANHO_MAXIMO_CSV = 5 * 1024 * 1024  # 5 MB
+
 
 def label_tipo_refeicao(codigo):
     return dict(Refeicao.TIPOS).get(codigo, codigo)
@@ -44,3 +46,33 @@ class TurmaForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class ImportarRosterForm(forms.Form):
+    arquivo = forms.FileField(
+        label='Planilha CSV',
+        widget=forms.ClearableFileInput(attrs={'accept': '.csv'}),
+    )
+    criar_turmas = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Cadastrar automaticamente as turmas que não existirem',
+    )
+    substituir = forms.BooleanField(
+        required=False,
+        label='Substituir a lista inteira (remover alunos que não estão nesta planilha)',
+    )
+    atualizar_contas = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Atualizar a turma de alunos já cadastrados',
+    )
+
+    def clean_arquivo(self):
+        arquivo = self.cleaned_data['arquivo']
+        nome = (arquivo.name or '').lower()
+        if not nome.endswith('.csv'):
+            raise forms.ValidationError('Envie um arquivo no formato .csv.')
+        if arquivo.size and arquivo.size > TAMANHO_MAXIMO_CSV:
+            raise forms.ValidationError('Arquivo muito grande (limite de 5 MB).')
+        return arquivo

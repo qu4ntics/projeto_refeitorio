@@ -105,6 +105,16 @@ function mostrarEstado(tipo) {
   document.getElementById('estado-erro').hidden    = tipo !== 'erro';
   const grid = document.getElementById('turmas-grid');
   if (tipo !== null) grid.hidden = true;
+
+  // Enquanto não houver nenhuma turma/aluno, o cabeçalho de ações e o
+  // subtítulo somem — a própria tela vazia já traz o botão de importação.
+  if (!ARQUIVADAS && tipo !== 'loading') {
+    const vazio = tipo === 'vazio';
+    const acoes = document.querySelector('.page-header-acoes');
+    const subtitulo = document.getElementById('page-subtitulo');
+    if (acoes) acoes.style.display = vazio ? 'none' : '';
+    if (subtitulo) subtitulo.style.display = vazio ? 'none' : '';
+  }
 }
 
 function escapar(str) {

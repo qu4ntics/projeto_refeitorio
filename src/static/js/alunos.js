@@ -112,10 +112,15 @@ function renderizarTabela(alunos) {
     const iniciais  = extrairIniciais(a.nome_completo);
     const cor       = CORES_AVATAR[somarChars(a.nome_completo) % CORES_AVATAR.length];
     const strikeCls = `strike-${Math.min(a.strikes_ativos, 2)}`;
+    const semConta  = a.conta_status === 'sem_conta';
 
     const expiracao = a.proximo_strike_expira_em
       ? `<span class="strike-expira">Expira ${formatarData(a.proximo_strike_expira_em)}</span>`
       : '';
+
+    const strikesHtml = semConta
+      ? '<span class="strike-vazio">—</span>'
+      : `<span class="strike-badge ${strikeCls}">${a.strikes_ativos}/2</span>${expiracao}`;
 
     const statusHtml = renderStatus(a);
 
@@ -133,11 +138,8 @@ function renderizarTabela(alunos) {
           <span class="aluno-nome">${escapar(a.nome_completo)}</span>
         </div>
         <span class="email">${escapar(a.email)}</span>
-        <div class="strikes-info">
-          <span class="strike-badge ${strikeCls}">${a.strikes_ativos}/2</span>
-          ${expiracao}
-        </div>
-        <div>${statusHtml}</div>
+        <div class="strikes-info">${strikesHtml}</div>
+        <div class="status-cell">${statusHtml}</div>
         <div>${btnDesbl}</div>
       </div>
     `;
@@ -145,6 +147,22 @@ function renderizarTabela(alunos) {
 }
 
 function renderStatus(a) {
+  const conta = renderContaBadge(a);
+  if (a.conta_status === 'sem_conta') return conta;
+  return conta + renderDisciplinaBadge(a);
+}
+
+function renderContaBadge(a) {
+  if (a.conta_status === 'sem_conta') {
+    return '<span class="status-badge status-sem-conta"><i class="fa-solid fa-user-clock"></i> Sem conta</span>';
+  }
+  if (a.conta_status === 'pendente') {
+    return '<span class="status-badge status-pendente"><i class="fa-solid fa-envelope"></i> Não confirmada</span>';
+  }
+  return '<span class="status-badge status-conta-ativa"><i class="fa-solid fa-user-check"></i> Conta ativa</span>';
+}
+
+function renderDisciplinaBadge(a) {
   if (a.bloqueado || a.strikes_ativos >= 2) {
     return '<span class="status-badge status-bloqueado"><i class="fa-solid fa-lock"></i> Bloqueado</span>';
   }

@@ -118,7 +118,33 @@ DB_PORT=5432
 
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 DEFAULT_FROM_EMAIL=ReservaIF <no-reply@reservaif.local>
+
+# Para enviar e-mail de verdade, troque o backend acima por
+# django.core.mail.backends.smtp.EmailBackend e preencha:
+EMAIL_HOST=smtp.seuprovedor.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=usuario
+EMAIL_HOST_PASSWORD=senha
+EMAIL_USE_TLS=True
+
+# Opcional: domínios de e-mail aceitos no cadastro de aluno, separados por vírgula.
+# Vazio ou ausente = sem restrição de domínio.
+ALUNO_EMAIL_DOMINIOS=estudante.ifxxx.edu.br
 ```
+
+> **Confirmação de e-mail.** Ao criar conta, o aluno recebe por e-mail um
+> **código de 6 dígitos** (validade de 15 min) e o digita em
+> `/accounts/cadastro/confirmar/` para ativar a conta. Com o backend `console`
+> (padrão de dev) o código aparece no terminal do `runserver`.
+
+> **Lista de alunos autorizados.** O cadastro de aluno só aceita e-mails que a
+> nutricionista tenha enviado previamente numa planilha CSV
+> (menu **Alunos → Importar planilha de alunos**). O CSV usa as colunas
+> `email`, `turma` e, opcionalmente, `nome` (separador `;` ou `,`). Turmas que
+> ainda não existem são criadas automaticamente na importação (turno matutino,
+> ajustável depois); turmas já cadastradas são reaproveitadas ignorando
+> maiúsculas e acentos. A turma da conta do aluno é definida por essa lista, não
+> escolhida no cadastro.
 
 ### 5. Criar o banco de dados
 

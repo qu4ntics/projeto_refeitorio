@@ -1129,3 +1129,206 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.assertIn('disponivel', menos)
         self.assertIn('disponivel', mais)
 
+
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+
+from .models import AlunoAutorizado
+from .services.roster import importar_roster
+
+
+def _csv(texto):
+    return SimpleUploadedFile('alunos.csv', texto.encode('utf-8'), content_type='text/csv')
+
+
+@override_settings(ALUNO_EMAIL_DOMINIOS=[])
+class ImportarRosterTests(TestCase):
+    def setUp(self):
+        self.turma_a = Turma.objects.create(nome='1º Informática', turno='matutino')
+        self.turma_b = Turma.objects.create(nome='2º Mecânica', turno='vespertino')
+
+    def test_importa_e_casa_turma_ignorando_caixa_e_acento(self):
+        res = importar_roster(_csv(
+            'email;turma;nome\n'
+            'ana@escola.edu.br;1o informatica;Ana\n'
+            'BRUNO@escola.edu.br;2º MECÂNICA;Bruno\n'
+        ))
+        self.assertEqual(res.criados, 2)
+        self.assertFalse(res.tem_erros)
+        ana = AlunoAutorizado.objects.get(email='ana@escola.edu.br')
+        self.assertEqual(ana.turma, self.turma_a)
+        self.assertEqual(
+            AlunoAutorizado.objects.get(email='bruno@escola.edu.br').turma,
+            self.turma_b,
+        )
+
+    def test_aceita_separador_virgula(self):
+        res = importar_roster(_csv('email,turma\nca@escola.edu.br,1º Informática\n'))
+        self.assertEqual(res.criados, 1)
+
+    def test_linhas_invalidas_viram_erros_e_validas_entram(self):
+        res = importar_roster(
+            _csv(
+                'email;turma\n'
+                'ok@escola.edu.br;1º Informática\n'
+                'sem-arroba;1º Informática\n'
+                'x@escola.edu.br;Turma Fantasma\n'
+            ),
+            criar_turmas=False,
+        )
+        self.assertEqual(res.criados, 1)
+        self.assertEqual(len(res.erros), 2)
+        self.assertTrue(AlunoAutorizado.objects.filter(email='ok@escola.edu.br').exists())
+
+    def test_cria_turmas_ausentes_e_vincula_alunos(self):
+        res = importar_roster(_csv(
+            'email;turma;nome\n'
+            'x@escola.edu.br;3º Química;Xavier\n'
+            'y@escola.edu.br;3o QUIMICA;Yara\n'
+            'z@escola.edu.br;1º Redes;Zoe\n'
+        ))
+        self.assertFalse(res.tem_erros)
+        self.assertEqual(res.turmas_criadas, 2)
+        self.assertEqual(res.criados, 3)
+        quimica = Turma.objects.get(nome='3º Química')
+        self.assertEqual(quimica.alunos_autorizados.count(), 2)
+        self.assertEqual(
+            AlunoAutorizado.objects.get(email='z@escola.edu.br').turma.nome, '1º Redes'
+        )
+
+    def test_criar_turmas_desligado_mantem_erro(self):
+        res = importar_roster(
+            _csv('email;turma\na@escola.edu.br;Turma Nova\n'),
+            criar_turmas=False,
+        )
+        self.assertEqual(res.criados, 0)
+        self.assertEqual(res.turmas_criadas, 0)
+        self.assertEqual(len(res.erros), 1)
+
+    def test_nao_duplica_turma_existente(self):
+        res = importar_roster(_csv('email;turma\na@escola.edu.br;1º INFORMÁTICA\n'))
+        self.assertEqual(res.turmas_criadas, 0)
+        self.assertEqual(
+            AlunoAutorizado.objects.get(email='a@escola.edu.br').turma, self.turma_a
+        )
+
+    def test_turma_nao_informada_vira_erro(self):
+        res = importar_roster(_csv('email;turma\nsemturma@escola.edu.br;\n'))
+        self.assertEqual(res.criados, 0)
+        self.assertEqual(len(res.erros), 1)
+
+    def test_cabecalho_invalido_aborta(self):
+        res = importar_roster(_csv('coluna1;coluna2\na;b\n'))
+        self.assertEqual(res.criados, 0)
+        self.assertTrue(res.tem_erros)
+
+    def test_substituir_remove_ausentes(self):
+        AlunoAutorizado.objects.create(email='antigo@escola.edu.br', turma=self.turma_a)
+        res = importar_roster(
+            _csv('email;turma\nnovo@escola.edu.br;1º Informática\n'),
+            substituir=True,
+        )
+        self.assertEqual(res.removidos, 1)
+        self.assertFalse(AlunoAutorizado.objects.filter(email='antigo@escola.edu.br').exists())
+
+    def test_sem_substituir_mantem_ausentes(self):
+        AlunoAutorizado.objects.create(email='antigo@escola.edu.br', turma=self.turma_a)
+        importar_roster(_csv('email;turma\nnovo@escola.edu.br;1º Informática\n'))
+        self.assertTrue(AlunoAutorizado.objects.filter(email='antigo@escola.edu.br').exists())
+
+    def test_atualizar_contas_sincroniza_turma_existente(self):
+        aluno = Usuario.objects.create_user(
+            username='sync', email='sync@escola.edu.br', password='x',
+            perfil='aluno', turma=self.turma_a,
+        )
+        res = importar_roster(
+            _csv('email;turma\nsync@escola.edu.br;2º Mecânica\n'),
+            atualizar_contas=True,
+        )
+        self.assertEqual(res.contas_sincronizadas, 1)
+        aluno.refresh_from_db()
+        self.assertEqual(aluno.turma, self.turma_b)
+
+    @override_settings(ALUNO_EMAIL_DOMINIOS=['estudante.if.edu.br'])
+    def test_dominio_invalido_vira_erro(self):
+        res = importar_roster(_csv(
+            'email;turma\n'
+            'certo@estudante.if.edu.br;1º Informática\n'
+            'errado@gmail.com;1º Informática\n'
+        ))
+        self.assertEqual(res.criados, 1)
+        self.assertEqual(len(res.erros), 1)
+
+    def test_view_importar_exige_nutricionista(self):
+        resp = self.client.get(reverse('administrativo:importar_alunos_autorizados'))
+        self.assertNotEqual(resp.status_code, 200)
+
+    def test_view_importar_get_renderiza(self):
+        Usuario.objects.create_user(
+            username='nutri_get', email='nutri_get@test.com',
+            password='senha123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri_get@test.com', password='senha123')
+        resp = self.client.get(reverse('administrativo:importar_alunos_autorizados'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Importar planilha de alunos')
+        self.assertContains(resp, 'file-drop')
+
+    def test_view_importar_processa_upload(self):
+        Usuario.objects.create_user(
+            username='nutri_imp', email='nutri_imp@test.com',
+            password='senha123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri_imp@test.com', password='senha123')
+        resp = self.client.post(reverse('administrativo:importar_alunos_autorizados'), {
+            'arquivo': _csv('email;turma\naluna@escola.edu.br;1º Informática\n'),
+            'atualizar_contas': 'on',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(AlunoAutorizado.objects.filter(email='aluna@escola.edu.br').exists())
+
+
+class TurmaAlunosListagemTests(TestCase):
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º Redes', turno='matutino')
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_lst', email='nutri_lst@test.com',
+            password='senha123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri_lst@test.com', password='senha123')
+
+        AlunoAutorizado.objects.create(
+            email='semconta@escola.edu.br', turma=self.turma, nome='Sem Conta',
+        )
+        self.ativa = Usuario.objects.create_user(
+            username='ativa', email='ativa@escola.edu.br', password='x',
+            perfil='aluno', turma=self.turma, first_name='Aluna', last_name='Ativa',
+            is_active=True,
+        )
+        AlunoAutorizado.objects.create(email='ativa@escola.edu.br', turma=self.turma)
+        self.pendente = Usuario.objects.create_user(
+            username='pendente', email='pendente@escola.edu.br', password='x',
+            perfil='aluno', turma=self.turma, is_active=False,
+        )
+
+    def _linhas(self):
+        resp = self.client.get(
+            reverse('administrativo:lista_alunos_turma', args=[self.turma.id])
+        )
+        self.assertEqual(resp.status_code, 200)
+        return resp.json()
+
+    def test_lista_une_contas_e_autorizados_sem_duplicar(self):
+        dados = self._linhas()
+        self.assertEqual(dados['turma']['total_alunos'], 3)
+        por_email = {a['email'].lower(): a for a in dados['alunos']}
+        self.assertEqual(por_email['semconta@escola.edu.br']['conta_status'], 'sem_conta')
+        self.assertEqual(por_email['ativa@escola.edu.br']['conta_status'], 'ativa')
+        self.assertEqual(por_email['pendente@escola.edu.br']['conta_status'], 'pendente')
+
+    def test_total_alunos_no_cabecalho_conta_autorizados(self):
+        resp = self.client.get(
+            reverse('administrativo:alunos_turma', args=[self.turma.id])
+        )
+        self.assertEqual(resp.context['total_alunos'], 3)
