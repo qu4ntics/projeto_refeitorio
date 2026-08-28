@@ -1,6 +1,8 @@
+import csv
 import json
 from datetime import date, datetime, timedelta, time
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
@@ -8,7 +10,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import ProtectedError, Q, Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -19,8 +21,12 @@ from accounts.models import Usuario
 from refeicoes.views import _preparar_contexto_semana
 from refeicoes.models import Refeicao
 from reservas.models import Reserva
-from .forms import TurmaForm, label_tipo_refeicao
-from .models import Turma, JanelaReserva, TipoRefeicao, Presenca, Strike, ConfigReserva
+from .forms import TurmaForm, ImportarRosterForm, label_tipo_refeicao
+from .models import (
+    Turma, JanelaReserva, TipoRefeicao, Presenca, Strike, ConfigReserva,
+    AlunoAutorizado,
+)
+from .services.roster import importar_roster
 from .services.chamada import (
     ChamadaError,
     abrir_chamada,
@@ -120,12 +126,72 @@ def alunos_turmas_arquivadas(request):
     return render(request, 'administrativo/alunos_turma.html', {'arquivadas': True})
 
 
+def _total_alunos_turma(turma):
+    """Alunos da turma = contas de aluno + autorizados que ainda não criaram conta
+    (união por e-mail, sem contar ninguém duas vezes)."""
+    contas = {
+        e.lower() for e in
+        Usuario.objects.filter(perfil='aluno', turma=turma).values_list('email', flat=True)
+    }
+    autorizados = {
+        e.lower() for e in turma.alunos_autorizados.values_list('email', flat=True)
+    }
+    return len(contas | autorizados)
+
+
+def _linhas_alunos_turma(turma, agora):
+    """Une contas de aluno (Usuario) e autorizados sem conta (AlunoAutorizado) da
+    turma, marcando o estado da conta de cada um:
+    'ativa' (e-mail confirmado), 'pendente' (cadastrou, falta confirmar) ou
+    'sem_conta' (só está na lista de autorizados)."""
+    contas = {
+        u.email.lower(): u
+        for u in Usuario.objects.filter(perfil='aluno', turma=turma)
+    }
+    autorizados = {
+        a.email.lower(): a
+        for a in AlunoAutorizado.objects.filter(turma=turma)
+    }
+
+    linhas = []
+    for email in sorted(contas.keys() | autorizados.keys()):
+        conta = contas.get(email)
+        aut = autorizados.get(email)
+        if conta is not None:
+            strikes_ativos = conta.strikes.filter(expira_em__gt=agora)
+            proximo_expira = strikes_ativos.order_by('expira_em').first()
+            linhas.append({
+                'id': str(conta.id),
+                'nome_completo': (
+                    conta.get_full_name() or (aut.nome if aut else '') or conta.username
+                ),
+                'email': conta.email,
+                'strikes_ativos': strikes_ativos.count(),
+                'bloqueado': conta.bloqueado,
+                'proximo_strike_expira_em': (
+                    proximo_expira.expira_em.isoformat() if proximo_expira else None
+                ),
+                'conta_status': 'ativa' if conta.is_active else 'pendente',
+            })
+        else:
+            linhas.append({
+                'id': '',
+                'nome_completo': aut.nome or aut.email.split('@')[0],
+                'email': aut.email,
+                'strikes_ativos': 0,
+                'bloqueado': False,
+                'proximo_strike_expira_em': None,
+                'conta_status': 'sem_conta',
+            })
+    return linhas
+
+
 def _serialize_turmas_grid(arquivadas=False):
     turmas = Turma.objects.filter(ativo=not arquivadas).order_by('nome')
     nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
     lista = []
     for t in turmas:
-        total_alunos = t.alunos.count()
+        total_alunos = _total_alunos_turma(t)
         total_bloqueados = t.alunos.filter(bloqueado=True).count()
         dias = [nomes_curtos[d] for d in sorted(t.dias_contraturno or []) if d in nomes_curtos]
         lista.append({
@@ -146,7 +212,7 @@ def _serialize_turmas_grid(arquivadas=False):
 def alunos_turma(request, turma_id):
     """Nível 2 — tabela de alunos de uma turma (/administrativo/alunos/<turma_id>/)."""
     turma = get_object_or_404(Turma, pk=turma_id)
-    total_alunos = turma.alunos.filter(perfil='aluno').count()
+    total_alunos = _total_alunos_turma(turma)
     nomes_curtos = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
     dias_semana = [
         {'valor': d, 'label': label, 'curto': nomes_curtos[d]}
@@ -160,6 +226,82 @@ def alunos_turma(request, turma_id):
         'dias_contraturno_set': set(turma.dias_contraturno or []),
         'turma_arquivada': not turma.ativo,
     })
+
+
+@login_required
+@perfil_required('nutricionista')
+def importar_alunos_autorizados(request):
+    """Envio da planilha CSV com os alunos autorizados a criar conta."""
+    resultado = None
+    if request.method == 'POST':
+        form = ImportarRosterForm(request.POST, request.FILES)
+        if form.is_valid():
+            resultado = importar_roster(
+                form.cleaned_data['arquivo'],
+                substituir=form.cleaned_data['substituir'],
+                atualizar_contas=form.cleaned_data['atualizar_contas'],
+                criar_turmas=form.cleaned_data['criar_turmas'],
+            )
+            if resultado.processados or resultado.removidos or resultado.turmas_criadas:
+                partes = [
+                    f'{resultado.criados} adicionado(s)',
+                    f'{resultado.atualizados} atualizado(s)',
+                ]
+                if resultado.turmas_criadas:
+                    partes.append(f'{resultado.turmas_criadas} turma(s) criada(s)')
+                if resultado.removidos:
+                    partes.append(f'{resultado.removidos} removido(s)')
+                if resultado.contas_sincronizadas:
+                    partes.append(
+                        f'{resultado.contas_sincronizadas} conta(s) sincronizada(s)'
+                    )
+                messages.success(request, 'Planilha processada: ' + ', '.join(partes) + '.')
+            if resultado.tem_erros:
+                messages.warning(
+                    request,
+                    f'{len(resultado.erros)} linha(s) foram ignoradas. Veja os detalhes abaixo.',
+                )
+            if (
+                not resultado.processados
+                and not resultado.removidos
+                and not resultado.turmas_criadas
+                and not resultado.tem_erros
+            ):
+                messages.info(request, 'Nenhuma alteração foi feita.')
+    else:
+        form = ImportarRosterForm()
+
+    ultimo_import = (
+        AlunoAutorizado.objects.order_by('-atualizado_em')
+        .values_list('atualizado_em', flat=True)
+        .first()
+    )
+    return render(request, 'administrativo/importar_alunos.html', {
+        'form': form,
+        'resultado': resultado,
+        'total_autorizados': AlunoAutorizado.objects.count(),
+        'ultimo_import': ultimo_import,
+        'turmas': Turma.objects.filter(ativo=True).order_by('nome'),
+    })
+
+
+@login_required
+@perfil_required('nutricionista')
+def modelo_csv_alunos(request):
+    """Baixa um CSV de exemplo com o cabeçalho esperado."""
+    turma_exemplo = (
+        Turma.objects.filter(ativo=True).order_by('nome')
+        .values_list('nome', flat=True)
+        .first()
+    ) or '1º ano Informática'
+    resposta = HttpResponse(content_type='text/csv')
+    resposta['Content-Disposition'] = 'attachment; filename="modelo_alunos.csv"'
+    escritor = csv.writer(resposta, delimiter=';')
+    escritor.writerow(['email', 'turma', 'nome'])
+    escritor.writerow([f'aluno@{settings.ALUNO_EMAIL_DOMINIOS[0]}'
+                       if settings.ALUNO_EMAIL_DOMINIOS else 'aluno@escola.edu.br',
+                       turma_exemplo, 'Nome do Aluno'])
+    return resposta
 
 
 @login_required
@@ -178,22 +320,7 @@ def lista_alunos_turma(request, turma_id):
     """JSON com dados da turma + alunos dela para o nível 2."""
     agora = timezone.now()
     turma = get_object_or_404(Turma, pk=turma_id)
-    alunos_qs = Usuario.objects.filter(perfil='aluno', turma=turma)
-
-    lista = []
-    for aluno in alunos_qs:
-        strikes_ativos = aluno.strikes.filter(expira_em__gt=agora)
-        proximo_expira = strikes_ativos.order_by('expira_em').first()
-        lista.append({
-            'id': str(aluno.id),
-            'nome_completo': aluno.get_full_name() or aluno.username,
-            'email': aluno.email,
-            'strikes_ativos': strikes_ativos.count(),
-            'bloqueado': aluno.bloqueado,
-            'proximo_strike_expira_em': (
-                proximo_expira.expira_em.isoformat() if proximo_expira else None
-            ),
-        })
+    lista = _linhas_alunos_turma(turma, agora)
 
     NOMES_CURTOS = {0: 'Seg', 1: 'Ter', 2: 'Qua', 3: 'Qui', 4: 'Sex', 5: 'Sáb', 6: 'Dom'}
 
@@ -205,7 +332,7 @@ def lista_alunos_turma(request, turma_id):
             'turno_display': turma.get_turno_display(),
             'dias_contraturno': turma.dias_contraturno or [],
             'ativo': turma.ativo,
-            'total_alunos': alunos_qs.count(),
+            'total_alunos': len(lista),
         },
         'dias_semana': [
             {'valor': d, 'label': label, 'curto': NOMES_CURTOS[d]}

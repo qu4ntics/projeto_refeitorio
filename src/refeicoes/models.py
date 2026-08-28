@@ -30,7 +30,6 @@ class Prato(UUIDModel):
     ORDEM_CATEGORIAS = [c[0] for c in CATEGORIAS]
 
     nome = models.CharField(max_length=200)
-    descricao = models.TextField(blank=True)
     categoria = models.CharField(max_length=20, choices=CATEGORIAS)
     ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -99,10 +98,10 @@ class Refeicao(UUIDModel):
 
         por_categoria = {}
         for prato in pratos:
-            texto = (prato.descricao or prato.nome).strip()
-            if not texto:
+            nome = prato.nome.strip()
+            if not nome:
                 continue
-            por_categoria.setdefault(prato.categoria, []).append(texto)
+            por_categoria.setdefault(prato.categoria, []).append(nome)
 
         categorias_labels = dict(Prato.CATEGORIAS)
         return [

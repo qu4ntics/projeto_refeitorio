@@ -55,6 +55,22 @@ DEFAULT_FROM_EMAIL = os.getenv(
     'ReservaIF <no-reply@reservaif.local>',
 )
 
+# SMTP — só entram em uso quando EMAIL_BACKEND aponta para o backend smtp.
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '25'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+
+# Domínios de e-mail aceitos no cadastro de aluno (ex.: "estudante.ifpr.edu.br").
+# Vazio = sem restrição de domínio; a lista de alunos autorizados continua valendo.
+ALUNO_EMAIL_DOMINIOS = [
+    d.strip().lower()
+    for d in os.getenv('ALUNO_EMAIL_DOMINIOS', '').split(',')
+    if d.strip()
+]
+
 # Application definition
 
 INSTALLED_APPS = [

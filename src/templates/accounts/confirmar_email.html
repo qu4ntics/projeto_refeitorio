@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirme seu e-mail</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/cadastro-style.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+    <style>
+        .confirmar-texto { color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
+        .confirmar-texto strong { color: var(--text-primary); }
+        input[name="codigo"] {
+            text-align: center;
+            font-size: 26px;
+            letter-spacing: 10px;
+            font-weight: 700;
+        }
+        .msg-flash {
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+        .msg-flash.msg-success { background: rgba(0,176,91,0.12); color: var(--accent); }
+        .msg-flash.msg-error { background: rgba(224,82,82,0.12); color: var(--danger); }
+        .reenviar-linha {
+            display: flex;
+            justify-content: center;
+            margin-top: 14px;
+        }
+        .reenviar-linha button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .reenviar-linha button:disabled { color: var(--text-light); cursor: default; }
+    </style>
+</head>
+<body>
+    <div class="caixa-login">
+        <div class="barra-topo">
+            <a href="{% url 'accounts:cadastro' %}">&larr;</a>
+            <p>Confirme seu e-mail</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="msg-flash {% if message.tags == 'error' %}msg-error{% else %}msg-success{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <p class="confirmar-texto">
+            Enviamos um código de 6 dígitos para <strong>{{ email_mascarado }}</strong>.
+            Digite o código para ativar sua conta.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="erro-form">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            {{ form.codigo }}
+            {% if form.codigo.errors %}
+            <div class="erro-form">{{ form.codigo.errors }}</div>
+            {% endif %}
+
+            <button type="submit" class="btn-submit" data-loading-text="Confirmando...">Confirmar e entrar</button>
+        </form>
+
+        <form method="post" action="{% url 'accounts:reenviar_codigo' %}" class="reenviar-linha">
+            {% csrf_token %}
+            <button type="submit" id="btn-reenviar" data-cooldown="{{ segundos_reenviar }}">Reenviar código</button>
+        </form>
+
+        <a href="{% url 'accounts:cadastro' %}">Trocar e-mail</a>
+    </div>
+
+    <script src="{% static 'js/form-feedback.js' %}"></script>
+    <script>
+        (function () {
+            var btn = document.getElementById('btn-reenviar');
+            if (!btn) return;
+            var restante = parseInt(btn.dataset.cooldown, 10) || 0;
+            var label = btn.textContent;
+            function tick() {
+                if (restante <= 0) {
+                    btn.disabled = false;
+                    btn.textContent = label;
+                    return;
+                }
+                btn.disabled = true;
+                btn.textContent = 'Reenviar código em ' + restante + 's';
+                restante -= 1;
+                setTimeout(tick, 1000);
+            }
+            tick();
+        })();
+    </script>
+</body>
+</html>

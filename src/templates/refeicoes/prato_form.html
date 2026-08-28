@@ -45,14 +45,6 @@
           {% endfor %}
         </div>
 
-        <div class="campo-grupo {% if form.descricao.errors %}has-error{% endif %}">
-          {{ form.descricao.label_tag }}
-          {{ form.descricao }}
-          {% for error in form.descricao.errors %}
-            <span class="form-error">{{ error }}</span>
-          {% endfor %}
-        </div>
-
         <div class="nova-refeicao-acoes">
           <a href="{% url 'refeicoes:pratos_lista' %}" class="btn-cancelar">Cancelar</a>
           <button type="submit" class="btn-salvar" data-loading-text="Salvando...">Salvar</button>

@@ -47,6 +47,36 @@ class Turma(UUIDModel):
         return ', '.join(labels[d] for d in sorted(self.dias_contraturno or []) if d in labels)
 
 
+class AlunoAutorizado(UUIDModel):
+    """E-mail institucional liberado pela nutricionista para criar conta de aluno.
+
+    Alimentado pela importação de planilha CSV. Só e-mails presentes aqui
+    conseguem se cadastrar, e a turma da conta vem daqui — não da escolha do aluno.
+    """
+
+    email = models.EmailField('E-mail institucional', unique=True)
+    turma = models.ForeignKey(
+        Turma,
+        on_delete=models.PROTECT,
+        related_name='alunos_autorizados',
+    )
+    nome = models.CharField('Nome', max_length=150, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['email']
+        verbose_name = 'Aluno autorizado'
+        verbose_name_plural = 'Alunos autorizados'
+
+    def save(self, *args, **kwargs):
+        self.email = (self.email or '').strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
+
+
 class Presenca(UUIDModel):
     reserva = models.OneToOneField(
         'reservas.Reserva',

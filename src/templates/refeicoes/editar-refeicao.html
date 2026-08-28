@@ -63,9 +63,6 @@
                             class="check-prato"
                             {% if prato.pk|stringformat:"s" in pratos_selecionados %}checked{% endif %}>
                           <span class="prato-check-nome">{{ prato.nome }}</span>
-                          {% if prato.descricao %}
-                            <span class="prato-check-desc">{{ prato.descricao }}</span>
-                          {% endif %}
                         </label>
                       </li>
                     {% endfor %}

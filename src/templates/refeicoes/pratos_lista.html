@@ -77,9 +77,6 @@
                     <li class="prato-item">
                       <div class="prato-item-corpo">
                         <span class="prato-item-nome">{{ prato.nome }}</span>
-                        {% if prato.descricao %}
-                          <p class="prato-item-desc">{{ prato.descricao|truncatewords:18 }}</p>
-                        {% endif %}
                       </div>
                       <div class="pratos-acoes">
                         <a href="{% url 'refeicoes:prato_editar' prato.pk %}" class="btn-acao btn-acao-editar" title="Editar">

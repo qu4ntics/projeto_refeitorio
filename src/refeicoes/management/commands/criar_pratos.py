@@ -12,41 +12,41 @@ from refeicoes.models import Prato
 
 PRATOS_PADRAO = [
     # Principais
-    {'nome': 'Arroz branco', 'categoria': 'principal', 'descricao': 'Arroz soltinho'},
-    {'nome': 'Arroz integral', 'categoria': 'principal', 'descricao': 'Arroz integral cozido'},
-    {'nome': 'Feijão carioca', 'categoria': 'principal', 'descricao': 'Feijão carioca temperado'},
-    {'nome': 'Feijão preto', 'categoria': 'principal', 'descricao': 'Feijão preto temperado'},
-    {'nome': 'Frango grelhado', 'categoria': 'principal', 'descricao': 'Peito de frango grelhado'},
-    {'nome': 'Frango à parmegiana', 'categoria': 'principal', 'descricao': 'Filé de frango empanado com molho e queijo'},
-    {'nome': 'Carne de panela', 'categoria': 'principal', 'descricao': 'Carne bovina cozida em panela'},
-    {'nome': 'Estrogonofe de frango', 'categoria': 'principal', 'descricao': 'Frango em cubos com molho cremoso'},
-    {'nome': 'Lasanha de carne', 'categoria': 'principal', 'descricao': 'Lasanha ao molho bolonhesa'},
-    {'nome': 'Peixe assado', 'categoria': 'principal', 'descricao': 'Filé de peixe assado com limão'},
-    {'nome': 'Omelete', 'categoria': 'principal', 'descricao': 'Omelete simples'},
-    {'nome': 'Macarrão ao molho', 'categoria': 'principal', 'descricao': 'Macarrão com molho de tomate'},
-    {'nome': 'Strogonoff de carne', 'categoria': 'principal', 'descricao': 'Carne em cubos com molho cremoso'},
-    {'nome': 'Lentilha', 'categoria': 'principal', 'descricao': 'Lentilha cozida temperada'},
+    {'nome': 'Arroz branco', 'categoria': 'principal'},
+    {'nome': 'Arroz integral', 'categoria': 'principal'},
+    {'nome': 'Feijão carioca', 'categoria': 'principal'},
+    {'nome': 'Feijão preto', 'categoria': 'principal'},
+    {'nome': 'Frango grelhado', 'categoria': 'principal'},
+    {'nome': 'Frango à parmegiana', 'categoria': 'principal'},
+    {'nome': 'Carne de panela', 'categoria': 'principal'},
+    {'nome': 'Estrogonofe de frango', 'categoria': 'principal'},
+    {'nome': 'Lasanha de carne', 'categoria': 'principal'},
+    {'nome': 'Peixe assado', 'categoria': 'principal'},
+    {'nome': 'Omelete', 'categoria': 'principal'},
+    {'nome': 'Macarrão ao molho', 'categoria': 'principal'},
+    {'nome': 'Strogonoff de carne', 'categoria': 'principal'},
+    {'nome': 'Lentilha', 'categoria': 'principal'},
     # Complementos
-    {'nome': 'Farofa', 'categoria': 'complemento', 'descricao': 'Farofa de mandioca'},
-    {'nome': 'Purê de batata', 'categoria': 'complemento', 'descricao': 'Purê cremoso de batata'},
-    {'nome': 'Batata assada', 'categoria': 'complemento', 'descricao': 'Batata em cubos assada'},
-    {'nome': 'Legumes refogados', 'categoria': 'complemento', 'descricao': 'Mix de legumes refogados'},
-    {'nome': 'Couve refogada', 'categoria': 'complemento', 'descricao': 'Couve refogada com alho'},
-    {'nome': 'Polenta', 'categoria': 'complemento', 'descricao': 'Polenta cremosa'},
-    {'nome': 'Mandioca cozida', 'categoria': 'complemento', 'descricao': 'Mandioca cozida'},
+    {'nome': 'Farofa', 'categoria': 'complemento'},
+    {'nome': 'Purê de batata', 'categoria': 'complemento'},
+    {'nome': 'Batata assada', 'categoria': 'complemento'},
+    {'nome': 'Legumes refogados', 'categoria': 'complemento'},
+    {'nome': 'Couve refogada', 'categoria': 'complemento'},
+    {'nome': 'Polenta', 'categoria': 'complemento'},
+    {'nome': 'Mandioca cozida', 'categoria': 'complemento'},
     # Saladas
-    {'nome': 'Salada de alface', 'categoria': 'salada', 'descricao': 'Alface americana fresca'},
-    {'nome': 'Vinagrete', 'categoria': 'salada', 'descricao': 'Tomate, cebola e pimentão'},
-    {'nome': 'Salada de repolho', 'categoria': 'salada', 'descricao': 'Repolho ralado temperado'},
-    {'nome': 'Salada de beterraba', 'categoria': 'salada', 'descricao': 'Beterraba ralada'},
-    {'nome': 'Salada de cenoura', 'categoria': 'salada', 'descricao': 'Cenoura ralada'},
+    {'nome': 'Salada de alface', 'categoria': 'salada'},
+    {'nome': 'Vinagrete', 'categoria': 'salada'},
+    {'nome': 'Salada de repolho', 'categoria': 'salada'},
+    {'nome': 'Salada de beterraba', 'categoria': 'salada'},
+    {'nome': 'Salada de cenoura', 'categoria': 'salada'},
     # Sobremesas
-    {'nome': 'Gelatina', 'categoria': 'sobremesa', 'descricao': 'Gelatina de frutas'},
-    {'nome': 'Fruta da estação', 'categoria': 'sobremesa', 'descricao': 'Fruta fresca do dia'},
-    {'nome': 'Pudim', 'categoria': 'sobremesa', 'descricao': 'Pudim de leite'},
-    {'nome': 'Doce de leite', 'categoria': 'sobremesa', 'descricao': 'Doce de leite caseiro'},
-    {'nome': 'Banana', 'categoria': 'sobremesa', 'descricao': 'Banana prata'},
-    {'nome': 'Maçã', 'categoria': 'sobremesa', 'descricao': 'Maçã fresca'},
+    {'nome': 'Gelatina', 'categoria': 'sobremesa'},
+    {'nome': 'Fruta da estação', 'categoria': 'sobremesa'},
+    {'nome': 'Pudim', 'categoria': 'sobremesa'},
+    {'nome': 'Doce de leite', 'categoria': 'sobremesa'},
+    {'nome': 'Banana', 'categoria': 'sobremesa'},
+    {'nome': 'Maçã', 'categoria': 'sobremesa'},
 ]
 
 
@@ -78,7 +78,6 @@ class Command(BaseCommand):
                 nome=dados['nome'],
                 defaults={
                     'categoria': dados['categoria'],
-                    'descricao': dados.get('descricao', ''),
                     'ativo': True,
                 },
             )
@@ -88,9 +87,8 @@ class Command(BaseCommand):
                 acao = 'Criado'
             else:
                 prato.categoria = dados['categoria']
-                prato.descricao = dados.get('descricao', '')
                 prato.ativo = True
-                prato.save(update_fields=['categoria', 'descricao', 'ativo'])
+                prato.save(update_fields=['categoria', 'ativo'])
                 atualizados += 1
                 acao = 'Atualizado'
 
