@@ -1,10 +1,16 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from administrativo.models import Presenca
 from reservas.models import Reserva
 
-from .horarios_refeicao import pode_abrir_chamada, pode_reabrir_chamada
+from .horarios_refeicao import (
+    fase_periodo_consumo,
+    periodo_consumo_configurado,
+    periodo_consumo_terminou,
+    pode_reabrir_chamada,
+)
 from .strikes import aplicar_strike
 
 
@@ -12,16 +18,23 @@ class ChamadaError(ValidationError):
     pass
 
 
-def abrir_chamada(refeicao):
-    if not refeicao.exige_reserva:
-        raise ChamadaError('Esta refeição não exige reserva e não possui chamada.')
-    if refeicao.chamada_finalizada:
-        raise ChamadaError('A chamada desta refeição já foi encerrada.')
-    ok, mensagem = pode_abrir_chamada(refeicao)
-    if not ok:
-        raise ChamadaError(mensagem)
-    refeicao.chamada_aberta = True
-    refeicao.save(update_fields=['chamada_aberta'])
+def _erro_fora_do_horario(refeicao, fase):
+    """Mensagem para quem tenta mexer na chamada fora do período de consumo."""
+    if fase == 'nao_configurado':
+        return (
+            'Horário de início e término da refeição não estão configurados. '
+            'Solicite à nutricionista.'
+        )
+    if fase == 'outro_dia':
+        return 'A presença só pode ser marcada no dia da refeição.'
+    if fase == 'depois':
+        return 'O horário da refeição já encerrou.'
+
+    periodo = periodo_consumo_configurado(refeicao.tipo_refeicao)
+    inicio = periodo[0].strftime('%H:%M') if periodo else None
+    if inicio:
+        return f'A refeição começa às {inicio}; a presença só pode ser marcada a partir daí.'
+    return 'A refeição ainda não começou.'
 
 
 def marcar_presenca(reserva, usuario_refeitorio, presente):
@@ -30,8 +43,10 @@ def marcar_presenca(reserva, usuario_refeitorio, presente):
         raise ChamadaError('Não é possível marcar presença em uma reserva cancelada.')
     if refeicao.chamada_finalizada:
         raise ChamadaError('Esta chamada já foi finalizada e não pode mais ser alterada.')
-    if not refeicao.chamada_aberta:
-        raise ChamadaError('A chamada desta refeição ainda não foi aberta.')
+
+    fase = fase_periodo_consumo(refeicao)
+    if fase != 'durante':
+        raise ChamadaError(_erro_fora_do_horario(refeicao, fase))
 
     Presenca.objects.update_or_create(
         reserva=reserva,
@@ -46,12 +61,21 @@ def marcar_presenca(reserva, usuario_refeitorio, presente):
 
 
 def encerrar_chamada(refeicao, usuario_refeitorio):
+    """
+    Fecha a chamada e aplica strike em quem não foi marcado como presente.
+
+    Chamada de dois lugares: automaticamente pelo cron quando o horário da
+    refeição termina (`usuario_refeitorio=None`) e manualmente pelo refeitório,
+    que pode encerrar antes da hora (ex.: a comida acabou).
+    """
     if not refeicao.exige_reserva:
         raise ChamadaError('Esta refeição não exige reserva e não possui chamada.')
     if refeicao.chamada_finalizada:
         raise ChamadaError('A chamada desta refeição já foi encerrada.')
-    if not refeicao.chamada_aberta:
-        raise ChamadaError('A chamada desta refeição ainda não foi aberta.')
+
+    fase = fase_periodo_consumo(refeicao)
+    if fase != 'durante' and not periodo_consumo_terminou(refeicao):
+        raise ChamadaError(_erro_fora_do_horario(refeicao, fase))
 
     resumo = {
         'presentes': 0,
@@ -62,6 +86,11 @@ def encerrar_chamada(refeicao, usuario_refeitorio):
 
     with transaction.atomic():
         refeicao_locked = type(refeicao).objects.select_for_update().get(pk=refeicao.pk)
+        # Recheca com a linha travada: o encerramento também é disparado por
+        # acesso às telas, então duas requisições podem chegar juntas aqui.
+        if refeicao_locked.chamada_finalizada:
+            raise ChamadaError('A chamada desta refeição já foi encerrada.')
+
         reservas = (
             Reserva.objects.select_for_update()
             .filter(refeicao=refeicao_locked)
@@ -95,30 +124,67 @@ def encerrar_chamada(refeicao, usuario_refeitorio):
 
             resumo['ausentes'] += 1
 
-        refeicao_locked.chamada_aberta = False
         refeicao_locked.chamada_finalizada = True
-        refeicao_locked.save(update_fields=['chamada_aberta', 'chamada_finalizada'])
+        refeicao_locked.save(update_fields=['chamada_finalizada'])
 
     refeicao.refresh_from_db()
     return resumo
 
 
+def encerrar_chamadas_vencidas():
+    """
+    Encerra toda chamada cujo horário de consumo já terminou, aplicando os
+    strikes dos ausentes. Retorna quantas foram encerradas.
+
+    É idempotente e barata quando não há nada vencido, porque é chamada tanto
+    pelo cron (`sincronizar_reservas`) quanto pelas telas do refeitório e da
+    nutricionista. A redundância é proposital: sem ela, os strikes dependeriam
+    de o cron estar configurado, e uma falha silenciosa de infraestrutura
+    deixaria de penalizar ausências sem ninguém perceber.
+    """
+    from refeicoes.models import Refeicao
+
+    pendentes = Refeicao.objects.filter(
+        data__lte=timezone.localdate(),
+        exige_reserva=True,
+        chamada_finalizada=False,
+    )
+
+    encerradas = 0
+    for refeicao in pendentes:
+        if not periodo_consumo_terminou(refeicao):
+            continue
+        try:
+            encerrar_chamada(refeicao, None)
+            encerradas += 1
+        except ChamadaError:
+            # Outra requisição encerrou primeiro, ou a refeição não está em
+            # condição de encerrar: seguir para a próxima.
+            continue
+    return encerradas
+
+
 def reabrir_chamada(refeicao):
+    """Reabre para correção: volta a valer o horário da refeição."""
     if not refeicao.exige_reserva:
         raise ChamadaError('Esta refeição não exige reserva e não possui chamada.')
     if not pode_reabrir_chamada(refeicao):
         raise ChamadaError(
-            'A chamada só pode ser reaberta no dia da refeição.'
+            'A chamada só pode ser reaberta durante o horário da refeição.'
         )
-    refeicao.chamada_aberta = True
     refeicao.chamada_finalizada = False
-    refeicao.save(update_fields=['chamada_aberta', 'chamada_finalizada'])
+    refeicao.save(update_fields=['chamada_finalizada'])
 
 
 def status_chamada_refeicao(refeicao):
+    """
+    A chamada não é aberta por ninguém: ela vale enquanto durar o horário de
+    consumo da refeição. `chamada_finalizada` é o único estado persistido,
+    porque encerrar aplica strikes e só pode acontecer uma vez.
+    """
     if refeicao.chamada_finalizada:
         return 'encerrada'
-    if refeicao.chamada_aberta:
+    if fase_periodo_consumo(refeicao) == 'durante':
         return 'em_andamento'
     return 'fechada'
 

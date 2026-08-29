@@ -1,13 +1,13 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Configurações{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
-  <link rel="stylesheet" href="{% static 'css/configuracoes_aluno.css' %}">
-  <link rel="stylesheet" href="{% static 'css/configuracoes.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/cardapio_semana.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/configuracoes_aluno.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/configuracoes.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -260,6 +260,6 @@
 <script>
   window.CONFIG_ABA_ATIVA = "{{ aba_ativa }}";
 </script>
-<script src="{% static 'js/configuracoes_nutri.js' %}?v=3"></script>
-<script src="{% static 'js/configuracoes_aluno.js' %}?v=1"></script>
+<script src="{% static_v 'js/configuracoes_nutri.js' %}"></script>
+<script src="{% static_v 'js/configuracoes_aluno.js' %}"></script>
 {% endblock %}

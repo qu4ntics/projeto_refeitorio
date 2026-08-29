@@ -1,11 +1,11 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Importar planilha de alunos — ReservaIF{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=4">
-  <link rel="stylesheet" href="{% static 'css/importar_alunos.css' %}?v=4">
+  <link rel="stylesheet" href="{% static_v 'css/alunos.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/importar_alunos.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -225,5 +225,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/importar_alunos.js' %}?v=1"></script>
+<script src="{% static_v 'js/importar_alunos.js' %}"></script>
 {% endblock %}

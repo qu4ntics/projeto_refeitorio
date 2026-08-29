@@ -1,18 +1,4 @@
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'}"></i> ${message}`;
-
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
-}
+// showToast vem de toast.js, carregado no base.html para toda a aplicação.
 
 function atualizarContador(delta) {
     const el = document.getElementById('contador-presentes');

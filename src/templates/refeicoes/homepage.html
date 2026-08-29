@@ -1,6 +1,6 @@
 {% extends "base/base.html" %}
 
-{% load static %}
+{% load static static_versionado %}
 
 
 
@@ -10,7 +10,7 @@
 
 {% block extra_css %}
 
-  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}?v=2">
+  <link rel="stylesheet" href="{% static_v 'css/cardapio_semana.css' %}">
 
 {% endblock %}
 
@@ -41,7 +41,7 @@
 
 {% if almoco_destaque %}
 
-<section class="almoco-atual" aria-label="{{ almoco_destaque.titulo }}">
+<section class="almoco-atual{% if almoco_destaque.refeicao.refeicao_em_andamento %} almoco-atual--em-andamento{% elif almoco_destaque.refeicao.reserva_futura %} almoco-atual--reserva-futura{% endif %}" aria-label="{{ almoco_destaque.titulo }}">
 
   <div class="almoco-atual__header">
 
@@ -51,8 +51,19 @@
 
   </div>
 
-  {% if almoco_destaque.refeicao.reserva_futura %}
-    <p class="almoco-atual__aviso">{{ almoco_destaque.refeicao.get_status_reserva }}</p>
+  {% if almoco_destaque.refeicao.refeicao_em_andamento %}
+    <p class="almoco-atual__aviso almoco-atual__aviso--em-andamento" role="status">
+      <span class="almoco-atual__pulso" aria-hidden="true"></span>
+      Acontecendo agora
+      {% if almoco_destaque.refeicao.hora_fim_consumo %}
+        — servindo até {{ almoco_destaque.refeicao.hora_fim_consumo|time:"H:i" }}
+      {% endif %}
+    </p>
+  {% elif almoco_destaque.refeicao.reserva_futura %}
+    <p class="almoco-atual__aviso almoco-atual__aviso--futura" role="status">
+      <i class="fa-solid fa-clock" aria-hidden="true"></i>
+      {{ almoco_destaque.refeicao.get_status_reserva }}
+    </p>
   {% elif almoco_destaque.refeicao.janela_encerrada_aguardando_refeicao %}
     <p class="almoco-atual__aviso almoco-atual__aviso--encerrada" role="status">
       <i class="fa-solid fa-lock" aria-hidden="true"></i>
@@ -61,6 +72,39 @@
   {% endif %}
 
   {% include "refeicoes/_meal_card_aluno.html" with refeicao=almoco_destaque.refeicao %}
+
+</section>
+
+<div class="cardapio-divider"></div>
+
+{% else %}
+
+<section class="almoco-atual almoco-atual--vazio" aria-label="Sem almoço para reservar">
+
+  <div class="almoco-atual__vazio">
+
+    <i class="fa-regular fa-calendar-xmark" aria-hidden="true"></i>
+
+    <div class="almoco-atual__vazio-texto">
+
+      <strong>Nenhum almoço para reservar agora</strong>
+
+      {% if proximo_almoco %}
+        <p>
+          O próximo é {{ proximo_almoco.data|date:"l, d/m" }}.
+          {% if proximo_almoco.reserva_futura %}
+            As reservas abrem em {{ proximo_almoco.abertura_reserva_display }}.
+          {% elif proximo_almoco.reserva_aberta %}
+            As reservas já estão abertas — veja no cardápio da semana.
+          {% endif %}
+        </p>
+      {% else %}
+        <p>Não há almoço cadastrado para amanhã.</p>
+      {% endif %}
+
+    </div>
+
+  </div>
 
 </section>
 
@@ -154,7 +198,14 @@
 
 {% block extra_js %}
 
-  <script src="{% static 'js/cardapio_semana.js' %}"></script>
+  <script src="{% static_v 'js/cardapio_semana.js' %}"></script>
+  <script src="{% static_v 'js/refeicao-polling.js' %}"></script>
+
+  <script>
+    // recarregarSeEstadoMudou: o card do aluno alterna entre o aviso de janela
+    // fechada e o botão RESERVAR, e essa troca vem do template.
+    iniciarPollingDaPagina({ recarregarSeEstadoMudou: true });
+  </script>
 
 {% endblock %}
 

@@ -1,10 +1,10 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Painel{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/painel-nutricionista.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/painel-nutricionista.css' %}">
 {% endblock %}
 
 {% block content %}

@@ -260,51 +260,6 @@
     transform: none;
 }
 
-/* Estilos para o Toast */
-.toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.toast {
-    min-width: 250px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    color: white;
-    font-weight: 600;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    animation: slideIn 0.3s ease;
-    transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.toast-success { background-color: var(--success); }
-.toast-error { background-color: var(--danger); }
-
-.toast.hide {
-    opacity: 0;
-    transform: translateX(20px);
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(100%);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
 /* Chamada por refeição */
 .header-chamada {
     display: flex;
@@ -370,6 +325,79 @@
     border-radius: 4px;
     font-size: 11px;
     font-weight: 800;
+}
+
+/* Fora do horário a lista é só leitura; este aviso explica o porquê e o que
+   vai acontecer sozinho, para o refeitório não ficar procurando um botão. */
+.aviso-chamada {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 14px;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--text-light);
+    background: color-mix(in srgb, var(--text-light) 8%, var(--bg-card));
+}
+
+.aviso-chamada > i {
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-size: 18px;
+    line-height: 1.2;
+    color: var(--text-secondary);
+}
+
+.aviso-chamada__texto {
+    min-width: 0;
+}
+
+.aviso-chamada__texto strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.aviso-chamada__texto p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.aviso-chamada--aguardando {
+    background: color-mix(in srgb, var(--warning) 14%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+    border-left-color: var(--warning);
+}
+
+.aviso-chamada--aguardando > i,
+.aviso-chamada--aguardando .aviso-chamada__texto strong {
+    color: color-mix(in srgb, var(--warning) 75%, var(--text-primary));
+}
+
+.aviso-chamada--pendencia {
+    background: color-mix(in srgb, var(--danger) 12%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+    border-left-color: var(--danger);
+}
+
+.aviso-chamada--pendencia > i,
+.aviso-chamada--pendencia .aviso-chamada__texto strong {
+    color: var(--danger);
+}
+
+@media (max-width: 480px) {
+    .aviso-chamada {
+        padding: 0.75rem 0.85rem;
+    }
+
+    .aviso-chamada__texto strong {
+        font-size: 13px;
+    }
 }
 
 .badge-finalizado {

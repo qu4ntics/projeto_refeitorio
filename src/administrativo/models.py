@@ -83,11 +83,15 @@ class Presenca(UUIDModel):
         on_delete=models.CASCADE,
         related_name='presenca',
     )
+    # Nulo quando a ausência foi registrada pelo encerramento automático da
+    # chamada, que não tem um funcionário por trás.
     confirmado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'perfil': 'refeitorio'},
         related_name='presencas_confirmadas',
+        null=True,
+        blank=True,
     )
     compareceu = models.BooleanField()
     confirmado_em = models.DateTimeField(auto_now_add=True)
