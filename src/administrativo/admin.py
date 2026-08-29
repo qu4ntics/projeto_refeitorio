@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ConfigReserva, Presenca, Strike, Turma
+from .models import AlunoAutorizado, ConfigReserva, Presenca, Strike, Turma
 
 
 @admin.register(Turma)
@@ -8,6 +8,14 @@ class TurmaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'turno', 'dias_contraturno', 'ativo')
     list_filter = ('turno', 'ativo')
     search_fields = ('nome',)
+
+
+@admin.register(AlunoAutorizado)
+class AlunoAutorizadoAdmin(admin.ModelAdmin):
+    list_display = ('email', 'turma', 'nome', 'atualizado_em')
+    list_filter = ('turma',)
+    search_fields = ('email', 'nome')
+    autocomplete_fields = ('turma',)
 
 
 @admin.register(Presenca)

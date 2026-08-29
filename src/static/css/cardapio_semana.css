@@ -147,6 +147,60 @@
   box-shadow: var(--shadow);
 }
 
+/* Janela de reserva ainda não abriu: o destaque fica em tom âmbar. */
+.almoco-atual--reserva-futura {
+  background: color-mix(in srgb, var(--warning) 12%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+  border-left-color: var(--warning);
+}
+
+/* Sem almoço em destaque (fim de semana, feriado): tom neutro, sem alarme. */
+.almoco-atual--vazio {
+  background: color-mix(in srgb, var(--text-light) 7%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--text-light) 30%, var(--border));
+  border-left-color: var(--text-light);
+  box-shadow: none;
+}
+
+.almoco-atual__vazio {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.almoco-atual__vazio > i {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 22px;
+  color: var(--text-light);
+}
+
+.almoco-atual__vazio-texto strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.almoco-atual__vazio-texto p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.almoco-atual__vazio-texto p::first-letter {
+  text-transform: uppercase;
+}
+
+/* Refeição sendo servida agora: verde, para separar do estado de espera. */
+.almoco-atual--em-andamento {
+  background: color-mix(in srgb, var(--success) 10%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+  border-left-color: var(--success);
+}
+
 .almoco-atual + .cardapio-divider {
   margin: 2rem 0;
 }
@@ -184,6 +238,56 @@
   background: color-mix(in srgb, var(--text-light) 8%, var(--bg-card));
   border-radius: 6px;
   border-left: 3px solid var(--accent);
+}
+
+.almoco-atual__aviso--futura {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 14px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--warning) 78%, var(--text-primary));
+  background: color-mix(in srgb, var(--warning) 18%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
+  border-left: 4px solid var(--warning);
+}
+
+.almoco-atual__aviso--futura > i {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--warning);
+}
+
+.almoco-atual__aviso--em-andamento {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: color-mix(in srgb, var(--success) 75%, var(--text-primary));
+  background: color-mix(in srgb, var(--success) 16%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--success) 40%, var(--border));
+  border-left: 4px solid var(--success);
+}
+
+.almoco-atual__pulso {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);
+  animation: pulso-refeicao 1.8s ease-out infinite;
+}
+
+@keyframes pulso-refeicao {
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--success) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .almoco-atual__pulso { animation: none; }
 }
 
 .almoco-atual__aviso--encerrada {
@@ -689,4 +793,30 @@
     background: transparent;
     color: var(--text-light);
     border: 1px solid var(--border);
+}
+
+.reservation-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    background: color-mix(in srgb, var(--warning) 18%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
+    border-radius: 8px;
+    border-left: 4px solid var(--warning);
+    font-size: 13px;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--warning) 78%, var(--text-primary));
+}
+
+.reservation-status-banner > i {
+    flex-shrink: 0;
+    font-size: 16px;
+    color: var(--warning);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }

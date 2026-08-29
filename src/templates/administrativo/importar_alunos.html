@@ -1,0 +1,229 @@
+{% extends "base/base.html" %}
+{% load static static_versionado %}
+
+{% block title %}Importar planilha de alunos — ReservaIF{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static_v 'css/alunos.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/importar_alunos.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="import-page">
+
+  <div class="breadcrumb">
+    <a href="{% url 'administrativo:alunos_turmas' %}" class="breadcrumb-link">
+      <i class="fa-solid fa-arrow-left"></i> Alunos
+    </a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-atual">Importar planilha</span>
+  </div>
+
+  <div class="import-header">
+    <h1 class="page-title">Importar planilha de alunos</h1>
+    <p class="page-subtitle">
+      Só quem estiver nesta lista consegue criar conta no sistema. A turma de
+      cada aluno também vem daqui — o aluno não escolhe no cadastro.
+    </p>
+  </div>
+
+  <div class="import-layout">
+  <div class="import-main">
+
+  <div class="import-stats">
+    <div class="import-stat">
+      <div class="import-stat-icon"><i class="fa-solid fa-user-check"></i></div>
+      <div class="import-stat-body">
+        <span class="import-stat-value">{{ total_autorizados }}</span>
+        <span class="import-stat-label">Alunos autorizados</span>
+      </div>
+    </div>
+    <div class="import-stat">
+      <div class="import-stat-icon"><i class="fa-solid fa-users-rectangle"></i></div>
+      <div class="import-stat-body">
+        <span class="import-stat-value">{{ turmas|length }}</span>
+        <span class="import-stat-label">Turmas ativas</span>
+      </div>
+    </div>
+    <div class="import-stat">
+      <div class="import-stat-icon"><i class="fa-regular fa-clock"></i></div>
+      <div class="import-stat-body">
+        <span class="import-stat-value">
+          {% if ultimo_import %}{{ ultimo_import|date:"d/m/Y" }}{% else %}—{% endif %}
+        </span>
+        <span class="import-stat-label">
+          {% if ultimo_import %}Último envio às {{ ultimo_import|date:"H:i" }}{% else %}Nenhum envio ainda{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {% if resultado %}
+    <div class="import-card">
+      <div class="import-section-title">Resultado do envio</div>
+      <div class="import-result-tiles">
+        <div class="import-tile{% if resultado.criados %} is-pos{% endif %}">
+          <span class="import-tile-value">{{ resultado.criados }}</span>
+          <span class="import-tile-label">Adicionados</span>
+        </div>
+        <div class="import-tile">
+          <span class="import-tile-value">{{ resultado.atualizados }}</span>
+          <span class="import-tile-label">Atualizados</span>
+        </div>
+        <div class="import-tile{% if resultado.turmas_criadas %} is-pos{% endif %}">
+          <span class="import-tile-value">{{ resultado.turmas_criadas }}</span>
+          <span class="import-tile-label">Turmas criadas</span>
+        </div>
+        <div class="import-tile{% if resultado.removidos %} is-danger{% endif %}">
+          <span class="import-tile-value">{{ resultado.removidos }}</span>
+          <span class="import-tile-label">Removidos</span>
+        </div>
+        <div class="import-tile">
+          <span class="import-tile-value">{{ resultado.contas_sincronizadas }}</span>
+          <span class="import-tile-label">Contas sincronizadas</span>
+        </div>
+      </div>
+
+      {% if resultado.erros %}
+        <div class="import-errors-title">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          {{ resultado.erros|length }} linha(s) ignorada(s)
+        </div>
+        <table class="import-errors">
+          <thead><tr><th>Linha</th><th>Motivo</th></tr></thead>
+          <tbody>
+            {% for linha, motivo in resultado.erros %}
+              <tr>
+                <td>{% if linha %}{{ linha }}{% else %}—{% endif %}</td>
+                <td>{{ motivo }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="import-result-ok">
+          <i class="fa-solid fa-circle-check"></i>
+          Todas as linhas foram processadas sem erros.
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="import-card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="import-alert">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <div>{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+        </div>
+      {% endif %}
+
+      <div class="import-section-title">Arquivo</div>
+      <div class="import-section-desc">
+        Aceita CSV exportado de qualquer planilha (Excel, Google Sheets, LibreOffice).
+      </div>
+
+      <div class="file-drop">
+        {{ form.arquivo }}
+        <div class="file-drop-prompt">
+          <i class="fa-solid fa-file-arrow-up file-drop-icon"></i>
+          <span class="file-drop-main">
+            Arraste o arquivo aqui ou <span class="file-drop-link">clique para escolher</span>
+          </span>
+          <span class="file-drop-hint">Formato .csv, até 5 MB</span>
+        </div>
+        <div class="file-drop-file">
+          <i class="fa-solid fa-file-csv"></i>
+          <span class="file-drop-filename"></span>
+        </div>
+      </div>
+      {% for error in form.arquivo.errors %}
+        <span class="import-field-error">{{ error }}</span>
+      {% endfor %}
+
+      <div class="import-format">
+        <span>Colunas:</span>
+        <span class="import-chip">email</span>
+        <span class="import-chip">turma</span>
+        <span class="import-chip">nome</span>
+        <span>(nome é opcional)</span>
+        <span class="sep">·</span>
+        <span>Separador <code>;</code> ou <code>,</code></span>
+        <span class="sep">·</span>
+        <a href="{% url 'administrativo:modelo_csv_alunos' %}">
+          <i class="fa-solid fa-download"></i> Baixar modelo
+        </a>
+      </div>
+
+      <hr class="import-card-sep">
+
+      <div class="import-section-title">Opções</div>
+      <div class="import-section-desc">Escolha como tratar a lista já existente.</div>
+
+      <label class="import-opt">
+        {{ form.criar_turmas }}
+        <span class="import-opt-text">
+          <span class="import-opt-title">Cadastrar turmas que não existirem</span>
+          <span class="import-opt-desc">
+            Turmas citadas na planilha e ainda não cadastradas são criadas no
+            turno matutino (ajustável depois).
+          </span>
+        </span>
+      </label>
+
+      <label class="import-opt">
+        {{ form.substituir }}
+        <span class="import-opt-text">
+          <span class="import-opt-title">Substituir a lista inteira</span>
+          <span class="import-opt-desc">
+            Remove da lista de autorizados quem não estiver nesta planilha. Use
+            só quando o CSV contém <em>todos</em> os alunos.
+          </span>
+        </span>
+      </label>
+
+      <label class="import-opt">
+        {{ form.atualizar_contas }}
+        <span class="import-opt-text">
+          <span class="import-opt-title">Atualizar a turma de alunos já cadastrados</span>
+          <span class="import-opt-desc">
+            Se um aluno já criou conta e a turma dele mudou na planilha, a conta
+            é remanejada.
+          </span>
+        </span>
+      </label>
+
+      <div class="import-actions">
+        <a href="{% url 'administrativo:alunos_turmas' %}" class="import-btn import-btn-ghost">Voltar</a>
+        <button type="submit" class="import-btn import-btn-primary" data-loading-text="Enviando...">
+          <i class="fa-solid fa-file-import"></i> Enviar planilha
+        </button>
+      </div>
+    </form>
+  </div>
+
+  </div><!-- /.import-main -->
+
+  <aside class="import-aside">
+    <div class="import-card">
+      <div class="import-section-title">Turmas cadastradas</div>
+      <div class="import-turmas">
+        {% for turma in turmas %}
+          <a class="import-turma-chip" href="{% url 'administrativo:alunos_turma' turma.id %}">{{ turma.nome }}</a>
+        {% empty %}
+          <span class="import-turmas-empty">Nenhuma turma ativa — serão criadas a partir da planilha.</span>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+
+  </div><!-- /.import-layout -->
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static_v 'js/importar_alunos.js' %}"></script>
+{% endblock %}

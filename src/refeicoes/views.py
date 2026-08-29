@@ -1,29 +1,37 @@
 from datetime import datetime, time, timedelta
+from uuid import UUID
 
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
+from django.core.paginator import Paginator
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Concat
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.decorators import perfil_required
 from accounts.views import REDIRECT_POR_PERFIL
 from administrativo.models import ConfigReserva, Notificacao, TipoRefeicao, Presenca, Strike
-from administrativo.services.chamada import estado_aluno_chamada, status_chamada_refeicao
-from administrativo.services.horarios_refeicao import pode_acessar_lista_chamada
+from administrativo.services.chamada import (
+    encerrar_chamadas_vencidas,
+    estado_aluno_chamada,
+    status_chamada_refeicao,
+)
+from administrativo.services.horarios_refeicao import fase_periodo_consumo
 from reservas.models import Reserva
 
 from .forms import PratoForm, RefeicaoForm, pratos_agrupados_por_categoria, pratos_catalogo_por_categoria
-from .models import Prato, Refeicao
+from .models import Prato, Refeicao, ordem_cronologica_tipo
 
 
 def _obter_semana(data_ref_str=None):
     """
-    Retorna a data de hoje e o intervalo da semana (Segunda a Domingo)
-    baseado em uma data de referência.
+    Retorna a data de hoje e o intervalo da semana baseado numa data de
+    referência. A semana começa no DOMINGO: no domingo já se mostra a semana
+    útil seguinte (ex.: domingo 23/08 → segunda 24 a sexta 28).
     """
     hoje = timezone.localdate()
     if data_ref_str:
@@ -33,7 +41,9 @@ def _obter_semana(data_ref_str=None):
             ref = hoje
     else:
         ref = hoje
-    segunda = ref - timedelta(days=ref.weekday())
+    # Domingo que inicia a semana de `ref` (segunda=0 … domingo=6).
+    domingo = ref - timedelta(days=(ref.weekday() + 1) % 7)
+    segunda = domingo + timedelta(days=1)
     return hoje, segunda, segunda + timedelta(days=6)
 
 
@@ -42,7 +52,7 @@ def _queryset_refeicoes_periodo(inicio, fim):
         Refeicao.objects.filter(data__range=(inicio, fim))
         .prefetch_related('itens_prato__prato')
         .annotate(reservas_ativas=Count('reservas', filter=Q(reservas__status='ativa')))
-        .order_by('data', 'tipo')
+        .order_by('data', ordem_cronologica_tipo())
     )
 
 
@@ -76,18 +86,30 @@ def _anexar_status_reserva_aluno(refeicao, reservas_ativas, pre_reservas):
     refeicao.pre_reserva = pre_reservas.get(refeicao.id)
 
 
-def _horario_inicio_almoco():
+def _horarios_almoco():
+    """(início, fim) do consumo do almoço; fim é None se não configurado."""
     tipo = TipoRefeicao.objects.filter(nome='almoco').first()
-    if tipo and tipo.horario_inicio_consumo:
-        return tipo.horario_inicio_consumo
-    return time(12, 0)
+    if not tipo:
+        return time(12, 0), None
+    return tipo.horario_inicio_consumo or time(12, 0), tipo.horario_fim_consumo
 
 
 def _almoco_passou(hoje):
+    """
+    True quando o almoço de hoje já acabou e o destaque deve passar para o de
+    amanhã. Enquanto o almoço está sendo servido ele continua em destaque —
+    trocar no início esconderia a refeição que está acontecendo.
+    """
     agora = timezone.localtime()
     if agora.date() != hoje:
         return agora.date() > hoje
-    return agora.time() >= _horario_inicio_almoco()
+
+    inicio, fim = _horarios_almoco()
+    if fim is None:
+        # Sem horário de término não há como saber quando acaba; mantém o
+        # comportamento antigo de virar no início.
+        return agora.time() >= inicio
+    return agora.time() > fim
 
 
 def _obter_almoco_em(data):
@@ -95,6 +117,29 @@ def _obter_almoco_em(data):
         Refeicao.objects.filter(data=data, tipo='almoco')
         .prefetch_related('itens_prato__prato')
         .annotate(reservas_ativas=Count('reservas', filter=Q(reservas__status='ativa')))
+        .first()
+    )
+
+
+# Uma semana à frente: o suficiente para atravessar um fim de semana ou um
+# feriado sem varrer o calendário inteiro.
+DIAS_BUSCA_PROXIMO_ALMOCO = 7
+
+
+def _proximo_almoco_apos(data):
+    """
+    Primeiro almoço cadastrado depois de `data`.
+
+    Serve para o aviso de quando não há almoço em destaque — na sexta à tarde,
+    por exemplo, o aluno precisa saber que o próximo é só na segunda.
+    """
+    return (
+        Refeicao.objects.filter(
+            data__gt=data,
+            data__lte=data + timedelta(days=DIAS_BUSCA_PROXIMO_ALMOCO),
+            tipo='almoco',
+        )
+        .order_by('data')
         .first()
     )
 
@@ -155,7 +200,6 @@ def homepage(request):
     ctx = _preparar_contexto_semana(request, request.GET.get('data'))
 
     from reservas.models import Reserva, PreReserva
-    from reservas.services.pre_reserva import sincronizar_pre_reservas
 
     hoje = ctx['hoje']
     almoco_destaque = _resolver_almoco_destaque(hoje)
@@ -167,7 +211,8 @@ def homepage(request):
         if refeicao_destaque.id not in refeicao_ids_set:
             refeicoes_semana.append(refeicao_destaque)
 
-    sincronizar_pre_reservas(refeicoes_semana)
+    # A ativação/expiração de pré-reservas roda no cron (manage.py
+    # sincronizar_reservas), não mais em toda visita à home.
 
     refeicao_ids = [r.id for r in refeicoes_semana]
 
@@ -204,6 +249,8 @@ def homepage(request):
     ctx.update({
         'tab_inicial': tab_inicial,
         'almoco_destaque': almoco_destaque,
+        # Sem destaque (fim de semana, feriado), o aviso informa quando volta.
+        'proximo_almoco': None if almoco_destaque else _proximo_almoco_apos(hoje),
     })
     return render(request, 'refeicoes/homepage.html', ctx)
 
@@ -231,17 +278,22 @@ def lista_presenca(request):
 @login_required
 @perfil_required('refeitorio')
 def chamada(request, refeicao_id):
+    """
+    Lista de conferência da refeição. Fica sempre disponível para leitura; o
+    que o horário controla é a marcação de presença (ver status_chamada).
+    """
+    # Se o horário desta refeição já passou, encerra antes de renderizar — a
+    # tela nunca deve mostrar "pendente" uma chamada que já venceu.
+    encerrar_chamadas_vencidas()
+
     refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
 
-    if not pode_acessar_lista_chamada(refeicao):
-        messages.warning(
-            request,
-            'A lista de chamada não está disponível fora do horário da refeição.',
-        )
-        return redirect('administrativo:painel_refeitorio')
-
+    # A lista serve para conferir quem tem reserva; quem cancelou não vai ser
+    # chamado e só poluiria a tela (um mesmo aluno costuma cancelar várias
+    # vezes antes de reservar de novo).
     reservas_qs = (
         Reserva.objects.filter(refeicao=refeicao)
+        .exclude(status='cancelada')
         .select_related('aluno', 'aluno__turma')
         .order_by('aluno__first_name', 'aluno__last_name')
     )
@@ -266,12 +318,11 @@ def chamada(request, refeicao_id):
     for reserva in reservas_qs:
         estado = estado_aluno_chamada(reserva, refeicao)
         reservas.append({'reserva': reserva, 'estado': estado})
-        if reserva.status != 'cancelada':
-            total_elegiveis += 1
-            if estado == 'presente':
-                presentes += 1
-            elif estado == 'pendente':
-                pendentes_encerrar += 1
+        total_elegiveis += 1
+        if estado == 'presente':
+            presentes += 1
+        elif estado == 'pendente':
+            pendentes_encerrar += 1
 
     tipo_cfg = TipoRefeicao.objects.filter(nome=refeicao.tipo).first()
     horario_inicio = tipo_cfg.horario_inicio_consumo if tipo_cfg else None
@@ -286,6 +337,7 @@ def chamada(request, refeicao_id):
         'total_elegiveis': total_elegiveis,
         'pendentes_encerrar': pendentes_encerrar,
         'status_chamada': status_chamada_refeicao(refeicao),
+        'fase_periodo': fase_periodo_consumo(refeicao),
         'horario_inicio': horario_inicio,
         'horario_fim': horario_fim,
         'tem_strikes': tem_strikes,
@@ -365,10 +417,13 @@ def criar_refeicao(request):
 def nutricionista_deletar(request, pk):
     refeicao = get_object_or_404(Refeicao, pk=pk)
     if request.method == 'POST':
-        if refeicao.reservas.exists():
+        # Reservas canceladas não impedem a exclusão; ativas ou concluídas sim
+        # (concluídas carregam presença e strikes que seriam perdidos).
+        if refeicao.reservas.exclude(status='cancelada').exists():
             messages.error(
                 request,
-                'Esta refeição não pode ser excluída porque já possui reservas vinculadas.',
+                'Esta refeição não pode ser excluída porque possui reservas '
+                'ativas ou histórico de presença.',
             )
         else:
             refeicao.delete()
@@ -503,9 +558,11 @@ def notificacoes_aluno(request):
         messages.success(request, 'Todas as notificações foram marcadas como lidas.')
         return redirect('refeicoes:notificacoes_aluno')
 
-    notificacoes = Notificacao.objects.filter(usuario=request.user)[:30]
+    qs = Notificacao.objects.filter(usuario=request.user)
+    pagina = Paginator(qs, 20).get_page(request.GET.get('page'))
     return render(request, 'refeicoes/notificacoes_aluno.html', {
-        'notificacoes': notificacoes,
+        'notificacoes': pagina,
+        'pagina': pagina,
     })
 
 
@@ -533,4 +590,85 @@ def configuracoes_aluno(request):
     return render(request, 'accounts/configuracoes_aluno.html', {
         'form_senha': form,
     })
+
+
+MAX_REFEICOES_POR_CONSULTA = 100
+
+
+def _dados_refeicao(refeicao):
+    """`reservas_validas` acompanha o painel do refeitório, que conta ativas +
+    concluídas (a chamada muda o status de ativa para concluída)."""
+    return {
+        'vagas_disponiveis': refeicao.vagas_disponiveis,
+        'vagas_ocupadas': refeicao.vagas_ocupadas,
+        'reservas_ativas_count': refeicao.reservas_ativas_count,
+        'reservas_validas_count': refeicao.reservas_validas,
+        'presentes_count': refeicao.presentes,
+        'limite_vagas': refeicao.limite_vagas,
+        'reserva_aberta': refeicao.reserva_aberta,
+        'status': refeicao.get_status_reserva(),
+        'vagas_display': refeicao.vagas_display,
+    }
+
+
+@login_required
+def refeicoes_dados_atualizados(request):
+    """
+    Números das refeições pedidas em `?ids=`, para o polling das telas de
+    aluno, nutricionista e refeitório.
+
+    Responde a todas de uma vez porque as telas mostram a semana inteira: uma
+    requisição por refeição multiplicaria a carga pelo tamanho do cardápio.
+    O custo em consultas é fixo, não proporcional ao número de refeições.
+    """
+    from administrativo.models import ConfigReserva, JanelaReserva
+
+    ids = [i for i in request.GET.get('ids', '').split(',') if i]
+    if not ids:
+        return JsonResponse({'refeicoes': {}})
+    if len(ids) > MAX_REFEICOES_POR_CONSULTA:
+        return JsonResponse(
+            {'erro': f'No máximo {MAX_REFEICOES_POR_CONSULTA} refeições por consulta.'},
+            status=400,
+        )
+
+    try:
+        ids = [UUID(i) for i in ids]
+    except ValueError:
+        return JsonResponse({'erro': 'Identificador de refeição inválido.'}, status=400)
+
+    # distinct=True: sem isso o JOIN das duas relações infla as duas contagens.
+    refeicoes = Refeicao.objects.filter(pk__in=ids).annotate(
+        reservas_ativas=Count(
+            'reservas', filter=Q(reservas__status='ativa'), distinct=True,
+        ),
+        reservas_validas=Count(
+            'reservas',
+            filter=Q(reservas__status__in=['ativa', 'concluida']),
+            distinct=True,
+        ),
+        presentes=Count(
+            'reservas', filter=Q(reservas__status='concluida'), distinct=True,
+        ),
+        pre_reservas_pendentes=Count(
+            'pre_reservas', filter=Q(pre_reservas__status='pendente'), distinct=True,
+        ),
+    )
+
+    # Janela e config são as mesmas para todas: carrega uma vez e distribui,
+    # em vez de duas consultas por refeição.
+    config = ConfigReserva.get_config_ativa()
+    janelas_por_tipo = {
+        j.tipo_refeicao.nome.lower(): j
+        for j in JanelaReserva.objects.select_related('tipo_refeicao')
+    }
+
+    dados = {}
+    for refeicao in refeicoes:
+        refeicao.precarregar_janela_reserva(
+            janelas_por_tipo.get(refeicao.tipo.lower()), config,
+        )
+        dados[str(refeicao.pk)] = _dados_refeicao(refeicao)
+
+    return JsonResponse({'refeicoes': dados})
 

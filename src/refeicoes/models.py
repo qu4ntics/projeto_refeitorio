@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, time
+from functools import cached_property
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -30,7 +32,6 @@ class Prato(UUIDModel):
     ORDEM_CATEGORIAS = [c[0] for c in CATEGORIAS]
 
     nome = models.CharField(max_length=200)
-    descricao = models.TextField(blank=True)
     categoria = models.CharField(max_length=20, choices=CATEGORIAS)
     ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -52,6 +53,7 @@ class Prato(UUIDModel):
 
 
 class Refeicao(UUIDModel):
+    # Declarados na ordem em que acontecem no dia; ORDEM_TIPOS deriva daqui.
     TIPOS = [
         ('cafe', 'Café'),
         ('lanche_manha', 'Lanche da Manhã'),
@@ -59,13 +61,16 @@ class Refeicao(UUIDModel):
         ('lanche_tarde', 'Lanche da Tarde'),
         ('jantar', 'Jantar'),
     ]
+    ORDEM_TIPOS = [t[0] for t in TIPOS]
 
     data = models.DateField()
     tipo = models.CharField(max_length=20, choices=TIPOS)
     limite_vagas = models.PositiveIntegerField()
     exige_reserva = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
-    chamada_aberta = models.BooleanField(default=False, verbose_name='Chamada Aberta')
+    # Não há "chamada aberta" persistida: ela vale enquanto durar o horário de
+    # consumo (ver services.chamada.status_chamada_refeicao). Só o encerramento
+    # é guardado, porque aplica strikes e não pode repetir.
     chamada_finalizada = models.BooleanField(default=False, verbose_name="Chamada Finalizada")
     pre_reservas_disparadas_em = models.DateTimeField(
         null=True,
@@ -82,11 +87,22 @@ class Refeicao(UUIDModel):
     def __str__(self):
         return f'{self.get_tipo_display()} - {self.data}'
 
+    def refresh_from_db(self, *args, **kwargs):
+        super().refresh_from_db(*args, **kwargs)
+        self.__dict__.pop('janela_reserva', None)
+        self.__dict__.pop('tipo_refeicao', None)
+
     @property
     def reservas_ativas_count(self):
         if hasattr(self, 'reservas_ativas'):
             return self.reservas_ativas
         return self.reservas.filter(status='ativa').count()
+
+    @property
+    def pre_reservas_pendentes_count(self):
+        if hasattr(self, 'pre_reservas_pendentes'):
+            return self.pre_reservas_pendentes
+        return self.pre_reservas.filter(status='pendente').count()
 
     @property
     def cardapio_por_categoria(self):
@@ -99,10 +115,10 @@ class Refeicao(UUIDModel):
 
         por_categoria = {}
         for prato in pratos:
-            texto = (prato.descricao or prato.nome).strip()
-            if not texto:
+            nome = prato.nome.strip()
+            if not nome:
                 continue
-            por_categoria.setdefault(prato.categoria, []).append(texto)
+            por_categoria.setdefault(prato.categoria, []).append(nome)
 
         categorias_labels = dict(Prato.CATEGORIAS)
         return [
@@ -129,10 +145,10 @@ class Refeicao(UUIDModel):
 
     @property
     def vagas_disponiveis(self):
-        ocupadas = (
-            self.reservas.filter(status='ativa').count()
-            + self.pre_reservas.filter(status='pendente').count()
-        )
+        # Ambos os contadores aproveitam anotações do queryset quando existem
+        # (home/cardápio/API), evitando um COUNT por acesso — esta property é
+        # lida várias vezes por render.
+        ocupadas = self.reservas_ativas_count + self.pre_reservas_pendentes_count
         return max(0, self.limite_vagas - ocupadas)
 
     @property
@@ -149,12 +165,17 @@ class Refeicao(UUIDModel):
         texto = f"{v} {v_word} {r_word}"
         return texto
 
+    @cached_property
+    def tipo_refeicao(self):
+        """O TipoRefeicao correspondente (cache por instância)."""
+        from administrativo.models import TipoRefeicao
+
+        return TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+
     @property
     def inicio_consumo_datetime(self):
         """Datetime aware do início da refeição, se configurado no tipo."""
-        from administrativo.models import TipoRefeicao
-
-        tipo = TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+        tipo = self.tipo_refeicao
         if not tipo or not tipo.horario_inicio_consumo:
             return None
         tz = timezone.get_current_timezone()
@@ -164,11 +185,35 @@ class Refeicao(UUIDModel):
         )
 
     @property
+    def hora_fim_consumo(self):
+        """Hora de término configurada no tipo, para exibição."""
+        tipo = self.tipo_refeicao
+        return tipo.horario_fim_consumo if tipo else None
+
+    @property
+    def fim_consumo_datetime(self):
+        """Datetime aware do fim da refeição, se configurado no tipo."""
+        hora_fim = self.hora_fim_consumo
+        if not hora_fim:
+            return None
+        tz = timezone.get_current_timezone()
+        return timezone.make_aware(datetime.combine(self.data, hora_fim), tz)
+
+    @property
     def refeicao_ainda_nao_iniciou(self):
         inicio = self.inicio_consumo_datetime
         if not inicio:
             return True
         return timezone.localtime() < inicio
+
+    @property
+    def refeicao_em_andamento(self):
+        """True enquanto a refeição está sendo servida."""
+        inicio = self.inicio_consumo_datetime
+        fim = self.fim_consumo_datetime
+        if not inicio or not fim:
+            return False
+        return inicio <= timezone.localtime() <= fim
 
     @property
     def janela_encerrada_aguardando_refeicao(self):
@@ -193,15 +238,33 @@ class Refeicao(UUIDModel):
         return f'O prazo de reservas encerrou em {fechamento}.'
 
     def get_janela_reserva(self):
+        """Limites da janela de reserva (com cache por instância)."""
+        return self.janela_reserva
+
+    @cached_property
+    def janela_reserva(self):
         """
         Retorna os limites de abertura e fechamento da reserva.
         Evita importação circular importando models de administrativo internamente.
         """
         from administrativo.models import JanelaReserva, ConfigReserva
-        
+
         janela = JanelaReserva.objects.filter(tipo_refeicao__nome__iexact=self.tipo).first()
         config = ConfigReserva.get_config_ativa()
+        return self.montar_janela_reserva(janela, config)
 
+    def precarregar_janela_reserva(self, janela, config):
+        """
+        Preenche o cache de `janela_reserva` com dados já carregados.
+
+        Sem isto, processar várias refeições juntas custa duas consultas por
+        refeição (JanelaReserva + ConfigReserva); quem chama busca uma vez só
+        e distribui.
+        """
+        self.__dict__['janela_reserva'] = self.montar_janela_reserva(janela, config)
+
+    def montar_janela_reserva(self, janela, config):
+        """Calcula os limites a partir da janela e da config já carregadas."""
         if not janela and not config:
             return None
 
@@ -253,7 +316,7 @@ class Refeicao(UUIDModel):
         
         limites = self.get_janela_reserva()
         if not limites:
-            return "Disponível"
+            return "Indisponível — refeição sem janela de reserva configurada"
 
         agora = timezone.localtime()
         abertura_str = self.abertura_reserva_display
@@ -268,10 +331,21 @@ class Refeicao(UUIDModel):
 
     @property
     def reserva_aberta(self):
-        """Retorna True se a janela de reserva está aberta no momento."""
+        """Retorna True se a janela de reserva está aberta no momento.
+
+        Sem janela configurada, a reserva fica FECHADA (falha fechado): é melhor
+        a nutricionista ver que faltou configurar do que aceitar reservas sem
+        prazo.
+        """
         limites = self.get_janela_reserva()
-        if not limites: return True
+        if not limites:
+            return False
         return limites['inicio'] <= timezone.localtime() <= limites['fim']
+
+    @property
+    def config_incompleta(self):
+        """True se a refeição exige reserva mas não tem janela configurada."""
+        return self.exige_reserva and self.get_janela_reserva() is None
 
     @property
     def periodo_pre_reserva_ativo(self):
@@ -295,15 +369,13 @@ class Refeicao(UUIDModel):
         Usa o início da refeição como referência; se não configurado, cai no
         fechamento da janela de reserva.
         """
-        from administrativo.models import TipoRefeicao
-
         limites = self.get_janela_reserva()
         if not limites:
             return None
 
         minutos = limites['minutos_cancelamento']
         tz = timezone.get_current_timezone()
-        tipo = TipoRefeicao.objects.filter(nome__iexact=self.tipo).first()
+        tipo = self.tipo_refeicao
         if tipo and tipo.horario_inicio_consumo:
             inicio_refeicao = timezone.make_aware(
                 datetime.combine(self.data, tipo.horario_inicio_consumo),
@@ -330,9 +402,10 @@ class Refeicao(UUIDModel):
 
     @property
     def reserva_encerrada(self):
-        """Retorna True se o prazo de reserva já expirou."""
+        """Retorna True se o prazo de reserva já expirou (ou não há janela)."""
         limites = self.get_janela_reserva()
-        if not limites: return False
+        if not limites:
+            return True
         return timezone.localtime() > limites['fim']
     
     @property
@@ -354,6 +427,24 @@ class Refeicao(UUIDModel):
                         f'(número de reservas ativas).'
                     ),
                 })
+
+
+def ordem_cronologica_tipo():
+    """
+    Expressão para ordenar refeições na sequência do dia (café → jantar).
+
+    Ordenar pelo campo `tipo` daria a ordem alfabética do código guardado
+    (almoco, cafe, jantar, lanche_manha, lanche_tarde), que não é a ordem em
+    que as refeições acontecem.
+    """
+    return models.Case(
+        *[
+            models.When(tipo=codigo, then=models.Value(posicao))
+            for posicao, codigo in enumerate(Refeicao.ORDEM_TIPOS)
+        ],
+        default=models.Value(len(Refeicao.ORDEM_TIPOS)),
+        output_field=models.IntegerField(),
+    )
 
 
 class RefeicaoPrato(UUIDModel):

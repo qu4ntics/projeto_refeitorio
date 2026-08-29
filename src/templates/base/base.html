@@ -1,4 +1,4 @@
-{% load static %}
+{% load static static_versionado %}
 
 <!DOCTYPE html>
 
@@ -10,13 +10,16 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <title>{% block title %}ReservaIF{% endblock %}</title>
+  <title>{% block title %}IFome{% endblock %}</title>
 
 
 
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/base.css' %}">
 
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+
+  <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+
 
 
 
@@ -44,7 +47,7 @@
 
         <img class="logo" src="{% static 'images/logo.png' %}" alt="ReservaIF">
 
-        <h1>ReservaIF</h1>
+        <h1>IFome</h1>
 
       </div>
 
@@ -260,23 +263,18 @@
 
 
 
+      {% comment %}
+      As mensagens saem como dados; o toast.js as converte em toasts no canto
+      superior direito, para o feedback vindo de redirect ficar igual ao de AJAX.
+      hidden evita qualquer piscada antes de o script rodar.
+      {% endcomment %}
       {% if messages %}
 
-        <div class="messages">
+        <div class="mensagens-pendentes" hidden>
 
           {% for message in messages %}
 
-            <div class="alert alert-{{ message.tags }}">
-
-              {{ message }}
-
-              <button class="alert-close" onclick="this.parentElement.remove()">
-
-                <i class="fa-solid fa-xmark"></i>
-
-              </button>
-
-            </div>
+            <span data-toast-mensagem data-toast-tipo="{{ message.level_tag }}">{{ message }}</span>
 
           {% endfor %}
 
@@ -404,8 +402,9 @@
 
 
 
-  <script src="{% static 'js/base.js' %}"></script>
-  <script src="{% static 'js/form-feedback.js' %}"></script>
+  <script src="{% static_v 'js/base.js' %}"></script>
+  <script src="{% static_v 'js/toast.js' %}"></script>
+  <script src="{% static_v 'js/form-feedback.js' %}"></script>
 
   {% if user.is_authenticated %}
   <div id="confirm-dialog" class="confirm-dialog" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">

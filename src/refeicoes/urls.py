@@ -5,6 +5,7 @@ from . import views
 app_name = 'refeicoes'
 
 urlpatterns = [
+    path('api/refeicoes/dados-atualizados/', views.refeicoes_dados_atualizados, name='refeicoes_dados_atualizados'),
     path('', views.homepage, name='homepage'),
     path('strikes/', views.strikes_aluno, name='strikes_aluno'),
     path('notificacoes/', views.notificacoes_aluno, name='notificacoes_aluno'),

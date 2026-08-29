@@ -1,0 +1,10 @@
+Olá, {{ usuario.first_name|default:usuario.username }}.
+
+Recebemos seu cadastro no IFome. Use o código abaixo para confirmar seu
+e-mail e ativar sua conta:
+
+    {{ codigo }}
+
+O código expira em 15 minutos.
+
+Se você não fez esse cadastro, ignore este e-mail.

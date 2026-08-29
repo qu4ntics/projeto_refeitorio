@@ -1,11 +1,11 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Pratos{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/pratos-style.css' %}?v=5">
+  <link rel="stylesheet" href="{% static_v 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/pratos-style.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -77,9 +77,6 @@
                     <li class="prato-item">
                       <div class="prato-item-corpo">
                         <span class="prato-item-nome">{{ prato.nome }}</span>
-                        {% if prato.descricao %}
-                          <p class="prato-item-desc">{{ prato.descricao|truncatewords:18 }}</p>
-                        {% endif %}
                       </div>
                       <div class="pratos-acoes">
                         <a href="{% url 'refeicoes:prato_editar' prato.pk %}" class="btn-acao btn-acao-editar" title="Editar">

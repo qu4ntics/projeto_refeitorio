@@ -1,4 +1,4 @@
-{% load static %}
+{% load static static_versionado %}
 
 <!DOCTYPE html>
 
@@ -12,11 +12,13 @@
 
     <title>Login</title>
 
-    <link rel="stylesheet" href="{% static 'css/base.css'%}">
+    <link rel="stylesheet" href="{% static_v 'css/base.css' %}">
 
-    <link rel="stylesheet" href="{% static 'css/login-style.css' %}">
+    <link rel="stylesheet" href="{% static_v 'css/login-style.css' %}">
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
 
 </head>
 
@@ -30,7 +32,7 @@
 
         <div class="texto">
 
-            <h1>Bem-vindo!</h1>
+            <h1>IFome</h1>
 
             <p>Sistema de reservas do refeitório</p>
 
@@ -67,7 +69,7 @@
 
                 <button type="button" class="btn-toggle-senha" id="btn-senha" onclick="mostrarSenha()" aria-label="Mostrar senha">
 
-                    <i class="bi bi-eye"></i>
+                    <i class="fa-regular fa-eye"></i>
 
                 </button>
 
@@ -99,8 +101,8 @@
 
 
 
-    <script src="{% static 'js/form-feedback.js' %}"></script>
-    <script src="{% static 'js/login-script.js' %}"></script>
+    <script src="{% static_v 'js/form-feedback.js' %}"></script>
+    <script src="{% static_v 'js/login-script.js' %}"></script>
 </body>
 
 </html>

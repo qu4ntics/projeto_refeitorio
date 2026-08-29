@@ -13,9 +13,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import sys
 import dj_database_url
 
 load_dotenv()
+
+
+def _env_list(nome, padrao=''):
+    return [item.strip() for item in os.getenv(nome, padrao).split(',') if item.strip()]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,12 +34,26 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://projeto-refeitorio.onrender.com']
+ALLOWED_HOSTS = _env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+if DEBUG and not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = _env_list(
+    'CSRF_TRUSTED_ORIGINS', 'https://projeto-refeitorio.onrender.com'
+)
 
 # Configurações de Segurança
-SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+if not DEBUG:
+    # Render (e afins) terminam o TLS num proxy; sem isso o Django acha que é HTTP.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 AUTH_USER_MODEL = 'accounts.Usuario'
 
@@ -46,6 +65,18 @@ LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'refeicoes:homepage'  # fallback; login usa redirect por perfil
 LOGOUT_REDIRECT_URL = 'accounts:login'
 
+# Cache local por processo. Suficiente para o django-ratelimit nesta aplicação
+# (poucos workers, tráfego baixo); os limites passam a valer por worker. Trocar
+# por Redis/Memcached e remover o SILENCED abaixo se escalar.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'reservaif-ratelimit',
+    }
+}
+SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003', 'django_ratelimit.W001']
+RATELIMIT_VIEW = 'accounts.views.ratelimited'
+
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend',
@@ -54,6 +85,22 @@ DEFAULT_FROM_EMAIL = os.getenv(
     'DEFAULT_FROM_EMAIL',
     'ReservaIF <no-reply@reservaif.local>',
 )
+
+# SMTP — só entram em uso quando EMAIL_BACKEND aponta para o backend smtp.
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '25'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+
+# Domínios de e-mail aceitos no cadastro de aluno (ex.: "estudante.ifpr.edu.br").
+# Vazio = sem restrição de domínio; a lista de alunos autorizados continua valendo.
+ALUNO_EMAIL_DOMINIOS = [
+    d.strip().lower()
+    for d in os.getenv('ALUNO_EMAIL_DOMINIOS', '').split(',')
+    if d.strip()
+]
 
 # Application definition
 
@@ -64,6 +111,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_ratelimit',
     'accounts',
     'refeicoes',
     'reservas',
@@ -79,6 +127,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
 ROOT_URLCONF = 'reservaif.urls'
@@ -150,4 +199,23 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-#STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        # Em produção o build roda collectstatic e gera o manifesto (hash nos
+        # nomes, dispensa o cache-busting manual). Em dev/teste não há manifesto.
+        'BACKEND': (
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            if not DEBUG
+            else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+        ),
+    },
+}
+
+# Testes: hasher rápido e sem rate-limit (o cache persiste entre testes).
+if 'test' in sys.argv:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+    RATELIMIT_ENABLE = False

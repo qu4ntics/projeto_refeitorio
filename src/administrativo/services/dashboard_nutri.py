@@ -216,7 +216,7 @@ def preparar_dias_semana_painel(dias_semana):
 def listar_refeicoes_hoje():
     hoje = timezone.localdate()
     tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
-    ordem_tipos = [codigo for codigo, _ in Refeicao.TIPOS]
+    ordem_tipos = Refeicao.ORDEM_TIPOS
 
     refeicoes = (
         Refeicao.objects.filter(data=hoje, exige_reserva=True)

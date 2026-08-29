@@ -1,6 +1,6 @@
 {% extends "base/base.html" %}
 
-{% load static %}
+{% load static static_versionado %}
 
 
 
@@ -10,9 +10,9 @@
 
 {% block extra_css %}
 
-  <link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=2">
+  <link rel="stylesheet" href="{% static_v 'css/alunos.css' %}">
 
-  <link rel="stylesheet" href="{% static 'css/turma_form.css' %}?v=2">
+  <link rel="stylesheet" href="{% static_v 'css/turma_form.css' %}">
 
 {% endblock %}
 

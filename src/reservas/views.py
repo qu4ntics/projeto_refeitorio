@@ -9,7 +9,7 @@ from accounts.decorators import perfil_required
 from accounts.models import Usuario
 from administrativo.models import Notificacao
 from refeicoes.models import Refeicao
-from .models import Reserva
+from .models import STATUS_OCUPA_VAGA, Reserva
 from .services.pre_reserva import (
     PreReservaError,
     ativar_pre_reservas,
@@ -67,14 +67,17 @@ def criar_reserva(request, refeicao_id):
         return redirect('refeicoes:homepage')
 
     # 5. Validação: Reserva duplicada
+    # Inclui 'concluida': marcar presença muda o status de ativa para concluída,
+    # e olhar só para 'ativa' deixava o aluno reservar de novo depois de comer,
+    # criando duas linhas dele na lista de chamada.
     reserva_existente = Reserva.objects.filter(
-        aluno=usuario, 
-        refeicao=refeicao, 
-        status='ativa'
+        aluno=usuario,
+        refeicao=refeicao,
+        status__in=STATUS_OCUPA_VAGA,
     ).exists()
-    
+
     if reserva_existente:
-        messages.info(request, "Você já possui uma reserva ativa para esta refeição.")
+        messages.info(request, "Você já possui uma reserva para esta refeição.")
         return redirect('refeicoes:homepage')
 
     # Se passar por tudo, persiste no banco

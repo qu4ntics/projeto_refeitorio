@@ -1,7 +1,12 @@
 from django.urls import path
-from .views import ativar_conta_view, cadastro_view, email_verification_sent_view
 from django.contrib.auth import views as auth_views
-from .views import LoginPerfilView
+
+from .views import (
+    LoginPerfilView,
+    cadastro_view,
+    confirmar_email_view,
+    reenviar_codigo_view,
+)
 
 app_name = 'accounts'
 
@@ -43,14 +48,6 @@ urlpatterns = [
         next_page='accounts:login'
     ), name='logout'),
     path('cadastro/', cadastro_view, name='cadastro'),
-    path(
-        'cadastro/verifique-email/',
-        email_verification_sent_view,
-        name='email_verification_sent',
-    ),
-    path(
-        'cadastro/ativar/<uidb64>/<token>/',
-        ativar_conta_view,
-        name='email_verification_confirm',
-    ),
+    path('cadastro/confirmar/', confirmar_email_view, name='confirmar_email'),
+    path('cadastro/confirmar/reenviar/', reenviar_codigo_view, name='reenviar_codigo'),
 ]

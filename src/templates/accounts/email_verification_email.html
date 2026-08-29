@@ -1,8 +1,0 @@
-Olá, {{ usuario.username }}.
-
-Recebemos seu cadastro no ReservaIF.
-
-Acesse o link abaixo para verificar seu email e ativar sua conta:
-{{ protocol }}://{{ domain }}{% url 'accounts:email_verification_confirm' uidb64=uid token=token %}
-
-Se você não fez esse cadastro, ignore este email.

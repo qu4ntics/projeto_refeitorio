@@ -5,6 +5,12 @@ from django.db import models
 from reservaif.models import UUIDModel
 
 
+# Status em que a reserva ainda "vale": ocupa vaga e impede uma segunda
+# reserva do mesmo aluno para a mesma refeição. `concluida` entra aqui porque
+# marcar presença apenas muda o status — a reserva não deixou de existir.
+STATUS_OCUPA_VAGA = ['ativa', 'concluida']
+
+
 class Reserva(UUIDModel):
     STATUS_CHOICES = [
         ('ativa', 'Ativa'),
@@ -31,8 +37,8 @@ class Reserva(UUIDModel):
         constraints = [
             models.UniqueConstraint(
                 fields=['aluno', 'refeicao'],
-                condition=models.Q(status='ativa'),
-                name='unique_reserva_ativa_aluno_refeicao',
+                condition=models.Q(status__in=STATUS_OCUPA_VAGA),
+                name='unique_reserva_valida_aluno_refeicao',
             ),
         ]
 

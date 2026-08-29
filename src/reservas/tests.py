@@ -119,8 +119,10 @@ class ReservaViewTests(TestCase):
         self.janela.horario_fechamento = time(11, 0)
         self.janela.save()
 
+        # 14:00: depois do fim do almoço (13:30 no seed). Durante o almoço o
+        # destaque continua sendo o de hoje.
         agora = timezone.make_aware(
-            datetime.combine(hoje, time(13, 0)),
+            datetime.combine(hoje, time(14, 0)),
             timezone.get_current_timezone(),
         )
         with patch('django.utils.timezone.localtime', return_value=agora):
@@ -128,7 +130,10 @@ class ReservaViewTests(TestCase):
 
         self.assertContains(response, 'Almoço de amanhã')
         self.assertContains(response, 'Reservas abrem em')
-        self.assertContains(response, 'disabled')
+        # Fora da janela o aluno vê o aviso no lugar do botão de reservar.
+        self.assertContains(response, 'reservation-status-banner')
+        # O polling compara com este marcador para recarregar quando abrir.
+        self.assertContains(response, 'data-reserva-aberta="0"')
         url_reserva = reverse('reservas:criar_reserva', args=[refeicao_amanha.id])
         self.assertEqual(response.content.decode('utf-8').count(url_reserva), 0)
 
@@ -150,6 +155,12 @@ class ReservaViewTests(TestCase):
         self.assertNotContains(response, 'Reservas abrem em')
         url_reserva = reverse('reservas:criar_reserva', args=[refeicao_amanha.id])
         self.assertEqual(response.content.decode('utf-8').count(url_reserva), 1)
+
+        # Só o card interativo carrega o marcador; o card de consulta da semana
+        # mostra a mesma refeição e não deve provocar reload.
+        html = response.content.decode('utf-8')
+        self.assertIn('data-reserva-aberta="1"', html)
+        self.assertEqual(html.count('data-reserva-aberta'), 1)
 
     def test_validacao_aluno_bloqueado(self):
         """Validação 1: Aluno bloqueado não pode reservar."""
@@ -251,7 +262,7 @@ class ReservaViewTests(TestCase):
         # Deve continuar existindo apenas 1 reserva
         self.assertEqual(Reserva.objects.filter(aluno=self.aluno, refeicao=self.refeicao).count(), 1)
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("já possui uma reserva ativa" in str(m).lower() for m in messages))
+        self.assertTrue(any("já possui uma reserva" in str(m).lower() for m in messages))
 
     def test_cancelamento_sucesso(self):
         """Garante que o aluno pode cancelar sua própria reserva dentro do prazo."""
@@ -580,3 +591,407 @@ class PreReservaTests(TestCase):
         self.assertRedirects(response, reverse('refeicoes:homepage'))
         pre.refresh_from_db()
         self.assertEqual(pre.status, 'rejeitada')
+
+class AlmocoDestaqueDuranteRefeicaoTests(TestCase):
+    """Enquanto o almoço está sendo servido ele continua em destaque; a troca
+    para o de amanhã só acontece depois que o horário acaba."""
+
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º ano Informática', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_destaque', email='destaque@teste.com',
+            password='password123', perfil='aluno', turma=self.turma,
+        )
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_destaque', email='nutri_destaque@teste.com',
+            password='123', perfil='nutricionista',
+        )
+        self.client.login(username='destaque@teste.com', password='password123')
+
+        self.hoje = timezone.localdate()
+        self.refeicao_hoje = Refeicao.objects.create(
+            data=self.hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        self.refeicao_amanha = Refeicao.objects.create(
+            data=self.hoje + timedelta(days=1), tipo='almoco',
+            limite_vagas=10, exige_reserva=True,
+        )
+
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.horario_inicio_consumo = time(11, 0)
+        tipo.horario_fim_consumo = time(13, 0)
+        tipo.save()
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=tipo,
+            defaults={
+                'horario_abertura': time(15, 0),
+                'horario_fechamento': time(10, 0),
+            },
+        )
+        ConfigReserva.objects.create(
+            abertura=time(15, 0), encerramento=time(10, 0),
+            minutos_cancelamento=60, criado_por=self.nutri,
+        )
+
+    def _homepage_em(self, hora, minuto=0):
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(hora, minuto)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            return self.client.get(reverse('refeicoes:homepage'))
+
+    def test_durante_o_almoco_destaca_hoje_com_indicativo(self):
+        response = self._homepage_em(12, 0)
+
+        self.assertContains(response, 'Almoço de hoje')
+        self.assertContains(response, 'Acontecendo agora')
+        self.assertContains(response, 'servindo até 13:00')
+        # A mensagem de abertura é do almoço de amanhã e não cabe agora.
+        self.assertNotContains(response, 'Reservas abrem em')
+
+    def test_depois_do_almoco_passa_para_amanha_com_abertura(self):
+        response = self._homepage_em(13, 30)
+
+        self.assertContains(response, 'Almoço de amanhã')
+        self.assertContains(response, 'Reservas abrem em')
+        self.assertNotContains(response, 'Acontecendo agora')
+
+    def test_antes_do_almoco_destaca_hoje_sem_indicativo(self):
+        response = self._homepage_em(9, 0)
+
+        self.assertContains(response, 'Almoço de hoje')
+        self.assertNotContains(response, 'Acontecendo agora')
+
+    def test_ultimo_minuto_do_horario_ainda_conta_como_acontecendo(self):
+        response = self._homepage_em(13, 0)
+
+        self.assertContains(response, 'Almoço de hoje')
+        self.assertContains(response, 'Acontecendo agora')
+
+
+class ConfirmacaoCancelamentoTests(TestCase):
+    """O aviso de confirmação precisa distinguir o cancelamento reversível do
+    irreversível — com a janela fechada o aluno não reserva de novo."""
+
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º ano Informática', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_conf', email='conf@teste.com', password='password123',
+            perfil='aluno', turma=self.turma,
+        )
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_conf', email='nutri_conf@teste.com', password='123',
+            perfil='nutricionista',
+        )
+        self.client.login(username='conf@teste.com', password='password123')
+
+        self.hoje = timezone.localdate()
+        self.refeicao = Refeicao.objects.create(
+            data=self.hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self.aluno, refeicao=self.refeicao, status='ativa',
+        )
+
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.horario_inicio_consumo = time(11, 30)
+        tipo.horario_fim_consumo = time(13, 0)
+        tipo.save()
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=tipo,
+            defaults={
+                'horario_abertura': time(15, 0),
+                'horario_fechamento': time(9, 30),
+            },
+        )
+        ConfigReserva.objects.create(
+            abertura=time(15, 0), encerramento=time(9, 30),
+            minutos_cancelamento=60, criado_por=self.nutri,
+        )
+
+    def _homepage_em(self, hora, minuto=0):
+        agora = timezone.make_aware(
+            datetime.combine(self.hoje, time(hora, minuto)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            return self.client.get(reverse('refeicoes:homepage'))
+
+    def test_avisa_que_e_irreversivel_com_janela_fechada(self):
+        # 10:00: janela fechou às 09:30, mas ainda dá para cancelar (limite 10:30).
+        response = self._homepage_em(10, 0)
+
+        self.assertContains(response, 'data-confirm-title="Cancelar sua reserva?"')
+        self.assertContains(response, 'não conseguirá reservar novamente')
+
+    def test_avisa_que_da_para_reservar_de_novo_com_janela_aberta(self):
+        # 08:00: dentro da janela, o cancelamento pode ser desfeito.
+        response = self._homepage_em(8, 0)
+
+        self.assertContains(response, 'data-confirm-title="Cancelar sua reserva?"')
+        self.assertContains(response, 'Dá para reservar de novo')
+        self.assertNotContains(response, 'não conseguirá reservar novamente')
+
+    def test_botao_cancelar_some_apos_o_prazo(self):
+        # 11:00: passou do limite de cancelamento (10:30).
+        response = self._homepage_em(11, 0)
+
+        self.assertNotContains(response, 'data-confirm-title="Cancelar sua reserva?"')
+        self.assertContains(response, 'RESERVADO')
+
+
+class MensagensComoToastTests(TestCase):
+    """As mensagens do Django são renderizadas como dados; o toast.js as
+    converte em avisos no canto superior direito."""
+
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º ano Informática', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_toast', email='toast@teste.com', password='password123',
+            perfil='aluno', turma=self.turma,
+        )
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_toast', email='nutri_toast@teste.com', password='123',
+            perfil='nutricionista',
+        )
+        self.client.login(username='toast@teste.com', password='password123')
+
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.save(update_fields=['ativo'])
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=tipo,
+            defaults={
+                'horario_abertura': time(0, 0),
+                'horario_fechamento': time(23, 59),
+            },
+        )
+        ConfigReserva.objects.create(
+            abertura=time(0, 0), encerramento=time(23, 59),
+            minutos_cancelamento=60, criado_por=self.nutri,
+        )
+        self.refeicao = Refeicao.objects.create(
+            data=timezone.localdate() + timedelta(days=1), tipo='almoco',
+            limite_vagas=10, exige_reserva=True,
+        )
+
+    def test_sucesso_vira_dado_de_toast(self):
+        response = self.client.post(
+            reverse('reservas:criar_reserva', args=[self.refeicao.id]),
+            follow=True,
+        )
+        html = response.content.decode('utf-8')
+
+        self.assertIn('data-toast-tipo="success"', html)
+        self.assertIn('realizada com sucesso', html)
+        # O formato antigo (alerta inline) não deve mais aparecer.
+        self.assertNotIn('class="alert alert-', html)
+
+    def test_erro_vira_dado_de_toast(self):
+        self.aluno.bloqueado = True
+        self.aluno.save(update_fields=['bloqueado'])
+
+        response = self.client.post(
+            reverse('reservas:criar_reserva', args=[self.refeicao.id]),
+            follow=True,
+        )
+        html = response.content.decode('utf-8')
+
+        self.assertIn('data-toast-tipo="error"', html)
+        self.assertIn('bloqueada', html)
+
+    def test_pagina_sem_mensagem_nao_renderiza_bloco(self):
+        response = self.client.get(reverse('refeicoes:homepage'))
+        self.assertNotContains(response, 'data-toast-mensagem')
+
+
+class ReservaDuplicadaAposPresencaTests(TestCase):
+    """Marcar presença troca o status para 'concluida'. Se a checagem de
+    duplicidade olhar só para 'ativa', o aluno reserva de novo depois de comer
+    e aparece duas vezes na lista de chamada."""
+
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='4º módulo ADS', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_dup', email='dup@teste.com', password='password123',
+            perfil='aluno', turma=self.turma,
+        )
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_dup', email='nutri_dup@teste.com', password='123',
+            perfil='nutricionista',
+        )
+        self.client.login(username='dup@teste.com', password='password123')
+
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.save(update_fields=['ativo'])
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=tipo,
+            defaults={
+                'horario_abertura': time(0, 0),
+                'horario_fechamento': time(23, 59),
+            },
+        )
+        ConfigReserva.objects.create(
+            abertura=time(0, 0), encerramento=time(23, 59),
+            minutos_cancelamento=60, criado_por=self.nutri,
+        )
+        self.refeicao = Refeicao.objects.create(
+            data=timezone.localdate() + timedelta(days=1), tipo='almoco',
+            limite_vagas=10, exige_reserva=True,
+        )
+        self.url = reverse('reservas:criar_reserva', args=[self.refeicao.id])
+
+    def _validas(self):
+        return Reserva.objects.filter(
+            aluno=self.aluno, refeicao=self.refeicao,
+        ).exclude(status='cancelada').count()
+
+    def test_nao_reserva_de_novo_apos_presenca_marcada(self):
+        self.client.post(self.url)
+        Reserva.objects.filter(aluno=self.aluno, refeicao=self.refeicao).update(
+            status='concluida',
+        )
+
+        self.client.post(self.url)
+
+        self.assertEqual(self._validas(), 1)
+
+    def test_nao_reserva_de_novo_com_reserva_ativa(self):
+        self.client.post(self.url)
+        self.client.post(self.url)
+
+        self.assertEqual(self._validas(), 1)
+
+    def test_reserva_de_novo_apos_cancelar(self):
+        """Cancelar libera: o aluno pode voltar atrás enquanto a janela permite."""
+        self.client.post(self.url)
+        reserva = Reserva.objects.get(aluno=self.aluno, refeicao=self.refeicao)
+        self.client.post(reverse('reservas:cancelar_reserva', args=[reserva.id]))
+
+        self.client.post(self.url)
+
+        self.assertEqual(
+            Reserva.objects.filter(
+                aluno=self.aluno, refeicao=self.refeicao, status='ativa',
+            ).count(),
+            1,
+        )
+
+    def test_banco_recusa_segunda_reserva_valida(self):
+        """Rede de proteção: mesmo que uma corrida passe pela view, a restrição
+        do banco impede as duas linhas."""
+        from django.db import IntegrityError, transaction
+
+        Reserva.objects.create(
+            aluno=self.aluno, refeicao=self.refeicao, status='concluida',
+        )
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Reserva.objects.create(
+                    aluno=self.aluno, refeicao=self.refeicao, status='ativa',
+                )
+
+
+class SemAlmocoParaReservarTests(TestCase):
+    """Fim de semana e feriado deixam o destaque sem refeição. Antes a seção
+    inteira sumia da tela, sem explicar por quê nem quando volta."""
+
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º ano Informática', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_vazio', email='vazio@teste.com', password='password123',
+            perfil='aluno', turma=self.turma,
+        )
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_vazio', email='nutri_vazio@teste.com', password='123',
+            perfil='nutricionista',
+        )
+        self.client.login(username='vazio@teste.com', password='password123')
+
+        tipo = TipoRefeicao.objects.get(nome='almoco')
+        tipo.ativo = True
+        tipo.horario_inicio_consumo = time(11, 30)
+        tipo.horario_fim_consumo = time(13, 0)
+        tipo.save()
+        JanelaReserva.objects.update_or_create(
+            tipo_refeicao=tipo,
+            defaults={
+                'horario_abertura': time(15, 0),
+                'horario_fechamento': time(9, 30),
+            },
+        )
+        ConfigReserva.objects.create(
+            abertura=time(15, 0), encerramento=time(9, 30),
+            minutos_cancelamento=60, criado_por=self.nutri,
+        )
+
+    def _sexta(self):
+        hoje = timezone.localdate()
+        return hoje + timedelta(days=(4 - hoje.weekday()) % 7)
+
+    def _homepage_em(self, dia, hora, minuto=0):
+        agora = timezone.make_aware(
+            datetime.combine(dia, time(hora, minuto)),
+            timezone.get_current_timezone(),
+        )
+        with patch('django.utils.timezone.localtime', return_value=agora):
+            return self.client.get(reverse('refeicoes:homepage'))
+
+    def test_sexta_depois_do_almoco_avisa_e_aponta_a_segunda(self):
+        sexta = self._sexta()
+        Refeicao.objects.create(
+            data=sexta, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        segunda = sexta + timedelta(days=3)
+        Refeicao.objects.create(
+            data=segunda, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+
+        # 14:00: o almoço de sexta acabou (13:00) e sábado não tem refeição.
+        response = self._homepage_em(sexta, 14, 0)
+
+        self.assertContains(response, 'Nenhum almoço para reservar agora')
+        self.assertContains(response, 'O próximo é')
+        self.assertNotContains(response, 'Almoço de amanhã')
+
+    def test_sem_nenhum_almoco_cadastrado_avisa_sem_prometer_data(self):
+        sexta = self._sexta()
+        Refeicao.objects.create(
+            data=sexta, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+
+        response = self._homepage_em(sexta, 14, 0)
+
+        self.assertContains(response, 'Nenhum almoço para reservar agora')
+        self.assertContains(response, 'Não há almoço cadastrado para amanhã')
+
+    def test_com_almoco_disponivel_nao_mostra_o_aviso(self):
+        sexta = self._sexta()
+        Refeicao.objects.create(
+            data=sexta, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+
+        # 10:00: ainda antes do almoço de sexta, que segue em destaque.
+        response = self._homepage_em(sexta, 10, 0)
+
+        self.assertContains(response, 'Almoço de hoje')
+        self.assertNotContains(response, 'Nenhum almoço para reservar agora')
+
+    def test_nao_aponta_almoco_alem_do_horizonte_de_busca(self):
+        """Um almoço daqui a duas semanas não ajuda o aluno de hoje."""
+        sexta = self._sexta()
+        Refeicao.objects.create(
+            data=sexta, tipo='almoco', limite_vagas=10, exige_reserva=True,
+        )
+        Refeicao.objects.create(
+            data=sexta + timedelta(days=20), tipo='almoco',
+            limite_vagas=10, exige_reserva=True,
+        )
+
+        response = self._homepage_em(sexta, 14, 0)
+
+        self.assertContains(response, 'Não há almoço cadastrado para amanhã')

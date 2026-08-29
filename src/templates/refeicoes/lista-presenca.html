@@ -1,14 +1,12 @@
 {% extends "base/base.html" %}
 
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Chamada — {{ refeicao.get_tipo_display }}{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-<link rel="stylesheet" href="{% static 'css/lista-presenca-style.css' %}">
-
-<div id="toast-container" class="toast-container"></div>
+<link rel="stylesheet" href="{% static_v 'css/lista-presenca-style.css' %}">
 
 <div class="container-refeitorio" data-chamada-aberta="{% if status_chamada == 'em_andamento' %}1{% else %}0{% endif %}">
     <header class="lista-presenca-header">
@@ -34,6 +32,47 @@
             <span class="badge-finalizado">ENCERRADA</span>
         {% elif status_chamada == 'em_andamento' %}
             <span class="badge-andamento">EM ANDAMENTO</span>
+        {% elif fase_periodo == 'antes' %}
+            <div class="aviso-chamada aviso-chamada--aguardando" role="status">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <div class="aviso-chamada__texto">
+                    <strong>
+                        {% if horario_inicio %}
+                            A chamada abre às {{ horario_inicio|time:"H:i" }}
+                        {% else %}
+                            A chamada ainda não começou
+                        {% endif %}
+                    </strong>
+                    <p>
+                        A lista abaixo já está disponível para conferência.
+                        A marcação de presença libera sozinha no horário — você não precisa fazer nada.
+                    </p>
+                </div>
+            </div>
+        {% elif fase_periodo == 'depois' %}
+            <div class="aviso-chamada aviso-chamada--encerrado" role="status">
+                <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>
+                <div class="aviso-chamada__texto">
+                    <strong>
+                        Horário encerrado{% if horario_fim %} às {{ horario_fim|time:"H:i" }}{% endif %}
+                    </strong>
+                    <p>
+                        A presença não pode mais ser marcada. A chamada será fechada
+                        em instantes e as ausências viram strike automaticamente.
+                    </p>
+                </div>
+            </div>
+        {% else %}
+            <div class="aviso-chamada aviso-chamada--pendencia" role="alert">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                <div class="aviso-chamada__texto">
+                    <strong>Horário da refeição não configurado</strong>
+                    <p>
+                        Sem horário de início e término não há como marcar presença.
+                        Peça à nutricionista para configurar em Configurações → Refeições.
+                    </p>
+                </div>
+            </div>
         {% endif %}
         {% if tem_strikes and status_chamada == 'em_andamento' %}
             <p class="aviso-strikes"><i class="bi bi-exclamation-triangle"></i> Esta refeição já teve strikes aplicados. Reabertura não os remove.</p>
@@ -139,5 +178,5 @@
     </div>
 </div>
 
-<script src="{% static 'js/lista-presenca-script.js' %}"></script>
+<script src="{% static_v 'js/lista-presenca-script.js' %}"></script>
 {% endblock %}

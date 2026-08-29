@@ -1,11 +1,11 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Configurações{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
-  <link rel="stylesheet" href="{% static 'css/configuracoes_aluno.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/cardapio_semana.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/configuracoes_aluno.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -114,5 +114,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/configuracoes_aluno.js' %}"></script>
+<script src="{% static_v 'js/configuracoes_aluno.js' %}"></script>
 {% endblock %}

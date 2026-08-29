@@ -455,6 +455,33 @@
   color: var(--danger);
 }
 
+.status-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-conta-ativa {
+  background: rgba(0, 176, 91, 0.1);
+  color: var(--accent);
+}
+
+.status-pendente {
+  background: rgba(232, 184, 75, 0.15);
+  color: var(--warning);
+}
+
+.status-sem-conta {
+  background: rgba(140, 140, 140, 0.16);
+  color: var(--text-secondary);
+}
+
+.strike-vazio {
+  color: var(--text-light);
+  font-size: 12px;
+}
+
 /* BOTÃO DESBLOQUEAR */
 .btn-desbloquear {
   display: inline-flex;

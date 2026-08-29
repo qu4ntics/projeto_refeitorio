@@ -1,7 +1,7 @@
 {% if refeicao.exige_reserva %}
 <p class="meal-capacity__text">
-  <strong>{{ refeicao.vagas_ocupadas }}/{{ refeicao.limite_vagas }}</strong> reservadas
-  - {{ refeicao.vagas_disponiveis }}
+  <strong><span data-vagas-ocupadas="{{ refeicao.id }}">{{ refeicao.vagas_ocupadas }}</span>/<span data-limite-vagas="{{ refeicao.id }}">{{ refeicao.limite_vagas }}</span></strong> reservadas
+  - <span data-vagas-disponiveis="{{ refeicao.id }}">{{ refeicao.vagas_disponiveis }}</span>
   {% if refeicao.vagas_disponiveis == 1 %}restante{% else %}restantes{% endif %}
   {% if refeicao.janela_encerrada_aguardando_refeicao %}
   <span class="meal-capacity__badge meal-capacity__badge--closed">

@@ -1,10 +1,10 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Resumo da Chamada — {{ refeicao.get_tipo_display }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/lista-presenca-style.css' %}">
+<link rel="stylesheet" href="{% static_v 'css/lista-presenca-style.css' %}">
 {% endblock %}
 
 {% block content %}

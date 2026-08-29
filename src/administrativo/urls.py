@@ -9,6 +9,8 @@ urlpatterns = [
     path('alunos/bloqueados/', views.alunos_bloqueados, name='alunos_bloqueados'),
     path('alunos/', views.alunos_turmas, name='alunos_turmas'),
     path('alunos/arquivadas/', views.alunos_turmas_arquivadas, name='alunos_turmas_arquivadas'),
+    path('alunos/autorizados/importar/', views.importar_alunos_autorizados, name='importar_alunos_autorizados'),
+    path('alunos/autorizados/modelo/', views.modelo_csv_alunos, name='modelo_csv_alunos'),
     path('alunos/turmas/json/', views.lista_turmas_json, name='lista_turmas_json'),
     path('configuracoes/', views.configuracoes, name='configuracoes'),
     #path('alunos/', views.alunos, name='alunos'),
@@ -26,7 +28,6 @@ urlpatterns = [
     path('configuracoes/janela-horarios/', views.janela_horarios_api, name='janela_horarios_lista'),
     path('configuracoes/janela-horarios/<uuid:tipo_refeicao_id>/', views.janela_horarios_api, name='janela_horarios_detalhe'),
 
-    path('refeitorio/abrir-chamada/<uuid:refeicao_id>/', views.abrir_chamada_view, name='abrir_chamada'),
     path('refeitorio/atualizar-status-reserva/<uuid:reserva_id>/', views.atualizar_status_reserva, name='atualizar_status_reserva'),
     path('refeitorio/encerrar-chamada/<uuid:refeicao_id>/', views.encerrar_chamada_view, name='encerrar_chamada'),
     path('refeitorio/reabrir-chamada/<uuid:refeicao_id>/', views.reabrir_chamada_view, name='reabrir_chamada'),
