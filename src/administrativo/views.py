@@ -19,7 +19,7 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import perfil_required
 from accounts.models import Usuario
 from refeicoes.views import _preparar_contexto_semana
-from refeicoes.models import Refeicao
+from refeicoes.models import Refeicao, ordem_cronologica_tipo
 from reservas.models import Reserva
 from .forms import TurmaForm, ImportarRosterForm, label_tipo_refeicao
 from .models import (
@@ -29,15 +29,14 @@ from .models import (
 from .services.roster import importar_roster
 from .services.chamada import (
     ChamadaError,
-    abrir_chamada,
     encerrar_chamada,
+    encerrar_chamadas_vencidas,
     marcar_presenca,
     reabrir_chamada,
     status_chamada_refeicao,
 )
 from .services.horarios_refeicao import (
     fase_periodo_consumo,
-    pode_abrir_chamada,
     pode_reabrir_chamada,
 )
 from .services.dashboard_nutri import metricas_painel, preparar_dias_semana_painel
@@ -48,6 +47,10 @@ from .services.tipos_refeicao import garantir_tipos_refeicao
 @perfil_required('nutricionista')
 def painel_nutricionista(request):
     """Painel principal da nutricionista com refeições do dia atual."""
+    # A nutricionista acompanha ausências e bloqueios; os números precisam
+    # refletir as chamadas que já venceram.
+    encerrar_chamadas_vencidas()
+
     ctx = _preparar_contexto_semana(request, None)
     dias_semana = preparar_dias_semana_painel(ctx['dias_semana'])
     dia_hoje = next((d for d in dias_semana if d['hoje']), None)
@@ -61,6 +64,10 @@ def painel_nutricionista(request):
 @perfil_required('refeitorio')
 def painel_refeitorio(request):
     """Painel operacional do refeitório com refeições do dia e status da chamada."""
+    # Põe o sistema em dia antes de montar a tela: sem isso, uma refeição que
+    # já acabou apareceria como pendente até o cron rodar.
+    encerrar_chamadas_vencidas()
+
     hoje = timezone.localdate()
     tipos_por_nome = {t.nome: t for t in TipoRefeicao.objects.all()}
 
@@ -73,7 +80,7 @@ def painel_refeitorio(request):
             ),
             presentes=Count('reservas', filter=Q(reservas__status='concluida')),
         )
-        .order_by('tipo')
+        .order_by(ordem_cronologica_tipo())
     )
 
     refeicoes_painel = []
@@ -86,14 +93,12 @@ def painel_refeitorio(request):
         horario_fim = tipo_cfg.horario_fim_consumo if tipo_cfg else None
         status = status_chamada_refeicao(refeicao)
         fase = fase_periodo_consumo(refeicao)
-        pode_abrir, _ = pode_abrir_chamada(refeicao)
         refeicoes_painel.append({
             'refeicao': refeicao,
             'horario_inicio': horario_inicio,
             'horario_fim': horario_fim,
             'status': status,
             'fase_periodo': fase,
-            'pode_abrir': pode_abrir and refeicao.total_reservas > 0,
             'pode_reabrir': pode_reabrir_chamada(refeicao),
             'total_reservas': refeicao.total_reservas,
             'presentes': refeicao.presentes,
@@ -859,20 +864,6 @@ def janela_horarios_api(request, tipo_refeicao_id=None):
             return JsonResponse({'erro': e.message_dict}, status=400)
         except Exception as e:
             return JsonResponse({'erro': str(e)}, status=400)
-
-@login_required
-@perfil_required('refeitorio')
-@require_POST
-def abrir_chamada_view(request, refeicao_id):
-    refeicao = get_object_or_404(Refeicao, pk=refeicao_id, exige_reserva=True)
-    try:
-        abrir_chamada(refeicao)
-        messages.success(request, f'Chamada aberta para {refeicao.get_tipo_display()}.')
-    except ChamadaError as e:
-        messages.error(request, str(e))
-        return redirect('administrativo:painel_refeitorio')
-    return redirect('refeicoes:chamada', refeicao_id=refeicao.id)
-
 
 @login_required
 @perfil_required('refeitorio')

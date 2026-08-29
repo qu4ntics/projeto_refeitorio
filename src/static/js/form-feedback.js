@@ -27,7 +27,7 @@
     if (!dialog) return false;
 
     lastFocused = document.activeElement;
-    if (dialogTitle) dialogTitle.textContent = title;
+    if (dialogTitle) dialogTitle.textContent = title || 'Tem certeza?';
     if (dialogMessage) dialogMessage.textContent = message;
     if (dialogConfirm) dialogConfirm.textContent = confirmLabel || 'Confirmar';
 
@@ -56,7 +56,8 @@
       dialogConfirm.disabled = false;
       dialogConfirm.classList.remove('is-loading');
       dialogConfirm.removeAttribute('aria-busy');
-      dialogConfirm.textContent = 'Sair';
+      // O rótulo é reescrito a cada abertura, a partir do formulário.
+      delete dialogConfirm.dataset.loadingOriginal;
     }
     if (dialogCancel) {
       dialogCancel.disabled = false;
@@ -121,26 +122,35 @@
     });
   }
 
+  /**
+   * Um formulário pede confirmação declarando data-confirm-message. Título,
+   * rótulo do botão e texto de carregamento saem dos data-* do próprio
+   * formulário, para o diálogo servir a qualquer ação.
+   */
+  function exigeConfirmacao(form) {
+    return form.hasAttribute('data-confirm-message');
+  }
+
   function handleFormSubmit(event) {
     var form = event.target;
     if (form.tagName !== 'FORM') return;
     if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
     if (form.hasAttribute('data-no-loading')) return;
-    if (form.classList.contains('logout-form') && form.dataset.confirmed !== 'true') return;
+    if (exigeConfirmacao(form) && form.dataset.confirmed !== 'true') return;
 
     var submitter = event.submitter || null;
-    var confirmedLogout = form.classList.contains('logout-form') && form.dataset.confirmed === 'true';
+    var confirmado = exigeConfirmacao(form) && form.dataset.confirmed === 'true';
     setTimeout(function () {
       applyFormLoading(form, submitter);
-      if (confirmedLogout) {
+      if (confirmado) {
         form.removeAttribute('data-confirmed');
       }
     }, 0);
   }
 
-  function handleLogoutSubmit(event) {
+  function handleConfirmSubmit(event) {
     var form = event.target;
-    if (!form.classList.contains('logout-form')) return;
+    if (!exigeConfirmacao(form)) return;
 
     if (form.dataset.confirmed === 'true') {
       return;
@@ -150,10 +160,11 @@
     event.stopPropagation();
     pendingForm = form;
 
+    // Sem o diálogo no DOM, segue direto em vez de travar a ação.
     if (!openDialog(
-      'Sair da conta?',
-      'Tem certeza que deseja encerrar sua sessão?',
-      'Sair'
+      form.getAttribute('data-confirm-title'),
+      form.getAttribute('data-confirm-message'),
+      form.getAttribute('data-confirm-ok')
     )) {
       form.dataset.confirmed = 'true';
       form.requestSubmit();
@@ -181,10 +192,13 @@
           return;
         }
 
-        setButtonLoading(dialogConfirm, 'Saindo...');
+        var form = pendingForm;
+        setButtonLoading(
+          dialogConfirm,
+          form.getAttribute('data-confirm-loading') || DEFAULT_LOADING_TEXT
+        );
         if (dialogCancel) dialogCancel.disabled = true;
 
-        var form = pendingForm;
         closeDialog();
         form.dataset.confirmed = 'true';
         form.requestSubmit();
@@ -198,7 +212,7 @@
     });
   }
 
-  document.addEventListener('submit', handleLogoutSubmit, true);
+  document.addEventListener('submit', handleConfirmSubmit, true);
   document.addEventListener('submit', handleFormSubmit);
 
   if (document.readyState === 'loading') {

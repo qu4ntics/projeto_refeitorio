@@ -1,12 +1,12 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Cardápio da Semana{% endblock %}
 
 {% block menu_refeicoes %}active{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/cardapio_semana.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/cardapio_semana.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -62,5 +62,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/cardapio_semana.js' %}"></script>
+<script src="{% static_v 'js/cardapio_semana.js' %}"></script>
+<script src="{% static_v 'js/refeicao-polling.js' %}"></script>
+
+<script>
+  iniciarPollingDaPagina();
+</script>
 {% endblock %}

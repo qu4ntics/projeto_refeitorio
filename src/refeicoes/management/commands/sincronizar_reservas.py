@@ -10,9 +10,7 @@ Deve rodar em cron a cada 5-10 minutos (ex.: Render Cron Job):
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from accounts.models import Usuario
-from administrativo.services.chamada import ChamadaError, encerrar_chamada
-from administrativo.services.horarios_refeicao import fase_periodo_consumo
+from administrativo.services.chamada import encerrar_chamadas_vencidas
 from refeicoes.models import Refeicao
 from reservas.services.pre_reserva import sincronizar_pre_reservas
 
@@ -29,30 +27,9 @@ class Command(BaseCommand):
         sincronizar_pre_reservas(futuras)
         self.stdout.write(f'Pré-reservas sincronizadas para {len(futuras)} refeição(ões).')
 
-        refeitorio = Usuario.objects.filter(perfil='refeitorio').first()
-        chamadas_pendentes = Refeicao.objects.filter(
-            data=hoje,
-            exige_reserva=True,
-            chamada_aberta=True,
-            chamada_finalizada=False,
-        )
-
-        encerradas = 0
-        for refeicao in chamadas_pendentes:
-            if fase_periodo_consumo(refeicao) != 'depois':
-                continue
-            if refeitorio is None:
-                self.stdout.write(self.style.WARNING(
-                    f'Chamada de {refeicao} venceu, mas não há usuário do '
-                    f'refeitório para encerrá-la automaticamente.'
-                ))
-                continue
-            try:
-                encerrar_chamada(refeicao, refeitorio)
-                encerradas += 1
-            except ChamadaError as e:
-                self.stdout.write(self.style.WARNING(f'{refeicao}: {e}'))
-
+        # Mesma rotina que as telas disparam; aqui ela cobre o caso de ninguém
+        # abrir o sistema depois da refeição.
+        encerradas = encerrar_chamadas_vencidas()
         self.stdout.write(self.style.SUCCESS(
             f'{encerradas} chamada(s) encerrada(s) automaticamente.'
         ))

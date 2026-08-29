@@ -190,6 +190,11 @@ cujo horário já passou. Rode em **cron a cada 5–10 minutos** (em produção,
 python manage.py sincronizar_reservas
 ```
 
+A chamada não é aberta nem fechada por ninguém: ela vale enquanto durar o
+horário de consumo da refeição. **Este comando é quem aplica os strikes** —
+sem ele rodando, as chamadas nunca encerram e nenhum ausente é penalizado.
+Ele também recupera refeições de dias em que ficou fora do ar.
+
 O painel administrativo Django fica em [http://localhost:8000/django-admin](http://localhost:8000/django-admin).
 
 ---

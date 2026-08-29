@@ -1,12 +1,12 @@
-{% load static %}
+{% load static static_versionado %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirme seu e-mail</title>
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/cadastro-style.css' %}">
+    <link rel="stylesheet" href="{% static_v 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static_v 'css/cadastro-style.css' %}">
     <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
     <style>
         .confirmar-texto { color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
@@ -87,7 +87,7 @@
         <a href="{% url 'accounts:cadastro' %}">Trocar e-mail</a>
     </div>
 
-    <script src="{% static 'js/form-feedback.js' %}"></script>
+    <script src="{% static_v 'js/form-feedback.js' %}"></script>
     <script>
         (function () {
             var btn = document.getElementById('btn-reenviar');

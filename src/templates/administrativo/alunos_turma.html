@@ -1,10 +1,10 @@
 {% extends 'base/base.html' %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}{% if arquivadas %}Turmas Arquivadas{% else %}Alunos por Turma{% endif %} — ReservaIF{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/alunos_turma.css' %}?v=6">
+<link rel="stylesheet" href="{% static_v 'css/alunos_turma.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -78,5 +78,5 @@
 <script>
   const ARQUIVADAS = {{ arquivadas|yesno:"true,false" }};
 </script>
-<script src="{% static 'js/alunos_turma.js' %}?v=2"></script>
+<script src="{% static_v 'js/alunos_turma.js' %}"></script>
 {% endblock %}

@@ -1,11 +1,11 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}{{ titulo|default:"Nova Refeição" }}{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/pratos-style.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/pratos-style.css' %}">
 {% endblock %}
 
 {% block content %}

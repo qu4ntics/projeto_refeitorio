@@ -1,4 +1,12 @@
-<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}{% if refeicao.janela_encerrada_aguardando_refeicao %} meal-card--reserva-encerrada{% endif %}{% if refeicao.exige_reserva and refeicao.reserva_futura and not refeicao.reserva_id and not refeicao.pre_reserva %} meal-card--reserva-futura{% endif %}">
+{% comment %}
+data-reserva-aberta guarda o estado que o servidor usou para montar o card: o
+polling compara com o valor atual e recarrega quando a janela abre/fecha, já que
+trocar o aviso pelo botão RESERVAR depende do template. Só no card interativo —
+o de consulta não muda de forma com a janela.
+{% endcomment %}
+<div class="meal-card{% if somente_visualizacao %} meal-card--visualizacao{% endif %}{% if refeicao.janela_encerrada_aguardando_refeicao %} meal-card--reserva-encerrada{% endif %}"
+     {% if not somente_visualizacao %}data-refeicao-id="{{ refeicao.id }}"
+     data-reserva-aberta="{% if refeicao.reserva_aberta %}1{% else %}0{% endif %}"{% endif %}>
   {% include "refeicoes/_meal_card_header.html" with refeicao=refeicao %}
 
   <div class="meal-card__body">
@@ -47,7 +55,16 @@
       {% else %}
       {% if refeicao.reserva_id %}
         {% if refeicao.pode_cancelar %}
-          <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post">
+          {% comment %}
+          Com a janela fechada o cancelamento é irreversível — o aluno não
+          consegue reservar de novo. O aviso precisa dizer isso, senão o clique
+          custa a refeição dele.
+          {% endcomment %}
+          <form action="{% url 'reservas:cancelar_reserva' refeicao.reserva_id %}" method="post"
+                data-confirm-title="Cancelar sua reserva?"
+                data-confirm-ok="Sim, cancelar"
+                data-confirm-loading="Cancelando..."
+                data-confirm-message="{% if refeicao.reserva_aberta %}Você libera sua vaga para outro aluno. Dá para reservar de novo até {{ refeicao.fechamento_reserva_display }}.{% else %}As reservas para esta refeição já encerraram: se cancelar, você não conseguirá reservar novamente.{% endif %}">
             {% csrf_token %}
             <button class="reserve-btn reserve-btn--cancel" type="submit" data-loading-text="Cancelando...">CANCELAR</button>
           </form>
@@ -66,10 +83,12 @@
             {% csrf_token %}
             <button class="reserve-btn" type="submit" data-loading-text="Reservando...">RESERVAR</button>
           </form>
-        {% elif not refeicao.janela_encerrada_aguardando_refeicao %}
-          <button class="reserve-btn" disabled title="{{ refeicao.get_status_reserva }}">
-            RESERVAR
-          </button>
+        {% elif not refeicao.janela_encerrada_aguardando_refeicao and not refeicao.refeicao_em_andamento %}
+          {# Durante a refeição o prazo de reserva não interessa mais: o cabeçalho já diz que está acontecendo. #}
+          <div class="reservation-status-banner">
+            <i class="fa-solid fa-clock"></i>
+            <span data-status-reserva="{{ refeicao.id }}">{{ refeicao.get_status_reserva }}</span>
+          </div>
         {% endif %}
       {% endif %}
       {% endif %}

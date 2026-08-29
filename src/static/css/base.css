@@ -517,59 +517,14 @@ body.sidebar-open {
 }
 
 /* =============================================
-   MENSAGENS DO DJANGO
+   ERRO DE FORMULÁRIO
+   As mensagens do Django viram toasts (ver .toast no fim deste arquivo);
+   o erro de formulário continua inline, junto do campo.
    ============================================= */
-.messages {
-  margin-bottom: 1.5rem;
-}
-
-.alert {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.alert-success {
-  background: #eaf7ef;
-  color: #256941;
-  border: 1px solid #b7dfc8;
-}
-
-.alert-error, .alert-danger {
+.alert-error {
   background: #fdecea;
   color: #922b21;
   border: 1px solid #f5b7b1;
-}
-
-.alert-warning {
-  background: #fef9ec;
-  color: #7d5a0a;
-  border: 1px solid #f7dc6f;
-}
-
-.alert-info {
-  background: #eaf4fb;
-  color: #1a5276;
-  border: 1px solid #aed6f1;
-}
-
-.alert-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.6;
-  padding: 0;
-  font-size: 13px;
-}
-
-.alert-close:hover {
-  opacity: 1;
 }
 
 /* =============================================
@@ -1371,4 +1326,94 @@ input.is-loading {
 
 .logout-form__icon-btn.is-loading .btn-spinner {
   margin-right: 0;
+}
+/* ==========================================================================
+   TOASTS — feedback no canto superior direito, usado em toda a aplicação
+   (mensagens do Django e retornos de AJAX).
+   ========================================================================== */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 40px));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 250px;
+  padding: 12px 14px 12px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  animation: toast-entrada 0.3s ease;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.toast > i {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 16px;
+}
+
+.toast__texto {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast__fechar {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.75;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast__fechar:hover {
+  opacity: 1;
+}
+
+.toast-success { background-color: var(--success); }
+.toast-error   { background-color: var(--danger); }
+.toast-warning {
+  background-color: var(--warning);
+  /* O âmbar não tem contraste suficiente com branco. */
+  color: #3a2c05;
+}
+.toast-info    { background-color: var(--primary); }
+
+.toast.hide {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+@keyframes toast-entrada {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+@media (max-width: 480px) {
+  .toast-container {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    max-width: none;
+  }
 }

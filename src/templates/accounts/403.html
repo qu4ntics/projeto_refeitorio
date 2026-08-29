@@ -1,10 +1,10 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}Acesso negado{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/403.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/403.css' %}">
 {% endblock %}
 
 {% block content %}
