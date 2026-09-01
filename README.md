@@ -1,4 +1,4 @@
-# ReservaIF — Sistema de Reservas de Refeições Escolares
+# IFome — Sistema de Reservas de Refeições Escolares
 
 Sistema web para gestão de reservas de refeições no refeitório escolar. Desenvolvido com **Django 6** e **PostgreSQL**, o ReservaIF conecta alunos, nutricionistas e equipe do refeitório em um fluxo único: visualizar cardápio, reservar vagas, realizar chamada e aplicar strikes por faltas.
 
@@ -32,7 +32,6 @@ Sistema web para gestão de reservas de refeições no refeitório escolar. Dese
 | Backend       | Python 3.12+, Django 6.0            |
 | Banco de dados| PostgreSQL                          |
 | Frontend      | Django Templates, HTML, CSS, JS     |
-| Deploy        | Gunicorn, WhiteNoise, Render        |
 
 ---
 
@@ -156,7 +155,7 @@ Crie um banco PostgreSQL com o nome definido em `DB_NAME`. Opcionalmente, os scr
 python manage.py migrate
 ```
 
-### 7. (Opcional) Criar usuários de teste
+### 7. (Opcional, exclusivo para testes) Criar usuários de teste
 
 Cria um usuário de cada perfil (aluno, nutricionista e refeitório) com senha padrão `teste12345`:
 
@@ -206,18 +205,6 @@ O painel administrativo Django fica em [http://localhost:8000/django-admin](http
 | `aluno`         | Visualiza cardápio, faz reservas e acompanha strikes   |
 | `nutricionista` | Gerencia refeições, pratos, turmas e configurações     |
 | `refeitorio`    | Realiza chamada e confirma presenças                   |
-
----
-
-## Deploy (Render)
-
-O código da aplicação está em `src/`. No painel do Render, configure:
-
-| Campo            | Valor                              |
-|------------------|------------------------------------|
-| **Root Directory** | `src`                            |
-| **Build Command**  | `./build.sh`                     |
-| **Start Command**  | `gunicorn reservaif.wsgi:application` |
 
 ---
 
