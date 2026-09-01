@@ -1,10 +1,10 @@
 {% extends 'base/base.html' %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}{% if arquivadas %}Turmas Arquivadas{% else %}Alunos por Turma{% endif %} — ReservaIF{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/alunos_turma.css' %}?v=5">
+<link rel="stylesheet" href="{% static_v 'css/alunos_turma.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -30,6 +30,9 @@
         <a href="{% url 'administrativo:alunos_turmas_arquivadas' %}" class="btn-link-turmas">
           <i class="fa-solid fa-box-archive"></i> Turmas arquivadas
         </a>
+        <a href="{% url 'administrativo:importar_alunos_autorizados' %}" class="btn-link-turmas">
+          <i class="fa-solid fa-file-import"></i> Importar planilha de alunos
+        </a>
         <a href="{% url 'administrativo:turma_criar' %}" class="btn-nova-turma">
           <i class="fa-solid fa-plus"></i> Nova Turma
         </a>
@@ -43,10 +46,20 @@
   </div>
 
   <div id="estado-vazio" class="estado-central" hidden>
-    <i class="fa-solid fa-{% if arquivadas %}box-archive{% else %}users-rectangle{% endif %}"></i>
-    <p id="estado-vazio-texto">
-      {% if arquivadas %}Nenhuma turma arquivada.{% else %}Nenhuma turma cadastrada.{% endif %}
-    </p>
+    {% if arquivadas %}
+      <i class="fa-solid fa-box-archive"></i>
+      <p id="estado-vazio-texto">Nenhuma turma arquivada.</p>
+    {% else %}
+      <i class="fa-solid fa-users-rectangle"></i>
+      <p id="estado-vazio-texto">Nenhum aluno cadastrado ainda.</p>
+      <p class="estado-central-sub">
+        Os alunos entram no sistema pela planilha de e-mails institucionais.
+        Importe a lista para liberar o cadastro das contas.
+      </p>
+      <a href="{% url 'administrativo:importar_alunos_autorizados' %}" class="btn-nova-turma">
+        <i class="fa-solid fa-file-import"></i> Importar planilha de alunos
+      </a>
+    {% endif %}
   </div>
 
   <div id="estado-erro" class="estado-central estado-erro" hidden>
@@ -65,5 +78,5 @@
 <script>
   const ARQUIVADAS = {{ arquivadas|yesno:"true,false" }};
 </script>
-<script src="{% static 'js/alunos_turma.js' %}?v=1"></script>
+<script src="{% static_v 'js/alunos_turma.js' %}"></script>
 {% endblock %}

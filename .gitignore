@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ambiente / segredos
+.env
+.env.*
+!.env.example
+*.log
+
+# Banco local
+db.sqlite3
+db.sqlite3-journal
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.idea/
+.vscode/
+*.swp
+
+# Node
+node_modules/
+
+# Django
+staticfiles/
+media/

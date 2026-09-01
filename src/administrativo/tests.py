@@ -1,6 +1,10 @@
 import json
-from datetime import datetime, timedelta, time
+from datetime import date, datetime, timedelta, time
 from unittest.mock import patch
+
+# Quarta-feira fixa, para testes que dependem de "hoje" cair num dia útil
+# (a grade da semana mostra segunda a sexta).
+_DIA_UTIL_FIXO = date(2025, 6, 4)
 
 from django.contrib.messages import get_messages
 from django.test import TestCase
@@ -11,6 +15,7 @@ from accounts.models import Usuario
 from refeicoes.models import Refeicao, Prato, RefeicaoPrato
 from reservas.models import Reserva
 from .models import Turma, TipoRefeicao, JanelaReserva, Presenca, Strike, ConfigReserva
+from .services.chamada import status_chamada_refeicao
 from .services.dashboard_nutri import (
     calcular_ausencias,
     calcular_dia_pico_almoco,
@@ -494,10 +499,6 @@ class ListaPresencaTests(TestCase):
     def _login_refeitorio(self):
         self.client.login(username='ref@test.com', password='123')
 
-    def _abrir_chamada(self, refeicao=None):
-        refeicao = refeicao or self.refeicao_hoje
-        return self.client.post(reverse('administrativo:abrir_chamada', args=[refeicao.id]))
-
     def test_seguranca_aluno_nao_acessa_chamada(self):
         self.client.login(username='aluno@teste.com', password='password123')
         url = reverse('refeicoes:chamada', args=[self.refeicao_hoje.id])
@@ -510,12 +511,12 @@ class ListaPresencaTests(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
 
-    def test_abrir_chamada_apenas_exige_reserva(self):
+    def test_chamada_apenas_para_refeicao_que_exige_reserva(self):
         self._login_refeitorio()
         refeicao_livre = Refeicao.objects.create(
             data=timezone.localdate(), tipo='cafe', limite_vagas=5, exige_reserva=False
         )
-        response = self.client.post(reverse('administrativo:abrir_chamada', args=[refeicao_livre.id]))
+        response = self.client.get(reverse('refeicoes:chamada', args=[refeicao_livre.id]))
         self.assertEqual(response.status_code, 404)
 
     def test_painel_refeitorio_lista_refeicoes_do_dia(self):
@@ -524,14 +525,15 @@ class ListaPresencaTests(TestCase):
         response = self.client.get(reverse('administrativo:painel_refeitorio'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Almoço')
-        self.assertContains(response, 'Abrir chamada')
+        # Dentro do horário a chamada já vale, sem ninguém precisar abrir.
+        self.assertContains(response, 'Marcar presença')
+        self.assertNotContains(response, 'Abrir chamada')
 
     def test_fluxo_chamada_marca_presenca_cria_presenca(self):
         from administrativo.models import Presenca
 
         self._login_refeitorio()
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        self._abrir_chamada()
 
         response = self.client.post(
             reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
@@ -557,12 +559,11 @@ class ListaPresencaTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(reserva.status, 'ativa')
 
-    def test_desmarcar_presenca_remove_registro(self):
+    def test_desmarcar_presenca_mantem_registro_como_ausente(self):
         from administrativo.models import Presenca
 
         self._login_refeitorio()
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        self._abrir_chamada()
 
         self.client.post(
             reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
@@ -577,7 +578,8 @@ class ListaPresencaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         reserva.refresh_from_db()
         self.assertEqual(reserva.status, 'ativa')
-        self.assertFalse(Presenca.objects.filter(reserva=reserva).exists())
+        # O registro é preservado (auditoria); só o comparecimento muda.
+        self.assertTrue(Presenca.objects.filter(reserva=reserva, compareceu=False).exists())
 
     def test_encerrar_aplica_strike_apenas_ausentes(self):
         from administrativo.models import Presenca, Strike
@@ -598,7 +600,6 @@ class ListaPresencaTests(TestCase):
             cancelado_em=timezone.now(),
         )
 
-        self._abrir_chamada()
         self.client.post(
             reverse('administrativo:atualizar_status_reserva', args=[reserva_p.id]),
             data=json.dumps({'checked': True}),
@@ -612,7 +613,7 @@ class ListaPresencaTests(TestCase):
 
         self.refeicao_hoje.refresh_from_db()
         self.assertTrue(self.refeicao_hoje.chamada_finalizada)
-        self.assertFalse(self.refeicao_hoje.chamada_aberta)
+        self.assertEqual(status_chamada_refeicao(self.refeicao_hoje), 'encerrada')
         self.assertEqual(Strike.objects.count(), 1)
         strike = Strike.objects.get()
         self.assertEqual(strike.aluno, ausente)
@@ -636,19 +637,37 @@ class ListaPresencaTests(TestCase):
         Reserva.objects.create(aluno=aluno, refeicao=refeicao1, status='ativa')
         Reserva.objects.create(aluno=aluno, refeicao=refeicao2, status='ativa')
 
-        self.client.post(reverse('administrativo:abrir_chamada', args=[refeicao1.id]))
         self.client.post(reverse('administrativo:encerrar_chamada', args=[refeicao1.id]))
-        self.client.post(reverse('administrativo:abrir_chamada', args=[refeicao2.id]))
         self.client.post(reverse('administrativo:encerrar_chamada', args=[refeicao2.id]))
 
         aluno.refresh_from_db()
         self.assertTrue(aluno.bloqueado)
         self.assertEqual(Strike.objects.filter(aluno=aluno).count(), 2)
 
+    def test_chamada_omite_reservas_canceladas(self):
+        """A lista é de quem tem reserva: um aluno que cancelou e reservou de
+        novo aparece uma vez só, sem o rastro das canceladas."""
+        self._login_refeitorio()
+        for _ in range(3):
+            Reserva.objects.create(
+                aluno=self.aluno, refeicao=self.refeicao_hoje,
+                status='cancelada', cancelado_em=timezone.now(),
+            )
+        Reserva.objects.create(
+            aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa',
+        )
+
+        response = self.client.get(
+            reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]),
+        )
+        self.assertEqual(len(response.context['reservas']), 1)
+        self.assertEqual(response.context['total_elegiveis'], 1)
+        self.assertNotContains(response, 'Cancelada')
+        self.assertEqual(response.content.decode('utf-8').count('João Silva'), 1)
+
     def test_chamada_exibe_contador_presentes(self):
         self._login_refeitorio()
         Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        self._abrir_chamada()
         response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
         self.assertContains(response, '0')
         self.assertContains(response, '1')
@@ -657,7 +676,6 @@ class ListaPresencaTests(TestCase):
     def test_resumo_pos_encerramento(self):
         self._login_refeitorio()
         Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        self._abrir_chamada()
         self.client.post(reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]))
         response = self.client.get(reverse('refeicoes:chamada_resumo', args=[self.refeicao_hoje.id]))
         self.assertEqual(response.status_code, 200)
@@ -669,24 +687,34 @@ class ListaPresencaTests(TestCase):
 
         self._login_refeitorio()
         Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        self._abrir_chamada()
         self.client.post(reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]))
         self.assertEqual(Strike.objects.count(), 1)
 
         self.client.post(reverse('administrativo:reabrir_chamada', args=[self.refeicao_hoje.id]))
         self.refeicao_hoje.refresh_from_db()
-        self.assertTrue(self.refeicao_hoje.chamada_aberta)
         self.assertFalse(self.refeicao_hoje.chamada_finalizada)
+        # Dentro do horário (00:00–23:59 no setUp) volta a valer sozinha.
+        self.assertEqual(status_chamada_refeicao(self.refeicao_hoje), 'em_andamento')
         self.assertEqual(Strike.objects.count(), 1)
 
-    def test_atualizar_presenca_bloqueia_sem_chamada_aberta(self):
+    def test_atualizar_presenca_bloqueia_fora_do_horario(self):
+        """O refeitório vê a lista a qualquer hora, mas só marca presença
+        dentro do horário da refeição."""
         self._login_refeitorio()
-        reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        response = self.client.post(
-            reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
-            data=json.dumps({'checked': True}),
-            content_type='application/json',
+        TipoRefeicao.objects.filter(nome='almoco').update(
+            horario_inicio_consumo=time(11, 0), horario_fim_consumo=time(13, 0),
         )
+        reserva = Reserva.objects.create(
+            aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa',
+        )
+
+        with self._mock_agora(15, 0):
+            response = self.client.post(
+                reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
+                data=json.dumps({'checked': True}),
+                content_type='application/json',
+            )
+
         self.assertEqual(response.status_code, 403)
         reserva.refresh_from_db()
         self.assertEqual(reserva.status, 'ativa')
@@ -694,7 +722,6 @@ class ListaPresencaTests(TestCase):
     def test_atualizar_presenca_bloqueia_chamada_finalizada(self):
         self._login_refeitorio()
         reserva = Reserva.objects.create(aluno=self.aluno, refeicao=self.refeicao_hoje, status='ativa')
-        self._abrir_chamada()
         self.client.post(reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]))
         response = self.client.post(
             reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
@@ -715,7 +742,6 @@ class ListaPresencaTests(TestCase):
         )
         Reserva.objects.create(aluno=aluno_b, refeicao=self.refeicao_hoje)
         Reserva.objects.create(aluno=aluno_a, refeicao=self.refeicao_hoje)
-        self._abrir_chamada()
         response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
         content = response.content.decode('utf-8')
         self.assertTrue(content.find('Ana') < content.find('Beatriz'))
@@ -728,7 +754,6 @@ class ListaPresencaTests(TestCase):
             perfil='aluno', turma=turma_info,
         )
         Reserva.objects.create(aluno=aluno_marcos, refeicao=self.refeicao_hoje)
-        self._abrir_chamada()
         url = reverse('refeicoes:chamada', args=[self.refeicao_hoje.id])
 
         for term in ['Marcos', 'marcos', 'MARCOS']:
@@ -740,17 +765,6 @@ class ListaPresencaTests(TestCase):
 
         resp = self.client.get(url, {'search': 'Inexistente'})
         self.assertNotContains(resp, 'Marcos')
-
-    def test_chamada_exibe_canceladas(self):
-        self._login_refeitorio()
-        Reserva.objects.create(
-            aluno=self.aluno, refeicao=self.refeicao_hoje,
-            status='cancelada', cancelado_em=timezone.now(),
-        )
-        self._abrir_chamada()
-        response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
-        self.assertContains(response, 'Cancelada')
-        self.assertContains(response, self.aluno.first_name)
 
     def test_lista_presenca_redireciona_para_painel(self):
         self._login_refeitorio()
@@ -783,65 +797,76 @@ class HorarioChamadaTests(TestCase):
         agora = timezone.make_aware(datetime.combine(hoje, time(hora, minuto)))
         return patch('django.utils.timezone.localtime', return_value=agora)
 
-    def test_abrir_chamada_antes_do_horario_bloqueia(self):
+    def _marcar_presenca(self):
+        reserva = Reserva.objects.get(refeicao=self.refeicao_hoje, aluno=self.aluno)
+        return self.client.post(
+            reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
+            data=json.dumps({'checked': True}),
+            content_type='application/json',
+        )
+
+    def test_presenca_bloqueada_antes_do_horario(self):
         with self._mock_agora(11, 0):
-            response = self.client.post(
-                reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]),
-            )
-        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
-        self.refeicao_hoje.refresh_from_db()
-        self.assertFalse(self.refeicao_hoje.chamada_aberta)
-        messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any('12:00' in str(m) for m in messages))
+            response = self._marcar_presenca()
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('12:00', response.json()['erro'])
 
-    def test_abrir_chamada_durante_horario_sucesso(self):
+    def test_presenca_liberada_durante_horario_sem_abrir_chamada(self):
+        """Ninguém abre a chamada: dentro do horário ela já vale."""
         with self._mock_agora(12, 30):
-            response = self.client.post(
-                reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]),
+            self.assertEqual(
+                status_chamada_refeicao(self.refeicao_hoje), 'em_andamento',
             )
-        self.assertRedirects(response, reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
-        self.refeicao_hoje.refresh_from_db()
-        self.assertTrue(self.refeicao_hoje.chamada_aberta)
+            response = self._marcar_presenca()
+        self.assertEqual(response.status_code, 200)
 
-    def test_abrir_chamada_depois_do_horario_bloqueia(self):
+    def test_presenca_bloqueada_depois_do_horario(self):
         with self._mock_agora(14, 0):
-            response = self.client.post(
-                reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]),
-            )
-        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
-        messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any('encerrou' in str(m).lower() for m in messages))
+            response = self._marcar_presenca()
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('encerrou', response.json()['erro'].lower())
 
-    def test_chamada_em_andamento_apos_fim_do_periodo(self):
-        with self._mock_agora(12, 30):
-            self.client.post(reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]))
-        with self._mock_agora(14, 0):
-            response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
-            self.assertEqual(response.status_code, 200)
-            reserva = Reserva.objects.get(refeicao=self.refeicao_hoje, aluno=self.aluno)
-            resp_presenca = self.client.post(
-                reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
-                data=json.dumps({'checked': True}),
-                content_type='application/json',
-            )
-            self.assertEqual(resp_presenca.status_code, 200)
-
-    def test_get_chamada_fora_periodo_redireciona(self):
+    def test_get_chamada_liberado_fora_do_periodo(self):
+        """A lista é de leitura livre; o horário só governa a marcação."""
         with self._mock_agora(11, 0):
-            response = self.client.get(reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
-        self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
+            response = self.client.get(
+                reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]),
+            )
+        self.assertEqual(response.status_code, 200)
+        # Sem isso o refeitório veria checkboxes travados sem explicação.
+        self.assertContains(response, 'A chamada abre às 12:00')
+        self.assertContains(response, 'aviso-chamada--aguardando')
+        self.assertNotContains(response, 'btn-encerrar-chamada')
 
-    def test_reabrir_apos_fim_periodo_mesmo_dia(self):
+    def test_reabrir_durante_o_horario(self):
+        """Encerrar cedo (a comida acabou) e voltar atrás ainda no horário."""
         with self._mock_agora(12, 30):
-            self.client.post(reverse('administrativo:abrir_chamada', args=[self.refeicao_hoje.id]))
-            self.client.post(reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]))
-        with self._mock_agora(14, 0):
+            self.client.post(
+                reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]),
+            )
             response = self.client.post(
                 reverse('administrativo:reabrir_chamada', args=[self.refeicao_hoje.id]),
             )
-        self.assertRedirects(response, reverse('refeicoes:chamada', args=[self.refeicao_hoje.id]))
+            self.refeicao_hoje.refresh_from_db()
+            self.assertFalse(self.refeicao_hoje.chamada_finalizada)
+            self.assertEqual(
+                status_chamada_refeicao(self.refeicao_hoje), 'em_andamento',
+            )
+        self.assertEqual(response.status_code, 302)
+
+    def test_reabrir_apos_fim_do_horario_bloqueia(self):
+        """Fora do horário a reabertura se desfaria sozinha: não dá para marcar
+        presença e o encerramento automático fecharia de novo."""
+        with self._mock_agora(12, 30):
+            self.client.post(
+                reverse('administrativo:encerrar_chamada', args=[self.refeicao_hoje.id]),
+            )
+        with self._mock_agora(14, 0):
+            self.client.post(
+                reverse('administrativo:reabrir_chamada', args=[self.refeicao_hoje.id]),
+            )
         self.refeicao_hoje.refresh_from_db()
-        self.assertTrue(self.refeicao_hoje.chamada_aberta)
+        self.assertTrue(self.refeicao_hoje.chamada_finalizada)
 
     def test_reabrir_dia_seguinte_bloqueia(self):
         ontem = timezone.localdate() - timedelta(days=1)
@@ -855,7 +880,9 @@ class HorarioChamadaTests(TestCase):
             )
         self.assertRedirects(response, reverse('administrativo:painel_refeitorio'))
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any('dia da refeição' in str(m).lower() for m in messages))
+        self.assertTrue(any('horário da refeição' in str(m).lower() for m in messages))
+        refeicao_ontem.refresh_from_db()
+        self.assertTrue(refeicao_ontem.chamada_finalizada)
 
 
 class PainelNutricionistaDashboardTests(TestCase):
@@ -1038,10 +1065,11 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.assertEqual(len(itens), 1)
         self.assertEqual(itens[0]['refeicao'].id, ref_com_reserva.id)
 
-    def test_preparar_dias_semana_dedupe_por_tipo(self):
+    @patch('django.utils.timezone.localdate', return_value=_DIA_UTIL_FIXO)
+    def test_preparar_dias_semana_dedupe_por_tipo(self, _):
         from refeicoes.views import _preparar_contexto_semana
 
-        hoje = timezone.localdate()
+        hoje = _DIA_UTIL_FIXO
         ref_vazia = Refeicao.objects.create(
             data=hoje, tipo='almoco', limite_vagas=10, exige_reserva=True,
         )
@@ -1061,10 +1089,11 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.assertEqual(len(dia_hoje['refeicoes']), 1)
         self.assertEqual(dia_hoje['refeicoes'][0].id, ref_com_reserva.id)
 
-    def test_painel_exibe_metricas(self):
-        self._criar_refeicao_encerrada(timezone.localdate() - timedelta(days=1), presentes=1, ausentes=1)
+    @patch('django.utils.timezone.localdate', return_value=_DIA_UTIL_FIXO)
+    def test_painel_exibe_metricas(self, _):
+        self._criar_refeicao_encerrada(_DIA_UTIL_FIXO - timedelta(days=1), presentes=1, ausentes=1)
         refeicao_hoje = Refeicao.objects.create(
-            data=timezone.localdate(),
+            data=_DIA_UTIL_FIXO,
             tipo='almoco',
             limite_vagas=10,
             exige_reserva=True,
@@ -1129,3 +1158,345 @@ class PainelNutricionistaDashboardTests(TestCase):
         self.assertIn('disponivel', menos)
         self.assertIn('disponivel', mais)
 
+
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+
+from .models import AlunoAutorizado
+from .services.roster import importar_roster
+
+
+def _csv(texto):
+    return SimpleUploadedFile('alunos.csv', texto.encode('utf-8'), content_type='text/csv')
+
+
+@override_settings(ALUNO_EMAIL_DOMINIOS=[])
+class ImportarRosterTests(TestCase):
+    def setUp(self):
+        self.turma_a = Turma.objects.create(nome='1º Informática', turno='matutino')
+        self.turma_b = Turma.objects.create(nome='2º Mecânica', turno='vespertino')
+
+    def test_importa_e_casa_turma_ignorando_caixa_e_acento(self):
+        res = importar_roster(_csv(
+            'email;turma;nome\n'
+            'ana@escola.edu.br;1o informatica;Ana\n'
+            'BRUNO@escola.edu.br;2º MECÂNICA;Bruno\n'
+        ))
+        self.assertEqual(res.criados, 2)
+        self.assertFalse(res.tem_erros)
+        ana = AlunoAutorizado.objects.get(email='ana@escola.edu.br')
+        self.assertEqual(ana.turma, self.turma_a)
+        self.assertEqual(
+            AlunoAutorizado.objects.get(email='bruno@escola.edu.br').turma,
+            self.turma_b,
+        )
+
+    def test_aceita_separador_virgula(self):
+        res = importar_roster(_csv('email,turma\nca@escola.edu.br,1º Informática\n'))
+        self.assertEqual(res.criados, 1)
+
+    def test_linhas_invalidas_viram_erros_e_validas_entram(self):
+        res = importar_roster(
+            _csv(
+                'email;turma\n'
+                'ok@escola.edu.br;1º Informática\n'
+                'sem-arroba;1º Informática\n'
+                'x@escola.edu.br;Turma Fantasma\n'
+            ),
+            criar_turmas=False,
+        )
+        self.assertEqual(res.criados, 1)
+        self.assertEqual(len(res.erros), 2)
+        self.assertTrue(AlunoAutorizado.objects.filter(email='ok@escola.edu.br').exists())
+
+    def test_cria_turmas_ausentes_e_vincula_alunos(self):
+        res = importar_roster(_csv(
+            'email;turma;nome\n'
+            'x@escola.edu.br;3º Química;Xavier\n'
+            'y@escola.edu.br;3o QUIMICA;Yara\n'
+            'z@escola.edu.br;1º Redes;Zoe\n'
+        ))
+        self.assertFalse(res.tem_erros)
+        self.assertEqual(res.turmas_criadas, 2)
+        self.assertEqual(res.criados, 3)
+        quimica = Turma.objects.get(nome='3º Química')
+        self.assertEqual(quimica.alunos_autorizados.count(), 2)
+        self.assertEqual(
+            AlunoAutorizado.objects.get(email='z@escola.edu.br').turma.nome, '1º Redes'
+        )
+
+    def test_criar_turmas_desligado_mantem_erro(self):
+        res = importar_roster(
+            _csv('email;turma\na@escola.edu.br;Turma Nova\n'),
+            criar_turmas=False,
+        )
+        self.assertEqual(res.criados, 0)
+        self.assertEqual(res.turmas_criadas, 0)
+        self.assertEqual(len(res.erros), 1)
+
+    def test_nao_duplica_turma_existente(self):
+        res = importar_roster(_csv('email;turma\na@escola.edu.br;1º INFORMÁTICA\n'))
+        self.assertEqual(res.turmas_criadas, 0)
+        self.assertEqual(
+            AlunoAutorizado.objects.get(email='a@escola.edu.br').turma, self.turma_a
+        )
+
+    def test_turma_nao_informada_vira_erro(self):
+        res = importar_roster(_csv('email;turma\nsemturma@escola.edu.br;\n'))
+        self.assertEqual(res.criados, 0)
+        self.assertEqual(len(res.erros), 1)
+
+    def test_cabecalho_invalido_aborta(self):
+        res = importar_roster(_csv('coluna1;coluna2\na;b\n'))
+        self.assertEqual(res.criados, 0)
+        self.assertTrue(res.tem_erros)
+
+    def test_substituir_remove_ausentes(self):
+        AlunoAutorizado.objects.create(email='antigo@escola.edu.br', turma=self.turma_a)
+        res = importar_roster(
+            _csv('email;turma\nnovo@escola.edu.br;1º Informática\n'),
+            substituir=True,
+        )
+        self.assertEqual(res.removidos, 1)
+        self.assertFalse(AlunoAutorizado.objects.filter(email='antigo@escola.edu.br').exists())
+
+    def test_sem_substituir_mantem_ausentes(self):
+        AlunoAutorizado.objects.create(email='antigo@escola.edu.br', turma=self.turma_a)
+        importar_roster(_csv('email;turma\nnovo@escola.edu.br;1º Informática\n'))
+        self.assertTrue(AlunoAutorizado.objects.filter(email='antigo@escola.edu.br').exists())
+
+    def test_atualizar_contas_sincroniza_turma_existente(self):
+        aluno = Usuario.objects.create_user(
+            username='sync', email='sync@escola.edu.br', password='x',
+            perfil='aluno', turma=self.turma_a,
+        )
+        res = importar_roster(
+            _csv('email;turma\nsync@escola.edu.br;2º Mecânica\n'),
+            atualizar_contas=True,
+        )
+        self.assertEqual(res.contas_sincronizadas, 1)
+        aluno.refresh_from_db()
+        self.assertEqual(aluno.turma, self.turma_b)
+
+    @override_settings(ALUNO_EMAIL_DOMINIOS=['estudante.if.edu.br'])
+    def test_dominio_invalido_vira_erro(self):
+        res = importar_roster(_csv(
+            'email;turma\n'
+            'certo@estudante.if.edu.br;1º Informática\n'
+            'errado@gmail.com;1º Informática\n'
+        ))
+        self.assertEqual(res.criados, 1)
+        self.assertEqual(len(res.erros), 1)
+
+    def test_view_importar_exige_nutricionista(self):
+        resp = self.client.get(reverse('administrativo:importar_alunos_autorizados'))
+        self.assertNotEqual(resp.status_code, 200)
+
+    def test_view_importar_get_renderiza(self):
+        Usuario.objects.create_user(
+            username='nutri_get', email='nutri_get@test.com',
+            password='senha123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri_get@test.com', password='senha123')
+        resp = self.client.get(reverse('administrativo:importar_alunos_autorizados'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Importar planilha de alunos')
+        self.assertContains(resp, 'file-drop')
+
+    def test_view_importar_processa_upload(self):
+        Usuario.objects.create_user(
+            username='nutri_imp', email='nutri_imp@test.com',
+            password='senha123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri_imp@test.com', password='senha123')
+        resp = self.client.post(reverse('administrativo:importar_alunos_autorizados'), {
+            'arquivo': _csv('email;turma\naluna@escola.edu.br;1º Informática\n'),
+            'atualizar_contas': 'on',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(AlunoAutorizado.objects.filter(email='aluna@escola.edu.br').exists())
+
+
+class TurmaAlunosListagemTests(TestCase):
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='1º Redes', turno='matutino')
+        self.nutri = Usuario.objects.create_user(
+            username='nutri_lst', email='nutri_lst@test.com',
+            password='senha123', perfil='nutricionista',
+        )
+        self.client.login(username='nutri_lst@test.com', password='senha123')
+
+        AlunoAutorizado.objects.create(
+            email='semconta@escola.edu.br', turma=self.turma, nome='Sem Conta',
+        )
+        self.ativa = Usuario.objects.create_user(
+            username='ativa', email='ativa@escola.edu.br', password='x',
+            perfil='aluno', turma=self.turma, first_name='Aluna', last_name='Ativa',
+            is_active=True,
+        )
+        AlunoAutorizado.objects.create(email='ativa@escola.edu.br', turma=self.turma)
+        self.pendente = Usuario.objects.create_user(
+            username='pendente', email='pendente@escola.edu.br', password='x',
+            perfil='aluno', turma=self.turma, is_active=False,
+        )
+
+    def _linhas(self):
+        resp = self.client.get(
+            reverse('administrativo:lista_alunos_turma', args=[self.turma.id])
+        )
+        self.assertEqual(resp.status_code, 200)
+        return resp.json()
+
+    def test_lista_une_contas_e_autorizados_sem_duplicar(self):
+        dados = self._linhas()
+        self.assertEqual(dados['turma']['total_alunos'], 3)
+        por_email = {a['email'].lower(): a for a in dados['alunos']}
+        self.assertEqual(por_email['semconta@escola.edu.br']['conta_status'], 'sem_conta')
+        self.assertEqual(por_email['ativa@escola.edu.br']['conta_status'], 'ativa')
+        self.assertEqual(por_email['pendente@escola.edu.br']['conta_status'], 'pendente')
+
+    def test_total_alunos_no_cabecalho_conta_autorizados(self):
+        resp = self.client.get(
+            reverse('administrativo:alunos_turma', args=[self.turma.id])
+        )
+        self.assertEqual(resp.context['total_alunos'], 3)
+
+
+class EncerramentoPorAcessoTests(TestCase):
+    """O encerramento não pode depender só do cron: abrir as telas do sistema
+    também põe as chamadas vencidas em dia."""
+
+    def setUp(self):
+        self.turma = Turma.objects.create(nome='3 ano Info', turno='matutino')
+        self.aluno = Usuario.objects.create_user(
+            username='aluno_acesso', email='acesso@test.com', password='123',
+            perfil='aluno', first_name='Ana', turma=self.turma,
+        )
+        Usuario.objects.create_user(
+            username='ref_acesso', email='ref_acesso@test.com', password='123',
+            perfil='refeitorio',
+        )
+        Usuario.objects.create_user(
+            username='nutri_acesso', email='nutri_acesso@test.com', password='123',
+            perfil='nutricionista',
+        )
+        TipoRefeicao.objects.filter(nome='almoco').update(
+            horario_inicio_consumo=time(11, 0), horario_fim_consumo=time(13, 0),
+        )
+        self.refeicao = Refeicao.objects.create(
+            data=timezone.localdate(), tipo='almoco',
+            limite_vagas=10, exige_reserva=True,
+        )
+        Reserva.objects.create(
+            aluno=self.aluno, refeicao=self.refeicao, status='ativa',
+        )
+
+    def _mock_agora(self, hora, minuto=0):
+        agora = timezone.make_aware(
+            datetime.combine(timezone.localdate(), time(hora, minuto)),
+        )
+        return patch('django.utils.timezone.localtime', return_value=agora)
+
+    def _assert_encerrada_com_strike(self):
+        self.refeicao.refresh_from_db()
+        self.assertTrue(self.refeicao.chamada_finalizada)
+        self.assertEqual(Strike.objects.filter(aluno=self.aluno).count(), 1)
+
+    def test_painel_refeitorio_encerra_chamada_vencida(self):
+        self.client.login(username='ref_acesso@test.com', password='123')
+        with self._mock_agora(14, 0):
+            self.client.get(reverse('administrativo:painel_refeitorio'))
+        self._assert_encerrada_com_strike()
+
+    def test_lista_de_chamada_encerra_chamada_vencida(self):
+        self.client.login(username='ref_acesso@test.com', password='123')
+        with self._mock_agora(14, 0):
+            response = self.client.get(
+                reverse('refeicoes:chamada', args=[self.refeicao.id]),
+            )
+        self.assertEqual(response.status_code, 200)
+        self._assert_encerrada_com_strike()
+
+    def test_painel_nutricionista_encerra_chamada_vencida(self):
+        self.client.login(username='nutri_acesso@test.com', password='123')
+        with self._mock_agora(14, 0):
+            self.client.get(reverse('administrativo:painel_nutricionista'))
+        self._assert_encerrada_com_strike()
+
+    def test_acesso_durante_o_horario_nao_encerra(self):
+        self.client.login(username='ref_acesso@test.com', password='123')
+        with self._mock_agora(12, 0):
+            self.client.get(reverse('administrativo:painel_refeitorio'))
+        self.refeicao.refresh_from_db()
+        self.assertFalse(self.refeicao.chamada_finalizada)
+        self.assertEqual(Strike.objects.count(), 0)
+
+    def test_acessos_repetidos_nao_duplicam_strike(self):
+        self.client.login(username='ref_acesso@test.com', password='123')
+        with self._mock_agora(14, 0):
+            for _ in range(3):
+                self.client.get(reverse('administrativo:painel_refeitorio'))
+        self._assert_encerrada_com_strike()
+
+    def test_presenca_marcada_no_horario_nao_vira_strike(self):
+        self.client.login(username='ref_acesso@test.com', password='123')
+        reserva = Reserva.objects.get(refeicao=self.refeicao, aluno=self.aluno)
+
+        with self._mock_agora(12, 0):
+            self.client.post(
+                reverse('administrativo:atualizar_status_reserva', args=[reserva.id]),
+                data=json.dumps({'checked': True}),
+                content_type='application/json',
+            )
+        with self._mock_agora(14, 0):
+            self.client.get(reverse('administrativo:painel_refeitorio'))
+
+        self.refeicao.refresh_from_db()
+        self.assertTrue(self.refeicao.chamada_finalizada)
+        self.assertEqual(Strike.objects.count(), 0)
+
+
+class StaticVersionadoTests(TestCase):
+    """O tag existe para o navegador não servir CSS/JS antigos em dev."""
+
+    def _render(self, caminho='css/base.css'):
+        from django.template import Context, Template
+
+        template = Template(
+            "{% load static_versionado %}{% static_v '" + caminho + "' %}"
+        )
+        return template.render(Context({}))
+
+    def test_em_debug_anexa_versao_do_arquivo(self):
+        with self.settings(DEBUG=True):
+            url = self._render()
+        self.assertIn('/static/css/base.css?v=', url)
+
+    def test_versao_muda_quando_o_arquivo_muda(self):
+        import os
+        from django.contrib.staticfiles import finders
+
+        caminho = finders.find('css/base.css')
+        with self.settings(DEBUG=True):
+            antes = self._render()
+            stat = os.stat(caminho)
+            os.utime(caminho, (stat.st_atime, stat.st_mtime + 60))
+            try:
+                depois = self._render()
+            finally:
+                os.utime(caminho, (stat.st_atime, stat.st_mtime))
+
+        self.assertNotEqual(antes, depois)
+
+    def test_fora_de_debug_nao_anexa_nada(self):
+        """Em produção o manifesto já põe hash no nome; um ?v= aqui só
+        atrapalharia o cache do CDN."""
+        with self.settings(DEBUG=False):
+            url = self._render()
+        self.assertNotIn('?v=', url)
+
+    def test_arquivo_inexistente_nao_quebra_a_pagina(self):
+        with self.settings(DEBUG=True):
+            url = self._render('css/nao-existe.css')
+        self.assertEqual(url, '/static/css/nao-existe.css')

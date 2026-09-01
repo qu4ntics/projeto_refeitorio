@@ -1,10 +1,10 @@
 {% extends 'base/base.html' %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}{{ turma.nome }} — ReservaIF{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/alunos.css' %}?v=3">
+<link rel="stylesheet" href="{% static_v 'css/alunos.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -162,5 +162,5 @@
   const TURMA_NOME = "{{ turma.nome|escapejs }}";
   const TURMA_TOTAL_ALUNOS = {{ total_alunos }};
 </script>
-<script src="{% static 'js/alunos.js' %}?v=3"></script>
+<script src="{% static_v 'js/alunos.js' %}"></script>
 {% endblock %}

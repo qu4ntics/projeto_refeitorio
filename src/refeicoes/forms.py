@@ -8,12 +8,6 @@ from .models import Prato, Refeicao
 ORDEM_CATEGORIAS = Prato.ORDEM_CATEGORIAS
 
 
-def _label_prato(prato):
-    if prato.descricao:
-        return f'{prato.nome} — {prato.descricao}'
-    return prato.nome
-
-
 def _queryset_pratos_ordenados():
     return Prato.objects.all().order_by('categoria', 'nome')
 
@@ -42,22 +36,16 @@ def pratos_catalogo_por_categoria():
 class PratoForm(forms.ModelForm):
     class Meta:
         model = Prato
-        fields = ['nome', 'descricao', 'categoria']
+        fields = ['nome', 'categoria']
         widgets = {
             'nome': forms.TextInput(attrs={
                 'class': 'campo',
                 'placeholder': 'Ex.: Frango grelhado',
             }),
-            'descricao': forms.Textarea(attrs={
-                'class': 'campo',
-                'rows': 3,
-                'placeholder': 'Ingredientes ou modo de preparo (opcional)',
-            }),
             'categoria': forms.Select(attrs={'class': 'campo'}),
         }
         labels = {
             'nome': 'Nome',
-            'descricao': 'Descrição',
             'categoria': 'Categoria',
         }
 
@@ -106,10 +94,7 @@ class RefeicaoForm(forms.ModelForm):
 
         queryset = _queryset_pratos_ordenados()
         self.fields['pratos'].queryset = queryset
-        choices = []
-        for prato in queryset:
-            choices.append((prato.pk, _label_prato(prato)))
-        self.fields['pratos'].choices = choices
+        self.fields['pratos'].choices = [(prato.pk, prato.nome) for prato in queryset]
 
     def clean_data(self):
         data = self.cleaned_data.get('data')
@@ -146,6 +131,16 @@ class RefeicaoForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
+        data = cleaned_data.get('data')
+        tipo = cleaned_data.get('tipo')
+        if data and tipo:
+            conflito = Refeicao.objects.filter(data=data, tipo=tipo)
+            if self.instance.pk:
+                conflito = conflito.exclude(pk=self.instance.pk)
+            if conflito.exists():
+                self.add_error('tipo', 'Já existe uma refeição deste tipo nesta data.')
+
         exige_reserva = cleaned_data.get('exige_reserva')
         limite_vagas = cleaned_data.get('limite_vagas')
 

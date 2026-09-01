@@ -4,6 +4,10 @@
       <span class="meal-card__tipo">{{ refeicao.get_tipo_display }}</span>
       {% if not refeicao.exige_reserva %}
         <span class="meal-card__tag">Informativa</span>
+      {% elif refeicao.config_incompleta %}
+        <span class="meal-card__tag meal-card__tag--alerta" title="Sem janela de reserva configurada para este tipo. Configure em Configurações → Refeições.">
+          <i class="fa-solid fa-triangle-exclamation"></i> Sem janela configurada
+        </span>
       {% endif %}
     </div>
     <div class="meal-card__actions">

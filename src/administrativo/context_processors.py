@@ -34,7 +34,6 @@ NAV_SECTION_BY_URL = {
     'lista-presenca': 'presenca',
     'chamada': 'presenca',
     'chamada_resumo': 'presenca',
-    'abrir_chamada': 'presenca',
     'atualizar_status_reserva': 'presenca',
     'encerrar_chamada': 'presenca',
     'reabrir_chamada': 'presenca',

@@ -1,10 +1,10 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static static_versionado %}
 
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/nova-refeicao-style.css' %}">
+  <link rel="stylesheet" href="{% static_v 'css/nova-refeicao-style.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -41,14 +41,6 @@
           {{ form.categoria.label_tag }}
           {{ form.categoria }}
           {% for error in form.categoria.errors %}
-            <span class="form-error">{{ error }}</span>
-          {% endfor %}
-        </div>
-
-        <div class="campo-grupo {% if form.descricao.errors %}has-error{% endif %}">
-          {{ form.descricao.label_tag }}
-          {{ form.descricao }}
-          {% for error in form.descricao.errors %}
             <span class="form-error">{{ error }}</span>
           {% endfor %}
         </div>

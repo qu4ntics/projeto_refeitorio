@@ -47,17 +47,51 @@ class Turma(UUIDModel):
         return ', '.join(labels[d] for d in sorted(self.dias_contraturno or []) if d in labels)
 
 
+class AlunoAutorizado(UUIDModel):
+    """E-mail institucional liberado pela nutricionista para criar conta de aluno.
+
+    Alimentado pela importação de planilha CSV. Só e-mails presentes aqui
+    conseguem se cadastrar, e a turma da conta vem daqui — não da escolha do aluno.
+    """
+
+    email = models.EmailField('E-mail institucional', unique=True)
+    turma = models.ForeignKey(
+        Turma,
+        on_delete=models.PROTECT,
+        related_name='alunos_autorizados',
+    )
+    nome = models.CharField('Nome', max_length=150, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['email']
+        verbose_name = 'Aluno autorizado'
+        verbose_name_plural = 'Alunos autorizados'
+
+    def save(self, *args, **kwargs):
+        self.email = (self.email or '').strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
+
+
 class Presenca(UUIDModel):
     reserva = models.OneToOneField(
         'reservas.Reserva',
         on_delete=models.CASCADE,
         related_name='presenca',
     )
+    # Nulo quando a ausência foi registrada pelo encerramento automático da
+    # chamada, que não tem um funcionário por trás.
     confirmado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'perfil': 'refeitorio'},
         related_name='presencas_confirmadas',
+        null=True,
+        blank=True,
     )
     compareceu = models.BooleanField()
     confirmado_em = models.DateTimeField(auto_now_add=True)
@@ -81,33 +115,14 @@ class Strike(UUIDModel):
     expira_em = models.DateTimeField()
 
     def save(self, *args, **kwargs):
-        is_new = self._state.adding
-        if is_new:
+        if self._state.adding:
             if not self.aplicado_em:
                 self.aplicado_em = timezone.now()
             if not self.expira_em:
                 self.expira_em = self.aplicado_em + timedelta(days=30)
         super().save(*args, **kwargs)
-
-        if is_new:
-            # Notificação para o aluno sobre o novo strike
-            Notificacao.objects.create(
-                usuario=self.aluno,
-                titulo="Novo Strike Recebido",
-                mensagem=f"Você recebeu um strike por falta na refeição {self.presenca.reserva.refeicao}. Lembre-se que 2 strikes ativos resultam em bloqueio."
-            )
-
-            # Lógica de bloqueio automático
-            strikes_ativos = self.aluno.strikes.filter(expira_em__gt=timezone.now()).count()
-            if strikes_ativos >= 2:
-                self.aluno.bloqueado = True
-                self.aluno.save(update_fields=['bloqueado'])
-                
-                Notificacao.objects.create(
-                    usuario=self.aluno,
-                    titulo="Sua conta foi bloqueada",
-                    mensagem="Devido ao acúmulo de 2 strikes ativos, seu acesso a novas reservas foi suspenso. Procure a nutricionista."
-                )
+        # Notificação e bloqueio automático ficam em
+        # administrativo.services.strikes.aplicar_strike (efeito explícito).
 
 
 class Notificacao(UUIDModel):

@@ -1,4 +1,9 @@
-<form method="post" action="{% url 'accounts:logout' %}" class="logout-form{% if variant == 'button' %} logout-form--button config-perfil-logout{% else %} logout-form--icon topbar-logout{% endif %}">
+<form method="post" action="{% url 'accounts:logout' %}"
+      class="logout-form{% if variant == 'button' %} logout-form--button config-perfil-logout{% else %} logout-form--icon topbar-logout{% endif %}"
+      data-confirm-title="Sair da conta?"
+      data-confirm-message="Tem certeza que deseja encerrar sua sessão?"
+      data-confirm-ok="Sair"
+      data-confirm-loading="Saindo...">
   {% csrf_token %}
   {% if variant == 'button' %}
   <button type="submit" class="config-btn config-btn--ghost config-btn--logout" data-loading-text="Saindo...">
